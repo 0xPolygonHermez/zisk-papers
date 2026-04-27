@@ -1,0 +1,25 @@
+#let definition(body, title: none, numbered: true) = figure(
+  body,
+  kind: "theorem",
+  supplement: [Definition],
+  numbering: if numbered {
+    n => [#n] + if title != none { [ (#title)] }
+  } else if title != none {
+    _ => [(#title)]
+  } else {
+    none
+  },
+)
+
+#let remark(body, title: none, numbered: false) = figure(
+  body,
+  kind: "theorem",
+  supplement: [Remark],
+  numbering: if numbered {
+    n => [#n] + if title != none { [ (#title)] }
+  } else if title != none {
+    _ => [(#title)]
+  } else {
+    none
+  },
+)
