@@ -123,9 +123,9 @@ Now we delve into the details of the design of the ZisK chips (@sec:chip-design)
 
 == Chip Design <sec:chip-design>
 
-=== The Main
+We now turn to the chips themselves: the AIRs that, together with the bus system, implement the ZisK zkVM. The presentation roughly follows the dependency structure of @fig:chip-hierarchy, starting from the central spine and moving outwards. We begin with the _Main_ chip (@sec:main-chip), which materializes one row per instruction step and orchestrates the rest of the system: it fetches instructions, resolves operands, dispatches operations to specialized sub-chips, and writes back results. We then describe the _Memory_ chip (@sec:memory-chip), which centralizes the memory consistency argument that almost every other chip ultimately relies on. The remaining categories cover what the Main delegates: _base-operation_ chips (@sec:base-operations) handle classes of simple operations ---binary, arithmetic, comparisons--- through dedicated AIRs and lookup tables; _precompiles_ (@sec:precompiles) handle expensive or memory-intensive primitives such as elliptic-curve arithmetic, hash functions, and bulk transfers, each as an independent instruction executor with its own internal layout; and _frequent-operation caches_ (@sec:freq-op-caches) commit pre-computed results for the most commonly queried inputs of base operations, replacing constraint checking with a direct lookup wherever possible.
 
-// TODO: Subsection about registers in main??
+=== The Main <sec:main-chip>
 
 ZisK uses a _Main_ chip as the central execution spine. Each row of the Main AIR corresponds to one instruction step and its trace materializes the full execution transcript. Recalling the notation from @subsec:instruction_format, the Main chip is responsible for:
 
@@ -135,9 +135,13 @@ ZisK uses a _Main_ chip as the central execution spine. Each row of the Main AIR
 
 + *Operation dispatch*: Operations that are simple enough are computed directly in the Main chip (e.g., no-ops, jumps, and control flow). Operations requiring dedicated constraint systems ---binary operations, multiplications, cryptographic primitives--- are _delegated_: the Main chip sends the inputs and receives back the result $(c, "flag")$ via the Operation Bus, and a specialized sub-chip proves correctness.
 
-+ *State update*: The output $c$ is written to its destination (register or memory) via the Memory Bus or directly in the Main trace.
++ *State update*: The output $c$ is written to its destination via the Memory Bus or directly in the Main trace.
 
-==== Timestamps
+==== Registers
+
+Although the ZisK ISA addresses the 32 general-purpose registers within the same numerical address space as data memory (@sec:memory), ZisK does _not_ route register accesses through memory. Forcing every register read and write to traverse the Memory Bus would inflate the global memory trace ---registers are by far the most frequently accessed locations in any execution--- and would couple the cost of register access to the cost of generic RAM. Instead, the register region is carved out of memory's domain and handled internally by the Main chip. Operand-resolution and store-back constraints reference register values directly from the Main chip, with a per-register linked-step argument (analogous to the global memory consistency argument, but local to the Main) ensuring that every register read observes the most recent write. From the program's standpoint nothing changes ---a load or store to the register region behaves exactly as the ISA prescribes--- but the underlying argument is local to Main rather than dispatched on the Memory Bus.
+
+==== Timestamps <sec:timestamps>
 
 The circuit arithmetization does not inherently represent temporal order. On the other hand, the execution of instructions is inherently sequential. To encode it, ZisK discretizes time by attaching a _timestamp_ to every memory access, so that the memory consistency argument can verify that reads always observe the most recent write to each address.
 
@@ -243,7 +247,7 @@ Base Operations chips together with the Main chip and Memory chip form the core 
 
 Precompiles, on the other hand, are designed to handle complex operations that would be expensive to constrain step-by-step in the Main chip.
 
-=== Precompiles
+=== Precompiles <sec:precompiles>
 
 _Precompiles_ handle classes of operations ---elliptic curve arithmetic, cryptographic hash functions, bulk memory transfers--- whose decomposition into base operations would be inefficient. Each precompile is an independent instruction executor chip that owns the full proof obligation for its operation.
 
@@ -251,9 +255,9 @@ What distinguishes precompiles from basic operation chips is the complexity of t
 
 At the ISA level, invoking a precompile follows a calling convention: the caller issues a sequence of parameter-passing instructions, a call instruction, and result-retrieval instructions. These steps appear in the Main chip trace as bookkeeping steps that set up and tear down the call, but carry no proof obligation themselves. Adding a new precompile requires only defining a new chip and wiring it to the appropriate buses, with no changes to any existing chip.
 
-=== Frequent-Operation Caches
+=== Frequent-Operation Caches <sec:freq-op-caches>
 
-Basic operation chips prove correctness by decomposing inputs into small units ---bytes or 16-bit chunks--- and verifying each piece against a lookup table. Across a typical program execution, however, only a small fraction of all possible input combinations actually appear, and those that do appear tend to repeat. ZisK exploits this with _frequent-operation caches_: for binary and arithmetic operations, results for the most commonly queried input pairs are pre-computed and committed once at setup time.
+Basic operation chips carry a fixed per-invocation overhead: each chip handles a whole family of operations, and a single query pays for the constraints that distinguish all of them, regardless of which one is actually being proved. Across a typical program execution, however, only a small fraction of all possible input combinations actually appear, and those that do appear tend to repeat. ZisK exploits this with _frequent-operation caches_: for binary and arithmetic operations, results for the most commonly queried input pairs are pre-computed and committed once at setup time.
 
 At proof time, sub-chips resolve queries directly from the cache for inputs it covers, and fall back to constraint checking for the remainder. This significantly reduces witness size and proving time for programs with typical workloads.
 
@@ -265,9 +269,11 @@ ZisK uses a bus system ---recall @tbl:buses for an overview--- to constrain vali
 
 The _operation bus_ routes complex operations from the Main chip to specialized sub-chips. Messages have the form:
 $
-  ("op", a, b, c, "flag", "extra"),
+  ("op", a, b, c, "flag", t, "extra"),
 $
-where $"op" in [0, 2^8)$ identifies the operation, $a,b in [0, 2^64)$ are the input operands, $c in [0, 2^64)$ is the output, $"flag" in {0, 1}$ indicates whether the operation was valid, and $"extra" in [0, 2^32)^k$ carries any additional information needed to prove correctness.
+where $"op" in [0, 2^8)$ identifies the operation, $a,b in [0, 2^64)$ are the input operands, $c in [0, 2^64)$ is the output, $"flag" in {0, 1}$ indicates whether the operation was valid, $t$ is the main step (@sec:timestamps), and $"extra" in [0, 2^32)$ carries any additional information needed to prove correctness.
+
+The main step $t$ plays two different roles depending on the kind of sub-chip on the receiving end. For sub-chips whose entire input/output is already conveyed by $(a, b, c)$ ---i.e. those that do not interact with memory--- $t$ is set to $0$ and carries no information: the operation is fully specified by its operands. For precompiles, by contrast, $(a, b, c)$ is not enough: precompiles read their inputs and write their outputs directly through the memory bus rather than through the operand triple, so each precompile invocation must be tied to a specific point in the execution timeline. In that case, $t$ is set to the current execution step of the Main chip, allowing the precompile's memory accesses to be ordered consistently with the rest of the trace.
 
 When the Main chip delegates an operation, it sends a message on the operation bus and asserts that $(c, "flag") = "op"(a, b)$ without verifying the operation locally. The corresponding sub-chip receives those messages and proves correctness through its own constraints.
 
@@ -289,8 +295,7 @@ $
   ("op"_"mem", "addr", t_"mem", "width", "data"),
 $
 where $"op"_"mem" in {0, 1}$ is the access type (0: read, 1: write),
-$"addr" in [0, 2^32)$ is the target address, $t_"mem"$ is the timestamp
-assigned according to the schedule described in @sec:memory-chip,
+$"addr" in [0, 2^32)$ is the target address, $t_"mem"$ is the memory step (@sec:memory-chip),
 $"width" in {1, 2, 4, 8}$ is the access width in bytes, and
 $"data" in [0, 2^(8 dot "width"))$ is the value read or written.
 The Memory chip collects all messages on this bus

@@ -8,7 +8,7 @@ The frontend is based on a generalization of the _algebraic intermediate represe
 - *Separation of concerns*: Each AIR can be designed, implemented, and tested independently.
 - *Composability*: AIRs can be reused across different computations or combined in different configurations.
 - *Scalability*: Different AIRs can have different sizes, allowing resources to be allocated based on actual usage.
-- *Backend independence*: The arithmetization can be paired with any compatible proof system.
+- *Backend independence*: The arithmetization can be paired with any compatible proving system.
 
 The remainder of this section formalizes these concepts.
 
@@ -30,13 +30,13 @@ We generalize the standard AIR definition @EPRINT:BBHR18 by augmenting it with _
   where row indices are taken modulo $N$.
 ]
 
-Not all columns in a trace have the same lifecycle. Some are fully determined by the program before any execution begins; others depend on the specific inputs provided; and others are intermediate values the prover computes but need not reveal. Distinguishing these cases allows the proof system to avoid redundant work ---a column that is the same across all executions of a program need only be committed once--- and to be precise about what the verifier is entitled to see. Trace columns are therefore partitioned into three categories according to when they are determined and who can access them:
+Not all columns in a trace have the same lifecycle. Some are fully determined by the program before any execution begins; others depend on the specific inputs provided; and others are intermediate values the prover computes but need not reveal. Distinguishing these cases allows the proving system to avoid redundant work ---a column that is the same across all executions of a program need only be committed once--- and to be precise about what the verifier is entitled to see. Trace columns are therefore partitioned into three categories according to when they are determined and who can access them:
 
 - *Fixed*: Determined at setup time, independent of any particular execution. Fixed columns are shared with the verifier as part of the AIR's description; when an AIR has fixed columns, the trace height $N$ is also fixed at setup. Typical uses include lookup tables and instruction encodings.
 
 - *Cached*: Computed by the prover and committed once, then reused across multiple executions of the same program. Cached columns capture data that depends on the program but not on its inputs ---such as the ROM instruction trace--- avoiding redundant recomputation.
 
-- *Witness*: Computed fresh for each execution and not revealed to the verifier. These columns carry the execution-specific state: register values, memory accesses, and all intermediate values produced during a run.
+- *Witness*: Computed fresh for each execution and not revealed to the verifier. These columns carry the execution-specific state: operation values, memory accesses, and all intermediate values produced during a run.
 
 == Interactions
 
