@@ -18,7 +18,7 @@ A central motivation for ZisK is _extensibility_. Application domains such as bl
 
 == Paper Overview
 
-@sec:isa defines the ZisK ISA: register file, instruction format, and memory model. @sec:arithmetization presents the arithmetization framework: AIRs, bus interactions, and LogUp-based circuit satisfiability. @sec:design describes the chip architecture and bus system. @sec:continuations explains trace splitting and how continuation buses chain segment boundaries. @sec:recursion covers the recursive aggregation tree, the recursive challenge derivation, and root-level bus balancing.
+@sec:isa defines the ZisK ISA: execution environment, machine state, and instruction format. @sec:arithmetization presents the arithmetization framework: AIRs, bus interactions, and LogUp-based circuit satisfiability. @sec:design describes the chip architecture and bus system. @sec:continuations explains trace splitting and how continuation buses chain segment boundaries. @sec:recursion covers the recursive aggregation tree, the recursive challenge derivation, and root-level bus balancing.
 
 == Notation
 

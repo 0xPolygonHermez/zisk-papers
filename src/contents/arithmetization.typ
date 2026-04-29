@@ -36,7 +36,7 @@ Not all columns in a trace have the same lifecycle. Some are fully determined by
 
 - *Cached*: Computed by the prover and committed once, then reused across multiple executions of the same program. Cached columns capture data that depends on the program but not on its inputs ---such as the ROM instruction trace--- avoiding redundant recomputation.
 
-- *Witness*: Computed fresh for each execution and not revealed to the verifier. These columns carry the execution-specific state: register values, memory accesses, and all intermediate values produced during a run.
+- *Witness*: Computed fresh for each execution and not revealed to the verifier. These columns carry the execution-specific state: operation values, memory accesses, and all intermediate values produced during a run.
 
 == Interactions
 
