@@ -16,7 +16,7 @@ The rest of this section describes the execution environment (@sec:execution_env
 
 == Execution Environment <sec:execution_environment>
 
-Programs in ZisK are executed inside a _virtual machine_ (VM). The VM is a _state machine_: execution proceeds as a sequence of discrete steps, each step transforming the current _guest state_ (memory, program counter, outputs) according to one instruction. The VM is hosted on a physical machine, called the _host_, that maintains an external _host state_ separate from the guest. The ZisK ISA provides specific interfaces through which the guest program can read from and write to the host state.
+Programs in ZisK are executed inside a _virtual machine_ (VM). The VM is a _state machine_: execution proceeds as a sequence of discrete steps, each step transforming the current _guest state_ according to one instruction. The VM is hosted on a physical machine, called the _host_, that maintains an external _host state_ separate from the guest. The ZisK ISA provides specific interfaces through which the guest program can read from and write to the host state.
 
 This host/guest separation is central to ZisK's trust model. The guest program runs in a fully deterministic, sandboxed environment: every value it operates on is either derived from the initial program ROM (@sec:program), loaded from memory, or explicitly received from the host through a typed channel. The host can supply:
 - *Public inputs*: values known to both prover and verifier, loaded into the input data region before execution begins.
