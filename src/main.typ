@@ -25,13 +25,18 @@
 // Set bibliography style to alphanumeric
 #set cite(style: "alphanumeric")
 
-// Override AMS theorem styling to remove italic
+// Override AMS theorem styling
 #show figure.where(kind: "theorem"): it => block(spacing: 11.5pt, {
   strong({
     it.supplement
     if it.numbering != none {
       [ ]
       it.counter.display(it.numbering)
+    }
+    if it.caption != none {
+      [ (]
+      it.caption.body
+      [)]
     }
     [.]
   })

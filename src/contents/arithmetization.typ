@@ -23,7 +23,7 @@ We generalize the standard AIR definition @EPRINT:BBHR18 by augmenting it with _
   $
   where $I$ is a finite index set. Polynomials $C_i$ are typically known as _constraint polynomials_ or simply _constraints_.
 
-  A _witness_ for $cal(A)$ is a pair $(bold(T), bold(a))$ where $bold(T) in FF^(N times W)$ (with $N$ a power of two) is the _trace matrix_ and $bold(a) in FF^V$ are the _AIR values_. The $j$-th column of $bold(T)$, viewed as a mapping $T_j : [N] arrow FF$, instantiates the formal variable $X_j$: the superscript $X_j^((k))$ denotes a shift by $k$ rows, so $X_j^((k))$ evaluates to $T_(j)(r + k)$ at row $r$. The variable $Y_j$ is instantiated by $a_j$, the same value at every row. The witness _satisfies_ $cal(A)$ if for every constraint $C in cal(A)$ and every row $r in [N]$:
+  A _witness_ for $cal(A)$ is a pair $(bold(T), bold(a))$ where $bold(T) in FF^(N times W)$ (with $N$ a power of two) is the _trace matrix_ and $bold(a) in FF^V$ are the _AIR values_. The $j$-th column of $bold(T)$, viewed as a mapping $T_j : [N] arrow FF$, instantiates the family of shifted variables $X_j^((0)), ..., X_j^((k))$: at row $r$, the variable $X_j^((k))$ takes the value $T_(j)(r + k)$. The variable $Y_j$ is instantiated by $a_j$, the same value at every row. The witness _satisfies_ $cal(A)$ if for every constraint $C in cal(A)$ and every row $r in [N]$:
   $
     C(T_1(r), ..., T_(W)(r), ..., T_1(r+D), ..., T_(W)(r+D), a_1, ..., a_V) = 0
   $
@@ -43,7 +43,7 @@ Not all columns in a trace have the same lifecycle. Some are fully determined by
 A single AIR is self-contained: its constraint polynomials relate columns within the same trace and cannot reference columns of another AIR. Yet realistic computations are inherently cross-cutting ---the CPU must read values that the memory has written, and a hash precompile must receive inputs from and return outputs to the main execution trace. To express these relationships without merging all AIRs into one monolithic constraint system, we introduce _interactions_: row-level messages that one AIR sends and another receives, mediated by a shared channel called a _bus_. An interaction specifies which values are communicated at each row and with what multiplicity; consistency across AIRs is then enforced by requiring that every bus is _balanced_ ---the total signed flow of messages sums to zero.
 
 #definition(title: "Interaction")[
-  An _interaction_ $cal$ of width $W$, depth $D$, $V$ values, and length $ell$ is a tuple $(b, m, bold(e))$ where:
+  Let $cal(A)$ be an AIR of width $W$, depth $D$, $V$ values. An _interaction_ of length $ell$ for $cal(A)$ is a tuple $(b, m, bold(e))$ where:
   - $b in FF$ is a _bus identifier_.
   - $m in FF[X_1^((0)), ..., X_W^((0)), ..., X_1^((D)), ..., X_W^((D)), Y_1, ..., Y_V]$ is the _multiplicity_ polynomial.
   - $bold(e) in FF[X_1^((0)), ..., X_W^((0)), ..., X_1^((D)), ..., X_W^((D)), Y_1, ..., Y_V]^ell$ are the _message_ polynomials.
@@ -77,13 +77,13 @@ To apply this idea to bus balancing, we first need to compress each multi-elemen
     hat(e)(r) = b + sum_(j=1)^(ell) gamma^j dot e_j (r)
   $
   The bus identifier $b$ is included to prevent cancellation across different buses.
-]
+] <def:compressed-interaction-value>
 
 After compression, LogUp defines an auxiliary column to account for the sum. For each AIR $cal(A)_i$ with trace of length $N_i$ and set of interactions $cal(I)_i$, the contributions of all its interactions to the bus are accumulated row by row into a _partial sum_ $S_i$, defined by the recurrence:
 $
   S_i (r) = cases(
-    display(sum_((b, m, bold(e)) in cal(I)_i) frac(m(1), alpha + hat(e)(1))) & "if" r = 1\,,
-    display(S_i (r-1) + sum_((b, m, bold(e)) in cal(I)_i) frac(m(r), alpha + hat(e)(r))) & "otherwise"
+    display(sum_((b, m, bold(e)) in cal(I)_i) frac(m(1), alpha + hat(e)(1)))\, & " if" r = 1,
+    display(S_i (r-1) + sum_((b, m, bold(e)) in cal(I)_i) frac(m(r), alpha + hat(e)(r)))\, & " if" r > 1,
   )
 $
 The final value $s_i = S_i (N_i)$ is the AIR's total signed contribution to the bus. Global bus balancing then reduces to a single scalar constraint:
@@ -97,24 +97,29 @@ This constraint is enforced at the aggregation level: individual AIR proofs expo
 Similar to @OPENVM, we define a _circuit_ as a collection of AIRs that, together with interactions, represents a complete computation.
 
 #definition(title: "Circuit")[
-  A _circuit_ is a collection of pairs $(cal(A), cal(I))_k := {(cal(A)_i, cal(I)_i)}_(i=1)^k$, where each $cal(A)_i$ is an AIR and each $cal(I)_i$ is a set of interactions. Each AIR $cal(A)_i$ has an associated witness $(bold(T)_i, bold(a)_i)$, with $bold(T)_i in FF^(N_i times W_i)$, where different AIRs may have different trace heights $N_i$.
+  A _circuit_ is a collection of pairs $cal(C) := {(cal(A)_i, cal(I)_i)}_(i=1)^k$, where each $cal(A)_i$ is an AIR with its own parameters $(W_i, D_i, V_i)$ and each $cal(I)_i$ is a set of interactions for $cal(A)_i$.
+
+  A _witness_ for $cal(C)$ is a collection of witnesses ${(bold(T)_i, bold(a)_i)}_(i=1)^k$ for each AIR $cal(A)_i$, with $bold(T)_i in FF^(N_i times W_i)$ and $bold(a)_i in FF^(V_i)$, where the trace heights $N_i$ may differ across AIRs.
 ]
 
-A _bus_ is a communication channel that connects all interactions sharing the same bus identifier $b$. Through the bus, different AIRs exchange data by sending and receiving interactions. The set of all bus identifiers in a circuit $(cal(A), cal(I))_k$ is denoted $cal(B) = {b : exists i, (b, m, bold(e)) in cal(I)_i}$.
+The fact that each AIR carries its _own_ trace height $N_i$ is a deliberate design choice and one of the main reasons for organising a computation as a circuit rather than as a single monolithic AIR. Different AIRs typically encode different units of work with different natural sizes ---one AIR may scale with the length of the program being proved, another with the number of times a particular operation is invoked, and another with the size of a fixed lookup table--- and there is no reason for these sizes to coincide. Forcing all AIRs to share a common height would either pad the cheap ones with empty rows or truncate the expensive ones below their needs, both of which translate directly into wasted prover work. Allowing per-AIR heights instead lets each AIR be sized to its true workload, so the prover only pays for what each unit actually does. This independence is also what later makes per-AIR mechanisms such as continuations (@sec:continuations) possible without affecting the rest of the circuit.
+
+A _bus_ is a communication channel that connects all interactions sharing the same bus identifier $b$. Through the bus, different AIRs exchange data by sending and receiving interactions. The set of all bus identifiers in a circuit $cal(C)$ is denoted $cal(B) = {b : exists i, (b, m, bold(e)) in cal(I)_i}$.
 
 The key consistency condition is _bus balancing_: the total flow of values across each bus must sum to zero when weighted by multiplicities.
 
 #definition(title: "Bus Balancing")[
-  Given a circuit $(cal(A), cal(I))_k$ with associated witnesses ${(bold(T)_i, bold(a)_i)}$, a bus $b in cal(B)$ is _balanced_ if:
+  Given a circuit $cal(C) = {(cal(A)_i, cal(I)_i)}_(i=1)^k$ with associated witnesses ${(bold(T)_i, bold(a)_i)}_(i=1)^k$, a bus $b in cal(B)$ is _balanced_ if:
   $
-    sum_(i=1)^k sum_((b, m, bold(e)) in cal(I)_i) sum_(r=0)^(N_i - 1) m(r) dot bold(e)(r) = bold(0).
+    sum_(i=1)^k sum_((b, m, bold(e)) in cal(I)_i) sum_(r=1)^(N_i) m(r) dot hat(e)(r) = 0,
   $
+  where $hat(e)(r)$ is the compressed interaction value for the interaction at row $r$ from @def:compressed-interaction-value.
 ] <def:bus-balancing>
 
 Bus balancing ensures coherent communication: every message sent must be received with matching content, and no message can be invented or dropped. Together, local constraint satisfaction and global bus balancing give the full notion of circuit satisfiability: a circuit is satisfied when every AIR accepts its witness and every bus is balanced.
 
 #definition(title: "Circuit Satisfiability")[
-  A circuit $(cal(A), cal(I))_k$ is _satisfied_ by witnesses ${(bold(T)_i, bold(a)_i)}$ if:
+  A circuit $cal(C) = {(cal(A)_i, cal(I)_i)}_(i=1)^k$ is _satisfied_ by witnesses ${(bold(T)_i, bold(a)_i)}$ if:
   + Each witness $(bold(T)_i, bold(a)_i)$ satisfies its corresponding AIR $cal(A)_i$.
   + Every bus $b in cal(B)$ is balanced.
 ]
