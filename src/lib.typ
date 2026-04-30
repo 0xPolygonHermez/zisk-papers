@@ -2,24 +2,14 @@
   body,
   kind: "theorem",
   supplement: [Definition],
-  numbering: if numbered {
-    n => [#n] + if title != none { [ (#title)] }
-  } else if title != none {
-    _ => [(#title)]
-  } else {
-    none
-  },
+  numbering: if numbered { "1" } else { none },
+  caption: if title != none { title } else { none },
 )
 
 #let remark(body, title: none, numbered: false) = figure(
   body,
   kind: "theorem",
   supplement: [Remark],
-  numbering: if numbered {
-    n => [#n] + if title != none { [ (#title)] }
-  } else if title != none {
-    _ => [(#title)]
-  } else {
-    none
-  },
+  numbering: if numbered { "1" } else { none },
+  caption: if title != none { title } else { none },
 )

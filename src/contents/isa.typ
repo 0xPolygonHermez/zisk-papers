@@ -19,8 +19,8 @@ The rest of this section describes the execution environment (@sec:execution_env
 Programs in ZisK are executed inside a _virtual machine_ (VM). The VM is a _state machine_: execution proceeds as a sequence of discrete steps, each step transforming the current _guest state_ according to one instruction. The VM is hosted on a physical machine, called the _host_, that maintains an external _host state_ separate from the guest. The ZisK ISA provides specific interfaces through which the guest program can read from and write to the host state.
 
 This host/guest separation is central to ZisK's trust model. The guest program runs in a fully deterministic, sandboxed environment: every value it operates on is either derived from the initial program ROM (@sec:program), loaded from memory, or explicitly received from the host through a typed channel. The host can supply:
-- *Public inputs*: values known to both prover and verifier, loaded into the input data region before execution begins.
-- *Private inputs* (hints): non-deterministic values provided by the host at runtime. The guest may request a hint and use its value, but must verify any properties it relies on ---ZisK treats hints as unconstrained. A hint that is never verified proves nothing.
+- *Public Inputs*. Values known to both prover and verifier, written into the input data region at the start of execution and read-only thereafter.
+- *Private Inputs (Hints)*. Non-deterministic values provided by the host at runtime. The guest may request a hint and use its value, but must verify any properties it relies on ---ZisK treats hints as unconstrained. A hint that is never verified proves nothing.
 
 The key property of this model is that _everything the guest touches is constrained by the VM's arithmetization_. Memory accesses are constrained by the memory argument; program code is validated by the ROM bus on every fetch; and public outputs become explicit proof data. The host state, by contrast, lies outside and is trusted by convention.
 
@@ -139,7 +139,7 @@ $
 $
 comprising the program counter, the previous instruction's output and flag, and the data memory. The host state $H = ("in[]", "hint[]")$ is supplied externally. Execution proceeds in discrete steps according to the following rules:
 
-*Initial state.* Execution begins at the entry point with memory initialised from the program binary: the ROM data region is populated with program constants, the input data region is loaded from the public host-supplied input stream, and all writable memory is zeroed. Formally:
+*Initial state.* Execution begins at a designated boot address with memory initialised from the program binary: the ROM data region is populated with program constants, the input data region is loaded from the public host-supplied input stream, and all writable memory is zeroed. Formally:
 $
   S_0 = ("pc"_0, 0, 0, "mem"_0 [])
 $
