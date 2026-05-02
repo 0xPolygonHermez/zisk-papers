@@ -1,6 +1,6 @@
 #import "../lib.typ": definition
 
-A proving system is naturally divided into two layers. The _frontend_ takes a program and produces a structured mathematical representation --- typically a system of polynomial constraints --- that captures exactly what it means for the computation to be correct. The _backend_ then takes that representation and produces a cryptographic proof of its satisfiability. The two layers are decoupled by design: a single frontend can target different backends, and improvements to either do not require redesigning the other.
+A proving system is naturally divided into two layers. The _frontend_ takes a program and produces a structured mathematical representation --- typically a system of polynomial constraints --- that captures exactly what it means for the computation to be correct. The _backend_ then takes that representation and produces a cryptographic proof of its satisfiability. Concretely, the backend performs a one-time _setup_ that yields a pair $("pk", "vk")$: a _proving key_ used to generate proofs of the frontend's constraint system, and a _verification key_ that summarises the constraint system in a form the verifier can check against. Verification of a proof $pi$ against a public statement $x$ is then the deterministic procedure $V("vk", x, pi) in {"accept", "reject"}$. The two layers are decoupled by design: a single frontend can target different backends, and improvements to either do not require redesigning the other.
 
 ZisK's _arithmetization framework_ is its frontend. The choice of arithmetization is consequential: it determines how circuits are structured, what operations are native, and how efficiently the backend can prove them. ZisK's arithmetization is designed to be modular and flexible, capturing a wide range of computations while optimizing for the patterns that arise most frequently in zkVM execution.
 
@@ -61,7 +61,7 @@ _Arguments_ are the semantic tools used to specify what consistency must hold ac
 
 Bus balancing is therefore the unified consistency condition underlying all arguments. However, checking it naively ---summing over every row of every AIR--- requires the verifier to process the full witness, defeating succinctness. We use _LogUp_ @EPRINT:Habock22b to reduce bus balancing to a small set of polynomial constraints that the backend can verify efficiently. The reduction proceeds in two steps: first, compress each multi-element message into a single field element; then, express the balancing sum as a polynomial identity checkable at a random location.
 
-=== LogUp Reduction
+=== LogUp Reduction <sec:logup-reduction>
 
 The key insight of LogUp is that multiset equality can be recast as a rational identity over a random challenge. Two multisets $S$ and $R$ (with multiplicities) are equal if and only if, for a _challenge_ $alpha$:
 $
@@ -88,7 +88,7 @@ $
 $
 The final value $s_i = S_i (N_i)$ is the AIR's total signed contribution to the bus. Global bus balancing then reduces to a single scalar constraint:
 $
-  sum_(i=1)^k s_i = 0
+  sum_(i=1)^M s_i = 0
 $
 This constraint is enforced at the aggregation level: individual AIR proofs expose $s_i$ as a public output, and the aggregation step verifies that they sum to zero (see @sec:recursion).
 
@@ -97,9 +97,9 @@ This constraint is enforced at the aggregation level: individual AIR proofs expo
 Similar to @OPENVM, we define a _circuit_ as a collection of AIRs that, together with interactions, represents a complete computation.
 
 #definition(title: "Circuit")[
-  A _circuit_ is a collection of pairs $cal(C) := {(cal(A)_i, cal(I)_i)}_(i=1)^k$, where each $cal(A)_i$ is an AIR with its own parameters $(W_i, D_i, V_i)$ and each $cal(I)_i$ is a set of interactions for $cal(A)_i$.
+  A _circuit_ is a collection of pairs $cal(C) := {(cal(A)_i, cal(I)_i)}_(i=1)^M$, where each $cal(A)_i$ is an AIR with its own parameters $(W_i, D_i, V_i)$ and each $cal(I)_i$ is a set of interactions for $cal(A)_i$.
 
-  A _witness_ for $cal(C)$ is a collection of witnesses ${(bold(T)_i, bold(a)_i)}_(i=1)^k$ for each AIR $cal(A)_i$, with $bold(T)_i in FF^(N_i times W_i)$ and $bold(a)_i in FF^(V_i)$, where the trace heights $N_i$ may differ across AIRs.
+  A _witness_ for $cal(C)$ is a collection of witnesses ${(bold(T)_i, bold(a)_i)}_(i=1)^M$ for each AIR $cal(A)_i$, with $bold(T)_i in FF^(N_i times W_i)$ and $bold(a)_i in FF^(V_i)$, where the trace heights $N_i$ may differ across AIRs.
 ]
 
 The fact that each AIR carries its _own_ trace height $N_i$ is a deliberate design choice and one of the main reasons for organising a computation as a circuit rather than as a single monolithic AIR. Different AIRs typically encode different units of work with different natural sizes ---one AIR may scale with the length of the program being proved, another with the number of times a particular operation is invoked, and another with the size of a fixed lookup table--- and there is no reason for these sizes to coincide. Forcing all AIRs to share a common height would either pad the cheap ones with empty rows or truncate the expensive ones below their needs, both of which translate directly into wasted prover work. Allowing per-AIR heights instead lets each AIR be sized to its true workload, so the prover only pays for what each unit actually does. This independence is also what later makes per-AIR mechanisms such as continuations (@sec:continuations) possible without affecting the rest of the circuit.
@@ -109,9 +109,9 @@ A _bus_ is a communication channel that connects all interactions sharing the sa
 The key consistency condition is _bus balancing_: the total flow of values across each bus must sum to zero when weighted by multiplicities.
 
 #definition(title: "Bus Balancing")[
-  Given a circuit $cal(C) = {(cal(A)_i, cal(I)_i)}_(i=1)^k$ with associated witnesses ${(bold(T)_i, bold(a)_i)}_(i=1)^k$, a bus $b in cal(B)$ is _balanced_ if:
+  Given a circuit $cal(C) = {(cal(A)_i, cal(I)_i)}_(i=1)^M$ with associated witnesses ${(bold(T)_i, bold(a)_i)}_(i=1)^M$, a bus $b in cal(B)$ is _balanced_ if:
   $
-    sum_(i=1)^k sum_((b, m, bold(e)) in cal(I)_i) sum_(r=1)^(N_i) m(r) dot hat(e)(r) = 0,
+    sum_(i=1)^M sum_((b, m, bold(e)) in cal(I)_i) sum_(r=1)^(N_i) m(r) dot hat(e)(r) = 0,
   $
   where $hat(e)(r)$ is the compressed interaction value for the interaction at row $r$ from @def:compressed-interaction-value.
 ] <def:bus-balancing>
@@ -119,7 +119,7 @@ The key consistency condition is _bus balancing_: the total flow of values acros
 Bus balancing ensures coherent communication: every message sent must be received with matching content, and no message can be invented or dropped. Together, local constraint satisfaction and global bus balancing give the full notion of circuit satisfiability: a circuit is satisfied when every AIR accepts its witness and every bus is balanced.
 
 #definition(title: "Circuit Satisfiability")[
-  A circuit $cal(C) = {(cal(A)_i, cal(I)_i)}_(i=1)^k$ is _satisfied_ by witnesses ${(bold(T)_i, bold(a)_i)}$ if:
+  A circuit $cal(C) = {(cal(A)_i, cal(I)_i)}_(i=1)^M$ is _satisfied_ by witnesses ${(bold(T)_i, bold(a)_i)}$ if:
   + Each witness $(bold(T)_i, bold(a)_i)$ satisfies its corresponding AIR $cal(A)_i$.
   + Every bus $b in cal(B)$ is balanced.
 ]
