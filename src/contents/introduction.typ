@@ -28,4 +28,6 @@ We also fix a finite extension field $bb(K)$ of $bb(F)$, primarily for the secur
 
 We denote by $bb(F)[X]$ the ring of univariate polynomials over $bb(F)$ and by $bb(F)[X_1, ..., X_n]$ the ring of $n$-variate polynomials over $bb(F)$. When needed, we write $bb(F)^(<N)[X]$ to refer to the subset of polynomials of degree strictly less than $N$. We use $bb(F)^(n times m)$ to denote the set of $n$-by-$m$ matrices over $bb(F)$. The same notation applies to $bb(K)$.
 
+When the additive structure is the only thing that matters, we sometimes write $ZZ_p$ for the abelian group of integers modulo $p$ ---the same underlying set as $bb(F)$, viewed as a $ZZ$-module rather than a field. Vectors over this group are denoted $ZZ_p^n$.
+
 We use the notation $[a, b]$ to denote the set of integers from $a$ to $b$, inclusive; and $[a, b)$ to denote the set of integers from $a$ to $b$, inclusive of $a$ and exclusive of $b$. When $a = 1$ and $b > 1$, we write $[b]$ instead of $[1, b]$.
