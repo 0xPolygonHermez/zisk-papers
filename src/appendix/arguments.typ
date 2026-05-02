@@ -1,45 +1,55 @@
 #import "../lib.typ": definition
 
-In this section, we describe the distinct argument types used in ZisK's arithmetization.
+This appendix gives the formal statements of the argument types used in ZisK's arithmetization framework. All are realised through the same bus-balancing primitive of @sec:circuits-and-balancing ---one or more sender interactions with positive multiplicity, one or more receiver interactions with negative multiplicity, on a shared bus--- but they differ in the semantic relationship they enforce on the messages.
+
+Throughout this appendix we fix a circuit $cal(C) = {(cal(A)_i, cal(I)_i)}_(i=1)^M$ with witnesses ${(bold(T)_i, bold(a)_i)}_(i=1)^M$, and we write $m(r), bold(e)(r) in FF^ell$ for the row-$r$ evaluation of an interaction $(b, m, bold(e))$ under its witness.
 
 == Permutation Argument
 
-A _permutation argument_ proves that two sequences of values are permutations of each other, i.e., they contain the same elements with the same multiplicities but possibly in different orders.
+A _permutation argument_ enforces that two AIRs observe the same multiset of messages on a shared bus. It is the natural primitive whenever data is reordered ---e.g., between unsorted and sorted views of the same memory accesses--- but not modified.
 
 #definition(numbered: false, title: "Permutation Argument")[
-  A _permutation argument_ between two AIRs $cal(A)_i$ and $cal(A)_j$ with interaction values $bold(e)_i$ and $bold(e)_j$ and selectors $s_i$ and $s_j$ proves that:
+  Let $iota_1 = (b, m_1, bold(e)_1) in cal(I)_(i_1)$ and $iota_2 = (b, -m_2, bold(e)_2) in cal(I)_(i_2)$ be a sender/receiver pair of interactions of common length $ell$ on a shared bus $b$, with boolean multiplicities $m_1, m_2 in {0, 1}$. The pair $(iota_1, iota_2)$ realises a _permutation argument_ in the sense that the joint contribution of $iota_1$ and $iota_2$ to bus $b$ vanishes if and only if
   $
-    {bold(e)_i (r) : r in [0, n_i - 1], s_i (r) != 0} = {bold(e)_j (r) : r in [0, n_j - 1], s_j (r) != 0}
+    {bold(e)_1 (r) : r in [N_(i_1)], m_1 (r) = 1} = {bold(e)_2 (r) : r in [N_(i_2)], m_2 (r) = 1}
   $
   as multisets.
 ]
 
-Permutation arguments are used when we need to verify that data is reorganized but not modified.
-
 == Lookup Argument
 
-A _lookup argument_ proves that every element in one sequence appears in another sequence (the "table"), without requiring the sequences to have the same length or the same multiplicity distribution.
+A _lookup argument_ enforces that every message sent on the bus by a "query" AIR also appears as a row of a "table" AIR, with the table free to receive each query any number of times.
 
 #definition(numbered: false, title: "Lookup Argument")[
-  A _lookup argument_ between two AIRs $cal(A)_("query")$ and $cal(A)_("table")$ proves that for a sequence of query values $bold(e)_("query")$ with selector $s_("query")$ and a table $bold(e)_("table")$ with selector $s_("table")$:
+  Let $iota_q = (b, m_q, bold(e)_q) in cal(I)_(i_q)$ be a _query_ interaction with boolean multiplicity $m_q in {0, 1}$, and $iota_t = (b, -m_t, bold(e)_t) in cal(I)_(i_t)$ a _table_ interaction with $m_t (r) >= 0$ counting how many queries land on row $r$ of the table. Both interactions have common length $ell$. The pair $(iota_q, iota_t)$ realises a _lookup argument_ in the sense that their joint contribution to bus $b$ vanishes if and only if
   $
-    forall r : s_("query") (r) != 0 arrow.r.double exists r' : s_("table") (r') != 0 and bold(e)_("query") (r) = bold(e)_("table") (r')
+    forall r in [N_(i_q)] " with " m_q (r) = 1 : exists r' in [N_(i_t)] " s.t. " bold(e)_q (r) = bold(e)_t (r').
   $
-  This is expressed with the bus using multiplicities: queries typically contribute $+1$ per active row, and table entries contribute with their lookup count.
 ]
 
-Lookup arguments are fundamental for range checks, table-driven computations, and verifying that values belong to a predefined set. For example, verifying that a byte value is in the range $[0, 255]$ can be done via a lookup into a table containing all valid byte values.
+Lookup arguments underpin most of ZisK's table-driven constraints: instruction decoding, byte and limb decompositions, and any check whose efficient form is "the output of a sub-chip must belong to a precomputed table".
+
+== Range Check Argument
+
+A _range check argument_ enforces that an expression takes values in a bounded interval. It is a specialisation of the lookup argument against a fixed interval table, but it is exposed as a first-class primitive because its receiving side is a shared system table rather than an AIR-specific one.
+
+#definition(numbered: false, title: "Range Check Argument")[
+  Fix integers $x <= y$ and let $b$ be the bus designated for the range check on $[x, y]$. Let $iota = (b, m, e) in cal(I)_i$ be an interaction of length $ell = 1$ with boolean multiplicity $m in {0, 1}$, paired with a receiver interaction $iota_t = (b, -m_t, e_t)$ on a dedicated table AIR whose trace materialises the set ${x, x+1, dots, y}$ and whose multiplicity $m_t (r) >= 0$ counts how many incoming queries land on each value. The pair $(iota, iota_t)$ realises a _range check argument_ on $[x, y]$ in the sense that their joint contribution to bus $b$ vanishes if and only if
+  $
+    forall r in [N_i] " with " m (r) = 1 : e (r) in [x, y].
+  $
+]
+
+In practice ZisK shares each range-check table across the entire circuit: a single $[x, y]$ table absorbs queries from every AIR that needs that range, so the marginal cost of a range check is one row of querying plus one row of multiplicity bookkeeping in the shared table.
 
 == Copy Argument
 
-A _copy argument_ proves that designated cells across different parts of the witness hold equal values, establishing equivalence classes among witness cells.
+A _copy argument_ asserts that a designated set of cells in a single AIR's trace hold equal values. It is the wiring primitive used inside an AIR to relate values that must coincide but live in different rows or columns ---for instance, feeding the output of one row back as the input of a later row, or forcing two columns to agree on a shared intermediate value.
 
 #definition(numbered: false, title: "Copy Argument")[
-  A _copy argument_ proves that a set of witness cells forms equivalence classes where all cells in each class have the same value. Given cells $C = {(i_1, r_1), ..., (i_m, r_m)}$ partitioned into equivalence classes ${C_1, ..., C_t}$:
+  Let $cal(A)$ be an AIR with witness $(bold(T), bold(a))$, and let $C = { (r_1, j_1), dots, (r_q, j_q) }$ be a finite set of _cell coordinates_ in $bold(T)$, each $(r, j)$ identifying the cell at row $r$ of column $j$. Let ${C_1, dots, C_t}$ be a partition of $C$ into _equivalence classes_. A _copy argument_ for $(C, {C_ell})$ enforces:
   $
-    forall (i, r), (i', r') in C_ell : e_i (r) = e_(i') (r')
+    forall ell in [t], forall (r, j), (r', j') in C_ell : T_(j,r) = T_(j',r').
   $
-  for each equivalence class $C_ell$. This is implemented as a permutation argument on the cells within each equivalence class.
+  Operationally, a copy argument is realised as a permutation argument applied class-by-class: for each $C_ell$, the values at all cells in $C_ell$ are sent on a dedicated bus and required to coincide as multisets with the same values shifted by an arbitrary cycle on $C_ell$ ---this forces every pair of cells in the class to agree.
 ]
-
-Copy arguments are used to enforce consistency between AIRs (not necessarily distinct) that share intermediate values. For example, ensuring that the output of an ALU operation matches the value written to a register, or establishing complex wiring patterns where multiple cells must hold identical values.
