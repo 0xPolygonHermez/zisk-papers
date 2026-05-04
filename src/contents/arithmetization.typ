@@ -53,9 +53,25 @@ A single AIR is self-contained: its constraint polynomials relate columns within
 
 Each AIR can be augmented with a set of interactions. At each row, the interaction emits the message $bold(e)(r)$ with signed multiplicity $m(r)$: a positive multiplicity means the AIR _sends_ the message, a negative multiplicity means it _receives_ it.
 
-Interactions define the communication structure, but they do not by themselves specify what semantic relationship is being enforced. That is the role of _arguments_.
+=== Buses and Bus Balancing
 
-== Arguments
+Consider a collection of AIRs $cal(A)_1, dots, cal(A)_M$, each with its own set of interactions $cal(I)_1, dots, cal(I)_M$ and a witness $(bold(T)_i, bold(a)_i)$ of trace height $N_i$. The bus identifier $b$ in each interaction names a shared communication channel: a _bus_ is the collection of all interactions across the AIRs sharing the same bus identifier $b$. We denote by $cal(B) = {b : exists i, (b, m, bold(e)) in cal(I)_i}$ the set of all bus identifiers in use. We assume #footnote[One can always take the largest message length across all interactions on a bus and pad the others accordingly.] in what follows that every interaction on a given bus has a common message length $ell$.
+
+The fundamental consistency condition is that every message sent on a bus by some AIR must be received on the same bus by another AIR with the same content: in other words, the (signed) multiset of messages emitted on a bus must sum to zero.
+
+#definition(title: "Bus Balancing")[
+  For a bus $b in cal(B)$ and a candidate message $v in FF^ell$, define the total signed multiplicity of $v$ on $b$ as
+  $
+    cal(M)_b (v) = sum_(i=1)^M sum_((tilde(b), tilde(m), tilde(bold(e))) in cal(I)_i) sum_(r=1)^(N_i) tilde(m)(r) dot bb(1)[tilde(b) = b and tilde(bold(e))(r) = v],
+  $
+  where $bb(1)[dot]$ is the indicator function. A bus $b$ is _balanced_ if $cal(M)_b (v) = 0$ for all $v in FF^ell$.
+] <def:bus-balancing>
+
+The definition is the natural multiset statement: nothing is sent that isn't received, and vice versa. As stated, however, it ranges over an exponentially large set of candidate messages and is impractical to check directly. @sec:arguments shows how _arguments_ can be leveraged to compress this condition into a small set of polynomial constraints checkable by the verifier without inspecting the full witness.
+
+Interactions and bus balancing define the communication structure, but they do not by themselves specify what _semantic_ relationship is being enforced. That is the role of arguments.
+
+== Arguments <sec:arguments>
 
 _Arguments_ are the semantic tools used to specify what consistency must hold across bus interactions: a permutation argument asserts that two multisets are equal or a lookup argument asserts containment in a table. Each argument type is realized as a pair of interactions on a shared bus ---one AIR sending with positive multiplicity, another receiving with negative multiplicity--- so that bus balancing becomes equivalent to the desired relationship holding. A detailed description of the specific arguments used in ZisK is provided in @appendix:arguments.
 
@@ -69,7 +85,7 @@ $
 $
 Here, by _challenge_ we refer to a random field element sent by the verifier after the prover has committed to its witness; because the prover cannot predict it before committing, the challenge breaks any attempt to craft a witness that satisfies the identity by accident. In the non-interactive setting, challenges are derived deterministically from the prover's commitments via a collision-resistant hash (Fiat-Shamir transform @C:FiaSha86), preserving the same guarantee without interaction.
 
-To apply this idea to bus balancing, we first need to compress each multi-element message $bold(e)(r)$ into a single field element.
+To apply this idea to bus balancing, we first need to compress each multi-element message $bold(e)(r)$ into a single field element. This compression itself uses a challenge $gamma in KK$, distinct from $alpha$ but not independent of it: $gamma$ is derived deterministically from $alpha$ (e.g., as a hash of $alpha$), so that fixing $alpha$ determines $gamma$ as well. From the prover's and verifier's points of view, the two challenges thus form a single Fiat-Shamir-derived secret that becomes available only after the witness has been committed.
 
 #definition(title: "Compressed Interaction Value")[
   Given an interaction $(b, m, bold(e))$ of length $ell$ and a challenge $gamma in KK$, the _compressed value_ at row $r$ is:
@@ -104,19 +120,7 @@ Similar to @OPENVM, we define a _circuit_ as a collection of AIRs that, together
 
 The fact that each AIR carries its _own_ trace height $N_i$ is a deliberate design choice and one of the main reasons for organising a computation as a circuit rather than as a single monolithic AIR. Different AIRs typically encode different units of work with different natural sizes ---one AIR may scale with the length of the program being proved, another with the number of times a particular operation is invoked, and another with the size of a fixed lookup table--- and there is no reason for these sizes to coincide. Forcing all AIRs to share a common height would either pad the cheap ones with empty rows or truncate the expensive ones below their needs, both of which translate directly into wasted prover work. Allowing per-AIR heights instead lets each AIR be sized to its true workload, so the prover only pays for what each unit actually does. This independence is also what later makes per-AIR mechanisms such as continuations (@sec:continuations) possible without affecting the rest of the circuit.
 
-A _bus_ is a communication channel that connects all interactions sharing the same bus identifier $b$. Through the bus, different AIRs exchange data by sending and receiving interactions. The set of all bus identifiers in a circuit $cal(C)$ is denoted $cal(B) = {b : exists i, (b, m, bold(e)) in cal(I)_i}$.
-
-The key consistency condition is _bus balancing_: the total flow of values across each bus must sum to zero when weighted by multiplicities.
-
-#definition(title: "Bus Balancing")[
-  Given a circuit $cal(C) = {(cal(A)_i, cal(I)_i)}_(i=1)^M$ with associated witnesses ${(bold(T)_i, bold(a)_i)}_(i=1)^M$, a bus $b in cal(B)$ is _balanced_ if:
-  $
-    sum_(i=1)^M sum_((b, m, bold(e)) in cal(I)_i) sum_(r=1)^(N_i) m(r) dot hat(e)(r) = 0,
-  $
-  where $hat(e)(r)$ is the compressed interaction value for the interaction at row $r$ from @def:compressed-interaction-value.
-] <def:bus-balancing>
-
-Bus balancing ensures coherent communication: every message sent must be received with matching content, and no message can be invented or dropped. Together, local constraint satisfaction and global bus balancing give the full notion of circuit satisfiability: a circuit is satisfied when every AIR accepts its witness and every bus is balanced.
+Together with the bus-balancing condition introduced in @def:bus-balancing, local constraint satisfaction gives the full notion of circuit satisfiability: a circuit is satisfied when every AIR accepts its witness and every bus is balanced.
 
 #definition(title: "Circuit Satisfiability")[
   A circuit $cal(C) = {(cal(A)_i, cal(I)_i)}_(i=1)^M$ is _satisfied_ by witnesses ${(bold(T)_i, bold(a)_i)}$ if:
