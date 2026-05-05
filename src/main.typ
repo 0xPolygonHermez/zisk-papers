@@ -43,6 +43,25 @@
   it.body
 })
 
+// Italic styling for remarks (including title)
+#show figure.where(kind: "remark"): it => block(spacing: 11.5pt, align(left, emph({
+  strong({
+    it.supplement
+    if it.numbering != none {
+      [ ]
+      it.counter.display(it.numbering)
+    }
+    if it.caption != none {
+      [ (]
+      it.caption.body
+      [)]
+    }
+    [.]
+  })
+  [ ]
+  it.body
+})))
+
 // Make top-level outline entries bold
 #show outline.entry.where(level: 1): it => {
   strong(it)

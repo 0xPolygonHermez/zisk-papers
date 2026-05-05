@@ -8,7 +8,7 @@
 
 #let remark(body, title: none, numbered: false) = figure(
   body,
-  kind: "theorem",
+  kind: "remark",
   supplement: [Remark],
   numbering: if numbered { "1" } else { none },
   caption: if title != none { title } else { none },
