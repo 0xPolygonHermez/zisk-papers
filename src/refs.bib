@@ -41,6 +41,27 @@
 @string{stocname =              "Annual {ACM} Symposium on Theory of Computing"}
 @string{stocpub =               "{ACM} Press"}
 
+@string{asiacryptname =         "Advances in Cryptology -- {ASIACRYPT}"}
+@string{asiacrypt03 =           "AC03"}
+@string{asiacrypt03key =        "ASIACRYPT 2003"}
+@string{asiacrypt03name =       asiacryptname # "~2003"}
+@string{asiacrypt03ed =         "Chi-Sung Laih"}
+@string{asiacrypt03vol =        "2894"}
+@string{asiacrypt03addr =       ""}
+@string{asiacrypt03month =      nov # "~/~" # dec}
+@string{asiacrypt03pub =        springer_berlin_heidelberg}
+
+@string{springer_cham =         "Springer, Cham"}
+@string{africacryptname =       "International Conference on Cryptology in Africa"}
+@string{africacrypt23 =         "AFRICACRYPT23"}
+@string{africacrypt23key =      "AFRICACRYPT 2023"}
+@string{africacrypt23name =     "AFRICACRYPT 23: 14th " # africacryptname}
+@string{africacrypt23ed =       "Nadia {El Mrabet} and Luca {De Feo} and Sylvain Duquesne"}
+@string{africacrypt23vol =      "14064"}
+@string{africacrypt23addr =     ""}
+@string{africacrypt23month =    jul}
+@string{africacrypt23pub =      springer_cham}
+
 // Copied from cryptobib/crypto.bib
 @Misc{EPRINT:GabWilCio19,
   author =       "Ariel Gabizon and
@@ -274,4 +295,41 @@
   number={},
   pages={1-84},
   keywords={IEEE Standards;Floating-point arithmetic;arithmetic;binary;computer;decimal;exponent;floating-point;format;IEEE 754;interchange;NaN;number;rounding;significand;subnormal.},
-  doi={10.1109/IEEESTD.2019.8766229}}
+  doi={10.1109/IEEESTD.2019.8766229}
+}
+
+@InProceedings{AC:CDDGS03,
+  author =       "Dwaine E. Clarke and
+                  Srinivas Devadas and
+                  Marten van Dijk and
+                  Blaise Gassend and
+                  G. Edward Suh",
+  title =        "Incremental Multiset Hash Functions and Their Application to Memory Integrity Checking",
+  pages =        "188--207",
+  editor =       asiacrypt03ed,
+  booktitle =    asiacrypt03name,
+  volume =       asiacrypt03vol,
+  address =      asiacrypt03addr,
+  month =        asiacrypt03month,
+  publisher =    asiacrypt03pub,
+  series =       mylncs,
+  year =         2003,
+  doi =          "10.1007/978-3-540-40061-5_12",
+}
+
+@InProceedings{AFRICACRYPT:GraKhoSch23,
+  author =       "Lorenzo Grassi and
+                  Dmitry Khovratovich and
+                  Markus Schofnegger",
+  title =        "{Poseidon2}: {A} Faster Version of the Poseidon Hash Function",
+  pages =        "177--203",
+  editor =       africacrypt23ed,
+  booktitle =    africacrypt23name,
+  volume =       africacrypt23vol,
+  address =      africacrypt23addr,
+  month =        africacrypt23month,
+  publisher =    africacrypt23pub,
+  series =       mylncs,
+  year =         2023,
+  doi =          "10.1007/978-3-031-37679-5_8",
+}
