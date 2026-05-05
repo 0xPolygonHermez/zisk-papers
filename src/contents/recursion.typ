@@ -211,7 +211,7 @@ $
 $
 
 #remark[
-  In the degenerate case of an execution that fits in a single segment, the aggregation tree is empty: there is nothing to aggregate. The Final Verifier then takes the leaf verifier's proof directly as its child, dispatching to $V_"REC"^((tau))$ in exactly the same way as an aggregation verifier would. The relation $cal(R)_"FINAL"$ above generalises to this case by replacing $V_"AGG"$ with $V_"REC"^((tau))$ and accepting any $tau in [M]$; everything else stays the same.
+  In the degenerate case of an execution that fits in a single segment, the aggregation tree is empty: there is nothing to aggregate. The Final Verifier then takes the leaf verifier's proof directly as its child, dispatching to $V_"LEAF"^((tau))$ in exactly the same way as an aggregation verifier would. The relation $cal(R)_"FINAL"$ above generalises to this case by replacing $V_"AGG"$ with $V_"LEAF"^((tau))$ and accepting any $tau in [M]$; everything else stays the same.
 ]
 
 The two equality checks have direct global meaning. The first, $s = 0$, is the global bus-balancing condition from @def:bus-balancing ---every message sent on every bus across every segment has been received exactly once with matching values. The second, $alpha = "DeriveAlpha"(bold(c))$, is _challenge correctness_: by the multiset homomorphism of $cal(H)$, the value of $bold(c)$ at the top of the tree equals $sum_i h("com"(bold(T)_i, bold(a)_i)) = cal(H)(S)$ over the multiset $S$ of segment trace commitments, so this check confirms that $alpha$ was honestly derived from the full set of commitments and not chosen adversarially.
