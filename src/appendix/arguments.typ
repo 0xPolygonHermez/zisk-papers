@@ -6,7 +6,7 @@ Throughout this appendix we fix a circuit $cal(C) = {(cal(A)_i, cal(I)_i)}_(i=1)
 
 == Permutation Argument
 
-Aaa _permutation argument_ enforces that two AIRs observe the same multiset of messages on a shared bus. It is the natural primitive whenever data is reordered ---e.g., between unsorted and sorted views of the same memory accesses--- but not modified.
+A _permutation argument_ enforces that two AIRs observe the same multiset of messages on a shared bus. It is the natural primitive whenever data is reordered ---e.g., between unsorted and sorted views of the same memory accesses--- but not modified.
 
 #definition(numbered: false, title: "Permutation Argument")[
   Let $iota_1 = (b, m_1, bold(e)_1) in cal(I)_(i_1)$ and $iota_2 = (b, -m_2, bold(e)_2) in cal(I)_(i_2)$ be a sender/receiver pair of interactions of common length $ell$ on a shared bus $b$, with boolean multiplicities $m_1, m_2 in {0, 1}$. The pair $(iota_1, iota_2)$ realises a _permutation argument_ in the sense that the joint contribution of $iota_1$ and $iota_2$ to bus $b$ vanishes if and only if
