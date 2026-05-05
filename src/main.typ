@@ -1,5 +1,4 @@
 #import "@preview/unequivocal-ams:0.1.2": ams-article, proof, theorem
-#import "lib.typ": definition
 
 #show: ams-article.with(
   title: [ZisK Whitepaper#footnote[This document describes ZisK v0.16.1
