@@ -4,14 +4,14 @@ Read it [here](src/main.pdf).
 
 ## Build
 
-This is a [Typst](https://typst.app/) whitepaper. To compile the PDF:
+This is a [Typst](https://typst.app/) whitepaper. 
 
+To refresh the committed PDF, use the build script:
 ```sh
-typst compile src/main.typ src/main.pdf
+./scripts/build.sh
 ```
 
-To watch for changes and recompile automatically:
-
+To watch for changes and recompile automatically while drafting:
 ```sh
 typst watch src/main.typ src/main.pdf
 ```
