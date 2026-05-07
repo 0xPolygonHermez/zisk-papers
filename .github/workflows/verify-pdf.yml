@@ -34,5 +34,13 @@ jobs:
           if ! git diff --exit-code --quiet src/main.pdf; then
             echo "::error::src/main.pdf is out of date with the typst source."
             echo "Please run ./scripts/build.sh and commit the resulting src/main.pdf."
+            echo "--- Fonts available to Typst ---"
+            typst fonts | grep -i "computer modern" || echo "(no New Computer Modern variants found)"
+            echo "--- File sizes (committed vs rebuilt) ---"
+            git show HEAD:src/main.pdf | wc -c
+            wc -c < src/main.pdf
+            echo "--- First 40 lines of byte-level diff ---"
+            git show HEAD:src/main.pdf > /tmp/committed.pdf
+            diff <(xxd /tmp/committed.pdf) <(xxd src/main.pdf) | head -40 || true
             exit 1
           fi
