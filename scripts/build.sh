@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
 # Build script for the ZisK whitepaper.
-# Always use this (not `typst compile` directly) to keep src/main.pdf
-# byte-deterministic so CI's verify-pdf check stays in sync.
+# Always use this (not `typst compile` directly) to keep src/main.pdf deterministic.
 
 set -euo pipefail
 
