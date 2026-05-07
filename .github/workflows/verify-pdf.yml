@@ -10,8 +10,15 @@ on:
 jobs:
   verify-pdf:
     runs-on: ubuntu-latest
+    env:
+      TYPST_FONT_PATHS: /home/runner/.fontist/fonts
     steps:
       - uses: actions/checkout@v4
+
+      - uses: fontist/setup-fontist@v2
+
+      - name: Install New Computer Modern font
+        run: fontist install "New Computer Modern"
 
       - name: Install Typst
         uses: typst-community/setup-typst@v3
