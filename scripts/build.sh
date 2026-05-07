@@ -8,4 +8,4 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-SOURCE_DATE_EPOCH=0 typst compile src/main.typ src/main.pdf
+SOURCE_DATE_EPOCH=0 typst compile --font-path src/fonts src/main.typ src/main.pdf
