@@ -10,15 +10,16 @@ on:
 jobs:
   verify-pdf:
     runs-on: ubuntu-latest
-    env:
-      TYPST_FONT_PATHS: /home/runner/.fontist/fonts
     steps:
       - uses: actions/checkout@v4
 
-      - uses: fontist/setup-fontist@v2
-
       - name: Install New Computer Modern font
-        run: fontist install "New Computer Modern"
+        run: |
+          mkdir -p ~/.fonts
+          curl -L -o /tmp/ncm.zip https://mirrors.ctan.org/fonts/newcomputermodern.zip
+          unzip -q /tmp/ncm.zip -d /tmp/ncm
+          cp /tmp/ncm/newcomputermodern/otf/*.otf ~/.fonts/
+          fc-cache -f ~/.fonts
 
       - name: Install Typst
         uses: typst-community/setup-typst@v3
