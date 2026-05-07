@@ -16,10 +16,8 @@
 )
 
 // Set text properties for the entire document
-#set text(
-  font: "Libertinus Serif",
-  size: 11pt,
-)
+#set text(font: "New Computer Modern", size: 11pt)
+#show link: set text(font: "DejaVu Sans Mono")
 
 // Set bibliography style to alphanumeric
 #set cite(style: "alphanumeric")
