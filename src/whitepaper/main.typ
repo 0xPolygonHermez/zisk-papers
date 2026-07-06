@@ -1,4 +1,5 @@
 #import "@preview/unequivocal-ams:0.1.2": ams-article, proof, theorem
+#import "../lib.typ": theorem-styles
 
 #show: ams-article.with(
   title: [ZisK Whitepaper#footnote[This document describes ZisK v0.16.1
@@ -22,43 +23,8 @@
 // Set bibliography style to alphanumeric
 #set cite(style: "alphanumeric")
 
-// Override AMS theorem styling
-#show figure.where(kind: "theorem"): it => block(spacing: 11.5pt, {
-  strong({
-    it.supplement
-    if it.numbering != none {
-      [ ]
-      it.counter.display(it.numbering)
-    }
-    if it.caption != none {
-      [ (]
-      it.caption.body
-      [)]
-    }
-    [.]
-  })
-  [ ]
-  it.body
-})
-
-// Italic styling for remarks (including title)
-#show figure.where(kind: "remark"): it => block(spacing: 11.5pt, align(left, emph({
-  strong({
-    it.supplement
-    if it.numbering != none {
-      [ ]
-      it.counter.display(it.numbering)
-    }
-    if it.caption != none {
-      [ (]
-      it.caption.body
-      [)]
-    }
-    [.]
-  })
-  [ ]
-  it.body
-})))
+// Boxed definitions / italic remarks (shared styling from lib.typ).
+#show: theorem-styles
 
 // Make top-level outline entries bold
 #show outline.entry.where(level: 1): it => {

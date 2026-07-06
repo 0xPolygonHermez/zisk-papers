@@ -1,6 +1,6 @@
-# ZisK Whitepaper
+# ZisK Papers
 
-Read it [here](src/main.pdf).
+Read the whitepaper [here](src/whitepaper/main.pdf).
 
 ## Build
 
