@@ -7,4 +7,4 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-SOURCE_DATE_EPOCH=0 typst compile src/main.typ src/main.pdf
+SOURCE_DATE_EPOCH=0 typst compile src/whitepaper/main.typ src/whitepaper/main.pdf
