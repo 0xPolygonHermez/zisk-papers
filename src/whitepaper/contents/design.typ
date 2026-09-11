@@ -1,4 +1,4 @@
-#import "../lib.typ": definition
+#import "../../lib.typ": definition
 
 // TODO
 // #remark(title: "field dependency")[

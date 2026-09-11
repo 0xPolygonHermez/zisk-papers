@@ -1,4 +1,4 @@
-#import "../lib.typ": definition
+#import "../../lib.typ": definition
 
 This appendix gives the formal statements of the argument types used in ZisK's arithmetization framework. All are realised through the same bus-balancing primitive of @sec:circuits-and-balancing ---one or more sender interactions with positive multiplicity, one or more receiver interactions with negative multiplicity, on a shared bus--- but they differ in the semantic relationship they enforce on the messages.
 
