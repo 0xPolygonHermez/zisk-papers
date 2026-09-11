@@ -1,5 +1,5 @@
 #import "../../lib.typ": (
-  Balanced, BusCont, Com, Commit, DeriveAlpha, Local, accept, definition, mult, negl, poly, remark, vk,
+  Adv, Balanced, BusCont, Com, Commit, DeriveAlpha, Local, Pr, accept, definition, mult, negl, poly, remark, vk,
 )
 
 This section fixes the notation used in the security analysis and restates,
@@ -86,8 +86,8 @@ $cal(P) := FF^k$.
 ] <def:local>
 
 The program being executed is not a separate parameter: the program ROM and
-the boot state are bound through fixed and cached columns of the relevant AIR
-types, hence through their verification keys. This plays the role of the
+the boot state are bound through cached columns of the relevant AIR
+type, hence through their verification keys. This plays the role of the
 program code hard-wired into the step circuit of the reference architecture.
 
 #definition(title: "Message multiset of a witness")[
@@ -108,24 +108,42 @@ $"Msg"_tau (w)$: the multiset records the net flow of every message out of the
 witness.
 
 #definition(title: "Bus fingerprint")[
-  A _bus fingerprint_ is a family $cal(F) = {cal(F)_chi}_(chi in KK^2)$ of
-  maps from $FF$-weighted multisets of messages to $KK union {bot}$ such that
+  A _bus fingerprint_ $cal(F)$ consists of a finite _key space_ $cal(X)$, an
+  abelian group $cal(G)$ of _values_, a class $cal(D)$ of _admissible_
+  nonzero $FF$-weighted multisets of messages, and, for every key
+  $chi in cal(X)$, a map $cal(F)_chi$ from $FF$-weighted multisets of
+  messages to $cal(G) union {bot}$, such that
   + (_additivity_) $cal(F)_chi (0) = 0$, and
-    $cal(F)_chi (D + D') = cal(F)_chi (D) + cal(F)_chi (D')$.
-  + (_soundness_) there is a non-decreasing function $epsilon_(cal(F))$ such
-    that for every $D != 0$ with $abs(D) <= Lambda$ and uniform $chi in KK^2$,
-    $Pr_chi [cal(F)_chi (D) = 0] <= epsilon_(cal(F))(Lambda)$.
-  The _bus contribution_ of $w in cal(W)_tau$ under the _challenge pair_
-  $chi in KK^2$ is
+    $cal(F)_chi (D + D') = cal(F)_chi (D) + cal(F)_chi (D')$ whenever the
+    right-hand side is defined;
+  + (_soundness_) for every $Lambda$ and every adversary $cal(A)$ that
+    outputs a multiset before the key is drawn uniformly from $cal(X)$, the
+    _fingerprint advantage_
+    $
+      Adv("fp", (cal(F), Lambda))(cal(A)) := Pr[
+        D <- cal(A); chi <- cal(X) :
+        D in cal(D) and abs(D) <= Lambda and cal(F)_chi (D) = 0
+      ]
+    $
+    is small. The fingerprint is _statistically sound_ with error
+    $epsilon_(cal(F))$ if $Adv("fp", (cal(F), Lambda))(cal(A)) <= epsilon_(cal(F))(Lambda)$
+    for every adversary, with $epsilon_(cal(F))$ non-decreasing, and
+    _computationally sound_ if the advantage is negligible for every PPT
+    adversary.
+  The _bus contribution_ of $w in cal(W)_tau$ under the key $chi$ is
   $
-    BusCont_chi (cal(I)_tau, w) := cal(F)_chi ("Msg"_tau (w)) in KK.
+    BusCont_chi (cal(I)_tau, w) := cal(F)_chi ("Msg"_tau (w)) in cal(G) union {bot}.
   $
 ] <def:fingerprint>
 
-A fingerprint is a keyed, additive summary of a multiset that vanishes on a
-nonzero multiset only at few keys; it is to bus balancing what the multiset
-hash $cal(H)$ of @sec:components is to challenge derivation. ZisK instantiates
-it with LogUp @EPRINT:Habock22b: for $chi = (alpha, gamma)$ the message
+A fingerprint is an additive summary of a multiset that vanishes on an
+admissible nonzero multiset only for few keys, or only for keys no efficient
+adversary can anticipate. ZisK's fingerprint has
+key space $cal(X) = KK^2$, whose elements are the _challenge pairs_
+$chi = (alpha, gamma)$, values in $cal(G) = KK$, admits every nonzero
+multiset, and is statistically sound. We fix these choices for the rest of
+the paper and suppress them from the notation. The instantiation is LogUp
+@EPRINT:Habock22b: for $chi = (alpha, gamma)$ the message
 $(b, v)$ is _compressed_ to
 $hat(e)_gamma (b, v) := b + sum_(j=1)^(ell_b) gamma^j v_j in KK$ and
 $

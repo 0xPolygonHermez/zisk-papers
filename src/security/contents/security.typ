@@ -141,8 +141,9 @@ digest has at least $2 lambda$ bits (@sec:discussion).
     sans("ZisK") = (cal(C), Com, h, cal(H), DeriveAlpha, cal(F), {Pi_"AIR"^((tau))}_(tau in [M]), {Pi_"LEAF"^((tau))}_(tau in [M]), Pi_"AGG", Pi_"FINAL")
   $
   consisting of the AIR-type family $cal(C)$, the components of
-  @sec:components and the bus fingerprint $cal(F)$ (@def:fingerprint), where
-  the argument systems attest to the relations of
+  @sec:components and a statistically sound bus fingerprint $cal(F)$
+  (@def:fingerprint) with key space $KK^2$, values in $KK$ and every nonzero
+  multiset admissible, where the argument systems attest to the relations of
   @sec:relations-def, the key hard-coded by $Pi_"FINAL"$ is the key of
   $Pi_"AGG"$, and the parameters satisfy the standing assumptions of
   @sec:relations.
@@ -232,7 +233,8 @@ gap. We first record that LogUp is a bus fingerprint in the sense of
 balance, and finally that the challenge the tree certifies is random enough.
 
 #lemma(title: "LogUp fingerprint")[
-  $cal(F)^"LogUp"$ is a bus fingerprint with
+  $cal(F)^"LogUp"$ is a statistically sound bus fingerprint, with key space
+  $KK^2$, values in $KK$ and every nonzero multiset admissible, with error
   $
     epsilon_(cal(F))(Lambda) = frac(ell dot binom(Lambda, 2) + Lambda - 1, abs(KK)).
   $
@@ -245,8 +247,10 @@ balance, and finally that the challenge the tree certifies is random enough.
   contained in that union, and the sum defining $cal(F)^"LogUp"_chi (D + D')$
   splits message by message.
 
-  _Soundness._ Fix $D != 0$ with $abs(D) <= Lambda$, let $chi = (alpha, gamma)$
-  be uniform in $KK^2$, and write $z_gamma (b, v) := hat(e)_gamma (b, v)$ for
+  _Soundness._ The key is drawn after the adversary has output its multiset,
+  so it suffices to fix an arbitrary $D != 0$ with $abs(D) <= Lambda$ and to
+  bound the probability over the key alone. Let $chi = (alpha, gamma)$ be
+  uniform in $KK^2$ and write $z_gamma (b, v) := hat(e)_gamma (b, v)$ for
   $(b, v) in "supp" D$.
 
   _Compression collisions._ Let $E_gamma$ be the event that
@@ -277,8 +281,9 @@ balance, and finally that the challenge the tree certifies is random enough.
 ]
 
 #lemma(title: "Zero test")[
-  Let $cal(F)$ be a bus fingerprint, let $L$ be a typed witness collection
-  with $not Balanced(L)$, and let $chi$ be uniform in $KK^2$. Then
+  Let $cal(F)$ be a statistically sound bus fingerprint with key space
+  $KK^2$ that admits every nonzero multiset, let $L$ be a typed witness
+  collection with $not Balanced(L)$, and let $chi$ be uniform in $KK^2$. Then
   $
     Pr_chi [ sum_(i=1)^(abs(L)) BusCont_chi (cal(I)_(tau_i), w_i) = 0 ]
     <= epsilon_(cal(F))(Lambda(L)).
