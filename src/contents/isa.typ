@@ -7,9 +7,7 @@ The ZisK ISA is designed around two goals. The first is compatibility: ZisK targ
 #remark(title: "RISC-V to ZisK transpilation")[
   Although programs are written and compiled as standard RISC-V binaries, ZisK does not constrain RISC-V execution directly. Before proving begins, the binary is _transpiled_ off-chain into an equivalent program in the ZisK ISA, and it is the transpiled program that is committed to and executed by the VM. The transpilation is a deterministic, one-to-one rewriting from RISC-V instructions into one or more ZisK instructions; it is performed by a trusted off-chain tool and is not itself part of the proof. We therefore treat the transpiler as part of the trusted computing base.
 
-  // This means that the security guarantees of ZisK rest on the correctness of the transpiler in addition to the proving system: a bug in the transpiler that produces a ZisK program with semantics differing from the original RISC-V binary would not be caught by the proof, even though the proof would still attest to a correct execution of the transpiled program.
-
-  // A full description of the supported RISC-V subset, the transpilation rules, and the precompile-call ABI is deferred to a later revision of this document.
+  // This means that the security guarantees of ZisK rest on the correctness of the transpiler in addition to the proving system: a bug in the transpiler that produces a ZisK program with semantics differing from the original RISC-V binary would not be caught by the proof, even though the proof would still attest to a correct execution of the transpiled program. Accordingly, every statement proved by ZisK in this document (@sec:zisk-statement) is a statement about the _committed ZisK program_ $P$, and the connection to the original RISC-V binary is an explicit, separate assumption (@sec:transpiler-assumption). A full description of the supported RISC-V subset and of the transpilation rules is deferred to the ZisK documentation.
 ]
 
 The rest of this section describes the execution environment (@sec:execution_environment), the machine state (@sec:state), and the formal execution model (@sec:execution_model).
@@ -42,60 +40,53 @@ The ROM data is validated through a different mechanism. Rather than a separate 
 
 === Instruction Format <subsec:instruction_format>
 
-ZisK instructions are specified by:
-- An _opcode_ determining the operation to perform.
-- A _source_ for a first input ($a$), specifying how to obtain its value.
-- A _source_ for a second input ($b$), specifying how to obtain its value.
-- A _store_ for the output ($c$), specifying where to write the result.
+A ZisK program $P$ is a finite partial map from 32-bit _instruction addresses_ to _instructions_. An instruction is a fixed-format record; the program ROM stores exactly one such record per address, and the proof system commits to the whole table (@sec:program). Every instruction performs one operation over two 64-bit input operands, producing a 64-bit output and a boolean flag:
+$
+  (c, "flag") = "op"(a, b), quad a, b, c in [0, 2^(64)), "flag" in {0, 1}.
+$
+What varies between instructions is how $a$ and $b$ are obtained, where $c$ is stored, and how the program counter advances.
 
-Each instruction performs an operation over two input operands, producing an output and a _flag_:
-$
-  (c, "flag") = "op"(a, b)
-$
-where $a, b, c in [0, 2^(64))$ and $"flag" in {0, 1}$. In essence, each instruction is a single execution step that transforms two 64-bit inputs into a 64-bit output and a boolean flag. The full ZisK instruction set is described in detail in #link("https://github.com/0xPolygonHermez/zisk/blob/main/core/src/zisk_ops.rs")[zisk_ops.rs].
+The record has the following fields; boolean fields are packed into a single `flags` word in the committed ROM (@sec:rom-bus).
+
+/ `op` $in [0, 2^8)$: the opcode (@sec:operations, @appendix:opcodes).
+/ `a_src` $in$ {`C`, `MEM`, `IMM`, `REG`}: how operand $a$ is obtained: the previous output $c$, an absolute memory address, an immediate, or a register.
+/ `a_off`, `a_imm1` $in [0, 2^(32))$: for `REG` the register index; for `MEM` the absolute address; for `IMM` the low and high 32 bits of the immediate.
+/ `b_src` $in$ {`C`, `MEM`, `IMM`, `REG`, `IND`}: how operand $b$ is obtained; `IND` is an indirect load at address $a + $ `b_off`.
+/ `b_off` $in [-2^(31), 2^(31))$, `b_imm1` $in [0, 2^(32))$: register index, absolute address, low and high immediate bits, or the signed displacement of an indirect load.
+/ `ind_w` $in$ {1, 2, 4, 8}: access width in bytes for `IND` loads and `IND` stores.
+/ `store` $in$ {`NONE`, `REG`, `MEM`, `IND`}: destination of the stored value.
+/ `store_off` $in [-2^(31), 2^(31))$: register index, absolute address, or signed displacement added to $a$ for an `IND` store.
+/ `store_pc` $in$ {0, 1}: store the return address `pc + j2` instead of $c$.
+/ `set_pc` $in$ {0, 1}: take the next program counter from $c$ (indirect jump).
+/ `j1`, `j2` $in [-2^(31), 2^(31))$: jump offsets, `j1` for a taken branch or indirect jump and `j2` for fall-through. For precompile instructions `j1` is instead a static _extended argument_.
+/ `m32` $in$ {0, 1}: the operation acts on the low 32 bits of the operands (the `_w` opcodes).
+/ `end` $in$ {0, 1}: execution halts after this instruction.
+
+The derived flags `is_external_op` (the operation is delegated to a sub-chip via the Operation Bus) and `is_precompiled` (the operation reads and writes memory itself) are functions of `op`.
+
+The full ZisK instruction set is listed in @appendix:opcodes. The reference implementation is #link("https://github.com/0xPolygonHermez/zisk/blob/v0.16.1/core/src/zisk_ops.rs")[zisk_ops.rs]; the table is a faithful transcription of that file at v0.16.1 and is normative for this document.
+
+=== Operations <sec:operations>
+
+ZisK v0.16.1 has $54$ opcodes plus $6$ internal DMA variants. They fall into the following families, each proved by one instruction-executor chip (@sec:chip-design); the exact semantics of every opcode ---the formula for $c$ and for $"flag"$, including wrap-around, signedness, shift masking and division-by-zero conventions--- is listed in @appendix:opcodes, which is a faithful transcription of `zisk_ops.rs` at v0.16.1 and is normative for this document.
+
+- *Internal* (proved by Main): `flag`, `copyb`, and the invalid-instruction sentinel `halt`.
+- *Binary* (Binary and BinaryAdd chips): 64-bit and 32-bit comparisons, minimum/maximum, addition, subtraction and bitwise logic; the comparison opcodes set $"flag"$ to the comparison result.
+- *Binary extension* (BinaryExtension chip): logical and arithmetic shifts in 64 and 32 bits, and sign extension from 8, 16 and 32 bits.
+- *Arithmetic* (Arith chip): 64-bit and 32-bit multiplication with high and low halves, and division and remainder; division by zero sets $"flag"$.
+- *Public output* (Main, bound globally): `pubout` declares public output word $a$ to be $b$ (@sec:statement).
+- *Hints* (Main): the three `fcall_*` opcodes drive the host-side hint stream (@sec:inputs_and_hints).
+- *Precompiles* (one chip each): Keccak-f, SHA-256 compression, Poseidon2, BLAKE2b, 256-bit addition, 256- and 384-bit modular arithmetic, secp256k1, secp256r1, BN254 and BLS12-381 curve and $FF_(p^2)$ operations, and the DMA bulk-memory operations. These read their operands from and write their results to memory (@sec:precompiles).
 
 === Phantom Instructions
 
-The opcode determines the operation performed by the instruction. Most instructions correspond to a single provable opcode and generate a proof obligation for that operation. Some instructions, however, are _phantom instructions_: they leave the guest state unchanged --- acting as no-ops from the VM's perspective --- but may trigger side effects in the host state, such as advancing the input or hint streams or emitting debug information. Phantom instructions appear in the main execution trace but carry no proof obligation of their own.
+Most opcodes carry a proof obligation for the operation they perform, discharged by the chip named for it in @appendix:opcodes. A few opcodes are _phantom_: they leave the guest state unchanged apart from the trivial effects $c = 0$ or $c = b$, but may trigger side effects in the host state, such as advancing the hint stream. Phantom instructions appear in the main execution trace but carry no proof obligation beyond the Main chip's own constraints. They are `flag`, `copyb`, and the three `fcall_*` hint instructions; `halt` is the invalid-instruction sentinel and cannot appear in a valid trace.
 
-Two notable cases:
-- *Precompile dispatch*: Instructions that implement the calling convention for invoking precompiles ---passing parameters, triggering the call, and retrieving results. What gets proven is the precompile computation itself.
-
-- *Halting*: This instruction terminates the emulator immediately with an error condition. Its opcode cannot appear in a valid execution trace ---if it is ever reached, proof generation fails. It is present in the ISA as a sentinel for invalid or unreachable code paths.
-
-// === Input Source
-
-// The source of an input register determines how its value is obtained before the operation executes:
-// #table(
-//   stroke: 0.5pt,
-//   columns: (auto, auto, auto),
-//   align: (center, center, auto),
-//   table.header([*Source*], [*Applies to*], [*Description*]),
-//   [`SRC_C`], [$a$, $b$], [Previous value of the $c$ register],
-//   [`SRC_IMM`], [$a$, $b$], [Immediate (constant) value encoded in the instruction],
-//   [`SRC_REG`], [$a$, $b$], [Value read from a constant register index],
-//   [`SRC_MEM`], [$a$, $b$], [Value read from memory at a fixed address],
-//   // [`SRC_STEP`], [$a$], [Current execution step counter],
-//   [`SRC_IND`], [$b$], [Value read from memory at indirect address],
-// )
-
-// ==== Output Store
-
-// The store of the output register determines how its value is persisted after the operation executes:
-
-// #table(
-//   stroke: 0.5pt,
-//   columns: (auto, 1fr),
-//   table.header([*Store*], [*Description*]),
-//   [`STORE_NONE`], [Value is discarded],
-//   [`STORE_REG`], [Value is stored at a constant register index],
-//   [`STORE_MEM`], [Value is stored to memory at a fixed address],
-//   [`STORE_IND`], [Value is stored to memory at indirect address],
-// )
+Precompile dispatch follows a calling convention: the caller writes the parameters to memory, then issues the precompile opcode with $b$ pointing to the parameter block. All parameter passing is done with ordinary instructions; only the precompile instruction itself carries a proof obligation, which is discharged by the corresponding precompile chip together with the memory argument.
 
 === Program Counter
 
-The program counter `pc`, which is seen as a special purpose register, stores the address of the instruction currently being executed. After each instruction, `pc` advances to the next instruction address unless the instruction explicitly modifies control flow (jumps, branches).
+The program counter `pc` is a 32-bit special-purpose register storing the address of the instruction currently being executed. Its update rule is part of the step semantics (@sec:execution_model): it advances by `j2` unless the instruction sets the flag (branch taken: advance by `j1`) or has `set_pc` set (indirect jump: $c$ + `j1`).
 
 === Data Memory <sec:memory>
 
@@ -109,11 +100,14 @@ To support execution of programs with different data assumptions and properties 
     columns: (auto, auto, 1fr),
     align: (center + horizon, center + horizon, auto),
     table.header([*Region*], [*Address Range*], [*Semantics*]),
-    [Input Data], [`[0x4000_0000, 0x8000_0000)`], [[1GB] Written once at initialization, read-only thereafter],
+    [Input Data],
+    [`[0x4000_0000, 0x8000_0000)`],
+    [[1GB] Host-supplied input; read-only. The first word, `0x4000_0000`, is the _free-input port_ through which hints are delivered (@sec:inputs_and_hints).],
     [ROM Data], [`[0x8000_0000, 0x8800_0000)`], [[128MB] Program constants, read-only],
     table.cell(rowspan: 3, align: center + horizon)[Writable RAM],
     [`[0xA000_0000, 0xA001_0000)`], [[64KB] System region: registers, UART and CSR registers],
-    [`[0xA001_0000, 0xA003_0000)`], [[128KB] Output data: public outputs written during execution],
+    [`[0xA001_0000, 0xA002_0000)`],
+    [[64KB] Output data: public outputs written during execution; the following 64KB are reserved],
     [`[0xA003_0000, 0xC000_0000)`], [[496MB] Program memory: general-purpose read/write RAM],
   ),
   caption: [Memory layout of the ZisK ISA. The address space is divided into three main regions: input data, ROM data, and writable RAM.],
@@ -124,34 +118,86 @@ The 32 general-purpose registers $x_0, dots, x_(31)$ occupy the start of the sys
 
 === Public Outputs
 
-The guest program can explicitly expose values as public outputs. The values are written internally by a dedicated instruction and become part of the proof's public data that allow the verifier to check that the program produced specific results.
-// ZisK handles up to $32$ public $64$-bit output values, i.e., $2048$ bits in total.
+The guest program can expose up to $32$ values of $64$ bits ($2048$ bits in total) as _public outputs_. During execution the guest writes them to the output-data region of RAM (@tbl:address-space) with ordinary stores; when the program returns to the boot code, the boot code reads the $32$ words back from that region and issues one `pubout` instruction per word (@appendix:opcodes), with $a = i in [0, 32)$ the index and $b$ the word. The `pubout` instructions are what binds the proof's public statement to the execution: the public statement contains exactly these $32$ words (@sec:statement), and nothing else about the input or the memory.
 
 === Inputs and Hints <sec:inputs_and_hints>
 
-The host state maintains two streams through which the outside world communicates with the guest. The _input stream_ is a queue of public data loaded before execution begins. The _hint stream_ provides non-deterministic values at runtime ---the guest may request a hint and act on its value, but must verify any property it relies on, since ZisK treats hints as unconstrained. Both streams are consumed by copying data into guest memory via explicit instructions; any value received from the host is untrusted until the guest has verified it.
+The host state maintains two streams through which the outside world communicates with the guest. The _input stream_ is loaded into the input-data region before execution begins; from the proof's point of view its contents are _not_ public: the public statement (@sec:statement) does not contain them, and a guest that wants to bind its outputs to its inputs must do so itself, e.g. by exposing a hash of the input as a public output. The _hint stream_ provides non-deterministic values at runtime: the guest requests a hint with the `fcall` instructions and then reads the result through the _free-input port_, a load of width $8$ at address `0x4000_0000` that returns the next hint value. The guest must verify any property of a hint it relies on, since ZisK treats hints as unconstrained. Formally, both streams are part of the host state $H$, and the only way their values enter the guest state is through memory reads of the input-data region, whose values the arithmetization leaves free (@sec:memory-relation).
 
 == Execution Model <sec:execution_model>
 
-The execution model defines how the VM transitions between states, what constitutes a valid execution, and how the prover commits to the result. Since the program ROM is fixed before execution begins, the _guest state_ at step $t$ is defined as:
-$
-  S_t = ("pc"_t, c_t, "flag"_t, "mem"_(t)[])
-$
-comprising the program counter, the previous instruction's output and flag, and the data memory. The host state $H = ("in[]", "hint[]")$ is supplied externally. Execution proceeds in discrete steps according to the following rules:
+The execution model defines how the VM transitions between states, what constitutes a valid execution, and which parts of an execution are exposed to the verifier. The W1 version of this document described the single-step map $"Step"$ as a black box "fully determined by the ISA"; here we spell it out, since the soundness statement of @sec:statement quantifies over it.
 
-*Initial state.* Execution begins at a designated boot address with memory initialised from the program binary: the ROM data region is populated with program constants, the input data region is loaded from the public host-supplied input stream, and all writable memory is zeroed. Formally:
-$
-  S_0 = ("pc"_0, 0, 0, "mem"_0 [])
-$
-where $"pc"_0$ is set to a designated boot address and $"mem"_0 []$ reflects the pre-loaded memory state.
+*Memory as a function.* We model data memory as a total function $"mem" : [0, 2^(32)) -> [0, 2^8)$ from byte addresses to bytes. For a width $w in {1, 2, 4, 8}$ and an address $x$ we write $"mem"[x]_w := sum_(i=0)^(w-1) 2^(8 i) dot "mem"(x + i) in [0, 2^(8 w))$ for the little-endian $w$-byte read, and $"mem"[x]_w <- v$ for the map that stores the $w$ low-order bytes of $v$ at $x, dots, x + w - 1$ and agrees with $"mem"$ elsewhere. Registers are memory: $x_i := "mem"["REG" + 8 i]_8$ for $i in [0, 32)$, where $"REG" =$ `0xA000_0000` is the start of the system region (@tbl:address-space). Register $x_0$ is hardwired to zero at transpilation time (every read of $x_0$ is rewritten to the immediate $0$ and every write to $x_0$ is dropped), so the program never accesses it.
 
-*Transition function.* At each step, the VM fetches the instruction at the current program counter from the committed ROM, executes it, and advances the guest state. The host supplies hint values on demand. The single-step transition is:
+*Guest state.* Since the program ROM is fixed before execution begins, the _guest state_ at step $t$ is
 $
-  S_(t+1) = "Step"(S_t, "hint"_(t)[])
+  S_t = ("pc"_t, c_t, "mem"_t),
 $
-where $"hint"_(t)[]$ are the hint values supplied by the host at step $t$. The function $"Step"$ is fully determined by the ZisK ISA: it decodes the instruction at $"pc"_t$, evaluates the operation, updates $"mem"_(t+1)[]$, and sets $"pc"_(t+1)$ according to the instruction's control-flow semantics.
+comprising the program counter, the previous instruction's output (which the next instruction may consume through the source `C`), and the data memory including the registers. The flag produced by an instruction is consumed only by the same instruction's control-flow rule, so it is not part of the state. The host state $H = ("in"[], "hint"[])$ is supplied externally: $"in"[]$ is loaded into the input-data region before execution, and $"hint"_t$ is the sequence of hint words delivered through the free-input port during step $t$.
 
-*Terminal condition.* A $T$-step execution is _successful_ if every transition is valid and the final program counter reaches a designated exit address.
-Execution _fails_ if any step violates the ISA's invariants ---invalid opcode, out-of-bounds memory access, or an explicit halt instruction--- or if the program counter fails to reach the exit address at the end of execution.
+*Fetch.* The instruction executed at step $t$ is
+$
+  iota_t := "Fetch"_P (S_t) := P["pc"_t],
+$
+the instruction stored in the program ROM at the current program counter. Execution _fails_ if $"pc"_t$ is not in the domain of $P$.
 
-*Public outputs.* The public outputs are not a separate component of the state but a designated region of writable RAM (see @tbl:address-space). The guest writes to this region through ordinary memory-store instructions during execution, and once the run terminates successfully, the contents of that region are extracted from $"mem"_T []$ and exposed as the proof's public output. In other words, the output buffer is filled in place over the course of execution rather than being accumulated as a separate stream at every step.
+*Operand resolution.* Given a state $S = ("pc", c, "mem")$ and an instruction $iota$, the operands are
+$
+  a := cases(
+    c & "if" iota."a_src" = mono("C"),
+    "mem"[iota."a_off"]_8 & "if" iota."a_src" = mono("MEM"),
+    iota."a_off" + 2^(32) dot iota."a_imm1" & "if" iota."a_src" = mono("IMM"),
+    x_(iota."a_off") & "if" iota."a_src" = mono("REG"),
+  ) quad quad
+  b := cases(
+    c & "if" iota."b_src" = mono("C"),
+    "mem"[iota."b_off"]_8 & "if" iota."b_src" = mono("MEM"),
+    iota."b_off" + 2^(32) dot iota."b_imm1" & "if" iota."b_src" = mono("IMM"),
+    x_(iota."b_off") & "if" iota."b_src" = mono("REG"),
+    "mem"[(a + iota."b_off") mod 2^(32)]_(iota."ind_w") & "if" iota."b_src" = mono("IND"),
+  )
+$
+where in the `IND` case the requirement $a < 2^(32)$ is part of the well-formedness of the step (the arithmetization enforces $a$'s high word to be zero whenever an indirect address is formed). Reads of the free-input port ---address `0x4000_0000` with width $8$--- return the next hint word $"hint"_t$ instead of the memory contents; this is the only non-deterministic input to a step.
+
+*Operation.* $(c', "flag") := iota."op"(a, b)$ as specified in @appendix:opcodes. For precompile opcodes the operation additionally has a _memory effect_: it reads its parameter block from $"mem"$ at addresses derived from $b$ and writes its results back, as described in @appendix:opcodes and in detail in @sec:precompiles. We write $"mem"^"op" := "Eff"_(iota."op")("mem", a, b, iota."j1")$ for the memory after the precompile's effect (with $"Eff"$ the identity for all non-precompile opcodes); the fourth argument is the extended static argument that some DMA opcodes take from the `j1` field.
+
+*Store.* The stored value is $v := (("pc" + iota."j2") mod 2^(32))$ if $iota."store_pc" = 1$ and $v := c'$ otherwise, and
+$
+  "mem"' := cases(
+    "mem"^"op" & "if" iota."store" = mono("NONE"),
+    "mem"^"op" ["REG" + 8 dot iota."store_off"]_8 <- v & "if" iota."store" = mono("REG"),
+    "mem"^"op" [iota."store_off"]_8 <- v & "if" iota."store" = mono("MEM"),
+    "mem"^"op" [(a + iota."store_off") mod 2^(32)]_(iota."ind_w") <- v & "if" iota."store" = mono("IND").
+  )
+$
+
+*Control flow.* The next program counter is
+$
+  "pc"' := cases(
+    (c' + iota."j1") mod 2^(32) & "if" iota."set_pc" = 1,
+    ("pc" + iota."j1") mod 2^(32) & "if" iota."set_pc" = 0 and "flag" = 1,
+    ("pc" + iota."j2") mod 2^(32) & "if" iota."set_pc" = 0 and "flag" = 0,
+  )
+$
+and a valid instruction never has both $iota."set_pc" = 1$ and $"flag" = 1$ (the arithmetization enforces $"flag" dot "set_pc" = 0$). Note that `j1` doubles as the extended argument of precompile instructions; for those, $"flag" = 0$ and $"set_pc" = 0$, so `j1` never reaches the program counter.
+
+#definition(title: "ZisK Step Predicate")[
+  Fix a program $P$. The _step predicate_ $"Step"_P (S, iota, h, S')$ holds for states $S = ("pc", c, "mem")$, $S' = ("pc"', c', "mem"')$, instruction $iota$, and hint sequence $h$ if and only if $iota = P["pc"]$ and, with $a, b, c', "flag", "mem"', "pc"'$ computed from $(S, iota, h)$ by the operand-resolution, operation, store and control-flow rules above, the components of $S'$ are exactly those values. We write $"Step"_P (S, h) = S'$ for the (unique) $S'$ satisfying the predicate, when it exists.
+] <def:step>
+
+The predicate is total on well-formed inputs and deterministic given the hints: for every $S$ with $"pc" in "dom"(P)$ and every $h$ there is exactly one $S'$, and $S'$ does not depend on $h$ unless the instruction reads the free-input port. This is what makes ZisK's execution a function of $(P, "in", "hint")$.
+
+*Initial state.* Execution begins at the boot address $"pc"_"BOOT" =$ `0x1000` with memory initialised from the program binary and the input:
+$
+  S_0 = ("pc"_"BOOT", 0, "mem"_0), quad "mem"_0 = "ROMDATA"_P union "in"[] union 0,
+$
+i.e. the ROM-data region holds the program constants, the input-data region holds the host-supplied input stream (word-aligned, preceded by the 8-byte free-input port), and every other address ---including all registers--- holds zero.
+
+*Terminal condition.* Every ZisK program contains, at address $"pc"_"END" =$ `0x1004`, the unique instruction with the `end` field set. A $T$-step execution is _successful_ if $"pc"_T = "pc"_"END"$ and $"Step"_P$ holds at every step $t < T$; the boot code guarantees that $"pc"_"END"$ is reached with $c_T = 0$. Execution _fails_ if a step violates the ISA's invariants ---undefined program counter, out-of-range memory access, or the `halt` sentinel--- or if the program counter never reaches $"pc"_"END"$. Only successful executions are provable.
+
+*Public outputs.* The public outputs are not a separate component of the state. The guest writes them to the output-data region of RAM with ordinary stores, and the boot code, after the guest returns, reads the $32$ words of that region and issues one `pubout` instruction per word (@appendix:opcodes). We write
+$
+  "out"_i (S_0, dots, S_T) := b_t quad "where" t "is the unique step with" iota_t."op" = mono("pubout") "and" a_t = i, quad i in [0, 32),
+$
+for the $i$-th public output of the execution; the boot code executes exactly one `pubout` per index. These $32$ words are the only execution-dependent data in the proof's public statement (@sec:statement).

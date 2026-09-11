@@ -1,9 +1,4 @@
-#import "../lib.typ": definition
-
-// TODO
-// #remark(title: "field dependency")[
-//   The ZisK ISA operates on 64-bit unsigned integers ---values in $[0, 2^(64))$--- but the underlying arithmetization works over Goldilocks $p = 2^(64) - 2^(32) + 1$. Because $p < 2^(64)$, there is a semantic gap: integer operations in the ZisK ISA are defined modulo $2^(64)$, while field arithmetic is modulo $p$. The constraint systems for operations such as addition, multiplication, and comparison must explicitly account for this difference, handling overflow at $2^(64)$ rather than at $p$.
-// ]
+#import "../lib.typ": definition, remark, lemma
 
 We describe the circuit architecture that constitutes the ZisK zkVM. The previous sections established the building blocks: the ISA defines what programs can run (@sec:isa), and the arithmetization framework defines how computations are represented as polynomial constraints (@sec:arithmetization). Here we describe how ZisK instantiates that framework into a concrete system.
 
@@ -119,6 +114,48 @@ An instruction executor may delegate part of its computation to other chips via 
   ],
 ) <fig:chip-hierarchy>
 
+=== Chip Inventory <sec:chip-inventory>
+
+@tbl:chip-inventory enumerates every AIR of the ZisK circuit $cal(C)$ at v0.16.1, with its trace height $N_i$ and the category it belongs to. This is the concrete instantiation of the abstract circuit $cal(C) = {(cal(A)_i, cal(I)_i)}_(i=1)^M$ of @sec:arithmetization: $M = 35$, of which $32$ are instruction-executor or memory AIRs and $3$ are table AIRs. The recursion circuits of @sec:recursion are not part of $cal(C)$; they are listed in the topology of @sec:topology. Several chips are realised by more than one AIR (the Memory chip by three region AIRs, MemAlign by four, DMA by twelve); conversely, every AIR belongs to exactly one chip, so "chip" is a grouping of AIRs for exposition and the formal objects are the AIRs.
+
+#figure(
+  {
+    set text(size: 8.5pt)
+    table(
+      stroke: 0.3pt,
+      columns: (1.25fr, 0.45fr, 0.9fr, 2.4fr),
+      align: (left, center, left, left),
+      table.header([*AIR*], [*$log_2 N_i$*], [*Category*], [*Proves*]),
+      [Main], [22], [executor (spine)], [one instruction step per row: fetch, operand resolution, dispatch, store, control flow, register argument],
+      [Rom], [22], [table (cached)], [the program $P$ as a lookup table on the ROM Bus; cached columns committed per program],
+      [Mem], [22], [memory], [sorted access trace of the writable RAM region],
+      [RomData], [21], [memory], [sorted access trace of the read-only data region],
+      [InputData], [21], [memory], [sorted access trace of the input-data region (free values)],
+      [MemAlign], [21], [memory helper], [sub-word and unaligned accesses as sequences of aligned ones],
+      [MemAlignByte, MemAlignReadByte, MemAlignWriteByte], [22], [memory helper], [single-byte accesses (read+write, read-only, write-only variants)],
+      [Arith], [21], [executor], [64/32-bit multiplication, division and remainder],
+      [Binary], [22], [executor], [byte-sliced comparisons, min/max, subtraction, bitwise logic],
+      [BinaryAdd], [22], [executor], [64-bit addition],
+      [BinaryExtension], [22], [executor], [shifts, rotations, sign extension],
+      [Add256], [20], [precompile], [256-bit addition with carry],
+      [ArithEq], [20], [precompile], [256-bit modular arithmetic, secp256k1/secp256r1/BN254 curve and $FF_(p^2)$ operations],
+      [ArithEq384], [20], [precompile], [384-bit modular arithmetic and BLS12-381 curve and $FF_(p^2)$ operations],
+      [Keccakf], [17], [precompile], [Keccak-f[1600] permutation],
+      [Sha256f], [18], [precompile], [SHA-256 compression function],
+      [Poseidon2], [17], [precompile], [Poseidon2 permutation of width 16],
+      [Blake2br], [18], [precompile], [BLAKE2b round function],
+      [Dma, DmaMemCpy, DmaInputCpy], [21], [precompile], [DMA front-ends: decode a bulk copy/compare/set into phases],
+      [Dma64Aligned and 4 variants], [21], [precompile], [aligned bulk copy, compare and set loops],
+      [DmaUnaligned], [21], [precompile], [unaligned bulk copy and compare],
+      [DmaPrePost, DmaPrePostMemCpy, DmaPrePostInputCpy], [21], [precompile], [head and tail partial words of a DMA operation],
+      [SpecifiedRanges], [20], [table], [all range-check tables ($[0, 2^(16))$, $[0, 2^(22))$, $[0, 2^(24))$, signed carry ranges, ...)],
+      [VirtualTable0, VirtualTable1], [21], [table], [packed fixed lookup tables: arithmetic, binary, binary-extension, Keccak, MemAlign program, DMA tables, frequent-operation caches, dual-byte ranges],
+    )
+  },
+  caption: [The $M = 35$ AIRs of ZisK v0.16.1. Instances of each AIR are created on demand by trace splitting (@sec:continuations); an execution uses as many instances of each AIR as its workload requires, and none of an AIR whose operation never occurs.],
+  kind: table,
+) <tbl:chip-inventory>
+
 Now we delve into the details of the design of the ZisK chips (@sec:chip-design) and bus system (@sec:bus-system).
 
 == Chip Design <sec:chip-design>
@@ -129,7 +166,7 @@ We now turn to the chips themselves: the AIRs that, together with the bus system
 
 ZisK uses a _Main_ chip as the central execution spine. Each row of the Main AIR corresponds to one instruction step and its trace materializes the full execution transcript. Recalling the notation from @subsec:instruction_format, the Main chip is responsible for:
 
-+ *Instruction fetch*: At each step, the Main chip reads the instruction at the current program counter from the program ROM via the Program Bus.
++ *Instruction fetch*: At each step, the Main chip reads the instruction at the current program counter from the program ROM via the ROM Bus (@sec:rom-bus).
 
 + *Operand resolution*: The input operands $a$ and $b$ are resolved according to their source modes (immediate, memory, or indirect), with memory reads constrained through the Memory Bus.
 
@@ -137,33 +174,57 @@ ZisK uses a _Main_ chip as the central execution spine. Each row of the Main AIR
 
 + *State update*: The output $c$ is written to its destination via the Memory Bus or directly in the Main trace.
 
-==== Registers
+==== Registers <sec:registers>
 
-Although the ZisK ISA addresses the 32 general-purpose registers within the same numerical address space as data memory (@sec:memory), ZisK does _not_ route register accesses through memory. Forcing every register read and write to traverse the Memory Bus would inflate the global memory trace ---registers are by far the most frequently accessed locations in any execution--- and would couple the cost of register access to the cost of generic RAM. Instead, the register region is carved out of memory's domain and handled internally by the Main chip. Operand-resolution and store-back constraints reference register values directly from the Main chip, with a per-register linked-step argument (analogous to the global memory consistency argument, but local to the Main) ensuring that every register read observes the most recent write. From the program's standpoint nothing changes ---a load or store to the register region behaves exactly as the ISA prescribes--- but the underlying argument is local to Main rather than dispatched on the Memory Bus.
+Although the ZisK ISA addresses the 32 general-purpose registers within the same numerical address space as data memory (@sec:memory), ZisK does _not_ route register accesses through the Memory chip. Forcing every register read and write to traverse the sorted memory trace would inflate it ---registers are by far the most frequently accessed locations in any execution--- and would couple the cost of register access to the cost of generic RAM. Instead, the register region is carved out of the Memory chip's domain and handled by the Main chip with a _linked-step argument_ on the Memory Bus.
+
+Concretely, every register access at memory step $t_"mem"$ (@sec:timestamps) to register $i in [1, 31]$ with value $v$ is accompanied in the Main trace by the memory step $t_"prev"$ of the previous access to the same register. The Main chip _receives_ the message $(mono("REG"), i, t_"prev", 8, v_"prev")$ ---asserting that the previous access exists and left value $v_"prev"$--- and _sends_ $(mono("REG"), i, t_"mem", 8, v)$, where $v_"prev" = v$ for a read and $v_"prev"$ is a free witness column for a write. A range check $0 <= t_"mem" - t_"prev" - 1 < 2^(24)$ forces the chain of accesses to each register to be strictly increasing in time. The chain is opened once, globally, by a receive of $(mono("REG"), i, 0, 8, 0)$ for every $i$ (registers start at zero), and it is closed by the last segment; at every segment boundary the Main chip reloads all $31$ registers (@sec:continuation-bus), which is what keeps the $2^(24)$ window sufficient. The register messages use the opcode $mono("REG")$ and the bare index $i$ as address, so they can never be confused with a RAM message. @sec:memory-relation states the relation this argument enforces and its refinement to the ISA view in which registers are memory cells.
 
 ==== Timestamps <sec:timestamps>
 
 The circuit arithmetization does not inherently represent temporal order. On the other hand, the execution of instructions is inherently sequential. To encode it, ZisK discretizes time by attaching a _timestamp_ to every memory access, so that the memory consistency argument can verify that reads always observe the most recent write to each address.
 
-Time is organized at two granularities. A _main step_ $t$ indexes one full instruction execution by the Main. Because rows within a trace are strictly increasing, $t$ is a globally monotone counter across the entire execution; i.e., if $t_i < t_j$ for all $i < j$ and the instruction at step $t_i$ is always executed before the instruction at step $t_j$.
-
-A single main step, however, is not atomic from the memory's perspective: operand resolution requires reads, storing the result requires a write, and a dispatched precompile may independently access memory to read its inputs and write its outputs. To order all of these accesses, each main step $t$ is subdivided into four fixed _memory step_ timestamps:
+Time is organized at two granularities. A _main step_ $t in [0, 2^(36))$ indexes one full instruction execution by the Main; it is the global step counter of the execution model, reconstructed inside a segment as $t = "seg" dot N + r$ from the segment index $"seg"$ (an AIR value, range-checked) and the row $r$. A single main step, however, is not atomic from the memory's perspective: operand resolution requires reads, storing the result requires a write, and a dispatched precompile may independently access memory to read its inputs and write its outputs. To order all of these accesses, each main step $t$ is subdivided into four _memory steps_
 $
-  t_"mem" = 4 dot t + s, quad s in {0, 1, 2, 3}
+  t_"mem" = 1 + 4 dot t + s, quad s in {0, 1, 2, 3},
 $
-with slots $0, 1$ reserved for reads and slots $2, 3$ for writes. These four timestamps are the only ordering device: the address accessed at each slot is unconstrained and varies freely from instruction to instruction and from chip to chip. Any operation dispatched at step $t$ can use the same four memory step values to stamp its own memory accesses ---at addresses entirely different from those of the Main chip, but it can perform as much accesses as needed during its execution.
+with the following fixed slot assignment: $s = 0$ for the read of operand $a$, $s = 1$ for the read of operand $b$, $s = 2$ for the store of $c$ and for the reads of a precompile dispatched at step $t$, and $s = 3$ for the writes of such a precompile, for the write-back that MemAlign performs on behalf of a slot-2 store, and for the end-of-segment register reload. Memory step $0$ is reserved for the global initialisation of the registers. Since $t < 2^(36)$, memory steps fit in $38$ bits. The slot is the only ordering device: the address accessed at each slot is unconstrained and varies freely from instruction to instruction and from chip to chip, but an operation dispatched at step $t$ can only stamp its accesses with the memory steps of step $t$, because the Main chip places $t$ on the Operation Bus for every precompile call (@sec:operation-bus) and the precompile chip derives its memory steps from that value.
 
 === Memory <sec:memory-chip>
 
-The _Memory_ chip centralizes all memory access verification. The Memory chip collects all submitted operations, verifies their consistency, and rejects any execution in which a memory access violates the memory rules.
+The _Memory_ chip centralizes all memory access verification. It is realised by three AIRs of the same template, one per address region (@tbl:chip-inventory): Mem for writable RAM, RomData for the read-only data, and InputData for the input-data region. Each AIR collects every memory operation submitted on the Memory Bus for its region, verifies their consistency, and rejects any execution in which a memory access violates the region's rules.
 
-To enforce correctness, all submitted operations are sorted globally by address, then by step within the same address. Within a given address, memory steps act as timestamps that must be strictly increasing; each time the address changes, the new address must be strictly greater than the previous one, so no address can appear more than once in non-consecutive blocks. This reduces the global consistency requirement ---that every read observes the most recent prior write--- to a sequence of local, row-to-row checks.
+To enforce correctness, all submitted operations are sorted globally by address, then by memory step within the same address. This reduces the global consistency requirement ---that every read observes the most recent prior write--- to a sequence of local, row-to-row checks. We now state precisely what the AIR enforces; the constraint system is the one of `mem.pil` at v0.16.1, and the description below is complete with respect to the soundness-relevant constraints.
 
-Recall from @sec:memory that address space is partitioned into regions, each governed by one of three access policies. The mutable RAM region supports arbitrary reads and writes: any address may be written at any step, and subsequent reads return the last written value; a read to an address that has never been written returns zero. Immutable regions (ROM and input data) admit exactly one write per address, which must be the first access to it; all later accesses are reads returning that same value.
+==== Memory Consistency Relation <sec:memory-relation>
 
-The input data is also considered the region for the hint stream (@sec:inputs_and_hints): they carry no writes, their values are treated as unconstrained inputs supplied by the executor, and all accesses to the same address must agree on that value. Notably, the same address may be read multiple times at the same step in these free-input regions (i.e., the hint stream region described above) ---a property exploited by precompiles that need to read the same input data repeatedly during their execution.
+A row of a Memory AIR is a tuple $(rho, "addr", t_"mem", "wr", "sel", v)$ with $rho in {0, 1}$ the _address-change_ flag, $"addr" in [0, 2^(29))$ a word address, $t_"mem"$ a memory step, $"wr" in {0, 1}$ the write flag, $"sel" in {0, 1}$ the _bus selector_, and $v = (v_0, v_1) in [0, 2^(32))^2$ the value as two limbs. Rows with $"sel" = 1$ emit the message $("op", 8 dot "addr", t_"mem", 8, v_0, v_1)$ on the Memory Bus with $"op" = mono("STORE")$ if $"wr" = 1$ and $mono("LOAD")$ otherwise, as a _prove_ (positive multiplicity); rows with $"sel" = 0$ emit nothing and exist only to bridge address gaps or to pad the trace. The Memory Bus is a _permutation_ argument (@appendix:arguments): the multiset of messages proved by the Memory AIRs must equal the multiset of messages assumed by all requesters.
 
-Value continuity for mutable memory follows from the sorted order: because rows for the same address are contiguous and ordered by step, the chip verifies each read against the immediately preceding row using adjacent-row constraints. Writes are additionally subject to a silent write prohibition: every write must produce a message on the Memory Bus, ensuring no memory modification can occur outside the scope of the consistency argument.
+#definition(title: "Sorted Access Trace")[
+  Fix a region with word-address interval $["base", "end"]$. A sequence of rows $(rho_r, "addr"_r, t_r, "wr"_r, "sel"_r, v_r)_(r in [R])$, together with a _previous row_ $("addr"_0, t_0, v_0)$ supplied by the continuation bus (@sec:continuation-bus), is a _sorted access trace_ of the region if for every $r in [R]$:
+  + (_Region_) $"base" <= "addr"_1$ and $"addr"_R <= "end"$ (each enforced by a $32$-bit range check on the distance).
+  + (_Address order_) $rho_r = 1 => "addr"_r > "addr"_(r-1)$, and $rho_r = 0 => "addr"_r = "addr"_(r-1)$.
+  + (_Time order_) $rho_r = 0 => t_r - t_(r-1) >= "wr"_r$, i.e. strictly increasing steps for writes and non-decreasing steps for reads, so that several reads of the same word at the same memory step are allowed.
+  + (_Bounded increments_) the quantity $rho_r ("addr"_r - "addr"_(r-1)) + (1 - rho_r)(t_r - t_(r-1) + 1 - "wr"_r) - 1$ lies in $[0, 2^(38))$, witnessed by a $22$-bit and a $16$-bit range-checked limb.
+  + (_No silent writes_) $"wr"_r = 1 => "sel"_r = 1$.
+  + (_Read-after-write_) $rho_r = 0 and "wr"_r = 0 => v_r = v_(r-1)$.
+  + (_Region policy_) for the writable RAM region, $rho_r = 1 and "wr"_r = 0 => v_r = 0$ (an address that is read before ever being written reads as zero). For the read-only data region, $"wr"_r = rho_r dot "sel"_r$: the first access to each address is a write and all later accesses are reads. For the input-data region, $"wr"_r = 0$ and, except at the free-input port (the region's base address), $rho_r = 0 => v_r = v_(r-1)$; at the free-input port the value is unconstrained on every row.
+  The relation $cal(R)_"MEM"^("region")$ consists of all $(x_"mem"; w_"mem")$ where $w_"mem"$ is such a trace and $x_"mem"$ is the pair of boundary rows carried on the continuation bus.
+] <def:sorted-access-trace>
+
+The witness-side facts that make the definition sound are recorded here because the soundness sketch relies on them. Padding rows repeat the last row's address, step and value with $"sel" = "wr" = 0$, which satisfies every constraint and emits nothing. Because increments are bounded by $2^(38)$ on the RAM region, whose address space is $2^(29)$ words and whose time span is $2^(38)$ memory steps, no address or time gap ever requires a bridging row there; the read-only and input-data regions use a $2^(24)$ address-increment bound and insert bridging rows with $"sel" = 0$ where an address gap exceeds it. The selectors are constrained to be binary, so a row cannot emit a message with multiplicity greater than one.
+
+What the sorted access trace guarantees is the semantic memory relation of the execution model. Say that a multiset $O$ of memory operations $("op", x, t_"mem", w, v)$ is _consistent with an initial memory_ $"mem"_0$ if, processing the operations in order of $t_"mem"$, every $mono("LOAD")$ returns the value most recently stored at its address, or the initial value if none.
+
+#lemma(title: "Memory Argument")[
+  Let $O$ be the multiset of aligned memory messages assumed by the requester AIRs of a satisfying circuit witness, restricted to a region, and suppose the Memory Bus balances. Then the region's Memory AIR instances jointly form a sorted access trace whose $"sel" = 1$ rows are exactly $O$, and $O$ is consistent with the region's initial memory: zero for RAM, the values of the first (write) access to each address for the read-only data region, and an arbitrary per-address constant for the input-data region. In particular every read of the RAM region observes the most recent prior write to its address, and the input-data region behaves as a read-only memory with prover-chosen contents whose values, once fixed by the first read, are the same for every subsequent read.
+] <lem:memory-argument>
+
+The proof is the standard one for sorted memory-checking @FOCS:BEGKN91: address and time order make the trace a concatenation of per-address blocks ordered in time; the permutation argument makes the blocks contain exactly the requested operations (with duplicates counted); read-after-write and the region policy pin the value of every read. The lemma is stated as a proof obligation in @sec:proof-obligations (it is a property of the constraint system, not of the cryptography). Two refinements connect the lemma to the ISA view of memory in @sec:execution_model: the _register refinement_, which shows that the linked-step argument of @sec:registers enforces the same consistency property for the $31$ register cells, and the _MemAlign refinement_, which shows that the sub-word and unaligned operations proved by MemAlign are equivalent to the ISA's byte-granular reads and writes (@sec:memalign-refinement).
+
+#remark(title: "Binding of the read-only data region")[
+  @lem:memory-argument makes the contents of the read-only data region equal to the values of the _first_ access to each address, which is a write requested on the Memory Bus. Whether those values equal the constants $"ROMDATA"_P$ of the program binary therefore depends on which chip requests the initialising writes and on how that chip is bound to the program commitment $"root"_"ROM"$. In the current ZisK sources the ROM AIR emits the initialising writes from its committed cached columns, which binds them to $"root"_"ROM"$; the corresponding proof obligation for v0.16.1 is listed explicitly in @sec:proof-obligations.
+]
 
 ==== Memory Access Paths
 
@@ -237,6 +298,15 @@ The MemAlign chip models a small processor (the MemAlign ROM) with eight byte-wi
 
 In every case, MemAlign issues only aligned 8-byte operations to the Memory Bus. This design allows MemAlign to support all possible sub-word and unaligned accesses with a small, fixed set of constraints, without needing to know the specific access patterns in advance.
 
+==== MemAlign Refinement <sec:memalign-refinement>
+
+MemAlign receives from the requester the unaligned message $("op", x, t_"mem", w, v)$ with $w in {1, 2, 4}$ or $8 divides.not x$, and assumes from the Memory chip one or two aligned messages: the reads $(mono("LOAD"), 8 floor(x \/ 8), t_"mem", 8, u_0)$ and, if the access spans two words, $(mono("LOAD"), 8 floor(x \/ 8) + 8, t_"mem", 8, u_1)$; for a write, additionally the stores of the patched words at memory step $t_"mem" + 1$. The fixed MemAlign program table (a lookup on its own table bus) forces the byte selection and patching to be the little-endian extraction and replacement of bytes $x mod 8, dots, x mod 8 + w - 1$ of the concatenation $u_0 || u_1$. The stamping of the write-back at $t_"mem" + 1$ is what preserves the order of the read-modify-write pair inside the requester's slot, and it is the reason a store slot is followed by a reserved slot in @sec:timestamps.
+
+#lemma(title: "MemAlign Refinement")[
+  In a satisfying circuit witness with balanced buses, every unaligned or sub-word message assumed by a requester is realised by aligned messages on the Memory Bus whose net effect on the byte-granular memory function of @sec:execution_model is exactly $"mem"[x]_w$ for a load and $"mem"[x]_w <- v$ for a store, and no other byte is modified.
+] <lem:memalign-refinement>
+
+
 === Base Operations <sec:base-operations>
 
 The _Base Operations_ chips prove the base instruction set operations ---bitwise logic, comparisons, shifts, sign extensions, and integer multiplication and division--- delegated from the Main chip via the Operation Bus.
@@ -261,42 +331,85 @@ Basic operation chips carry a fixed per-invocation overhead: each chip handles a
 
 At proof time, sub-chips resolve queries directly from the cache for inputs it covers, and fall back to constraint checking for the remainder. This significantly reduces witness size and proving time for programs with typical workloads.
 
+== Word Encoding over Goldilocks <sec:word-encoding>
+
+The ZisK ISA operates on 64-bit unsigned integers, while the arithmetization works over the Goldilocks field with $p = 2^(64) - 2^(32) + 1 < 2^(64)$. A 64-bit word therefore does not fit canonically into one field element, and integer overflow must occur at $2^(64)$, not at $p$. ZisK resolves this with a uniform encoding, which every bus schema in @sec:bus-system and every trace column holding an ISA value adheres to.
+
+- *Canonical limbs.* A 64-bit value $v$ is represented as two field elements $(v_0, v_1)$ with $v = v_0 + 2^(32) v_1$ and $v_0, v_1 in [0, 2^(32))$. Since $2^(32) < p$, each limb has a unique canonical representative, and the pair determines $v$ uniquely. The Main chip, the Operation Bus, the Memory Bus and the Memory AIRs all use this two-limb form; the `_w` opcodes zero the high limb of their operands on the Operation Bus.
+- *Range constraints.* A limb column is a valid 32-bit limb only if constrained to $[0, 2^(32))$. In ZisK this is enforced at the point where a value is _produced_: the executor chips decompose their outputs further (bytes in Binary and BinaryExtension, $16$-bit chunks in BinaryAdd, Arith and the 256/384-bit precompiles) and range-check the pieces via the table buses, and reconstruct the limbs as $v_0 = sum_k 2^(8 k) b_k$ or $sum_k 2^(16 k) h_k$. A value that is only _consumed_ (e.g. an operand received by the Main from a register) inherits its range from the message that produced it, since the bus transports the exact limbs.
+- *Overflow at $2^(64)$.* Arithmetic operations are verified on the decomposed form with explicit carries: addition as $a_0 + b_0 = c_0 + 2^(32) kappa_0$, $a_1 + b_1 + kappa_0 = c_1 + 2^(32) kappa_1$ with $kappa_i in {0, 1}$ and $kappa_1$ discarded; multiplication in Arith as the integer identity $a dot b + c = 2^(64) d_"hi" + d_"lo"$ over $16$-bit chunks with range-checked carries. None of these identities can wrap modulo $p$, because every term is bounded far below $p$ by its range constraints.
+- *Addresses and steps.* Addresses are $32$-bit and carried as a single field element; memory steps are $38$-bit and carried as a single field element; both are bounded by range checks or by the increment argument of @def:sorted-access-trace. The Memory chip's word address is the byte address divided by $8$; the bus carries the byte address.
+
+The consequence for the security analysis is that the map from a satisfying trace to ISA values is well defined and injective on every column that the relations of @sec:statement read, so an extractor can decode 64-bit words from field elements without ambiguity. The obligation that every limb column consumed by a relation is actually range-constrained is recorded in @sec:proof-obligations.
+
 == System Buses <sec:bus-system>
 
-ZisK uses a bus system ---recall @tbl:buses for an overview--- to constrain valid state transitions during program execution. Now we discuss all of them except the continuation bus, which is described in @sec:continuation-bus.
+ZisK uses a bus system ---recall @tbl:buses for an overview--- to constrain valid state transitions during program execution. Every bus is an instance of the bus-balancing primitive of @sec:arithmetization with a fixed _message schema_ and a fixed _semantic relation_ that balancing enforces; we give both for each bus. All 64-bit values use the two-limb encoding of @sec:word-encoding. The continuation buses are described in @sec:continuation-bus.
 
-=== Operation Bus
+=== Operation Bus <sec:operation-bus>
 
-The _operation bus_ routes complex operations from the Main chip to specialized sub-chips. Messages have the form:
+The _Operation Bus_ (identifier $5000$) routes operations from the Main chip to the executor and precompile chips. Messages have the form
 $
-  ("op", a, b, c, "flag", t, "extra"),
+  ("op", a_0, a_1, b_0, b_1, c_0, c_1, "flag", t, x, "extra"),
 $
-where $"op" in [0, 2^8)$ identifies the operation, $a,b in [0, 2^64)$ are the input operands, $c in [0, 2^64)$ is the output, $"flag" in {0, 1}$ indicates whether the operation was valid, $t$ is the main step (@sec:timestamps), and $"extra" in [0, 2^32)$ carries any additional information needed to prove correctness.
+where $"op" in [0, 2^8)$ identifies the operation, $(a_0, a_1), (b_0, b_1), (c_0, c_1)$ are the operands and result, $"flag" in {0, 1}$, $t$ is the main step, $x$ is the extended argument (the `j1` field of a precompile instruction) and $"extra"$ is a chip-specific field used only by the DMA chips. The Main chip _sends_ one message per row with $"is_external_op" = 1$, setting $t = x = 0$ unless the instruction is a precompile call, and zeroing $a_1, b_1$ for `_w` opcodes; the frequent-operation caches _receive_ messages of the form $("op", a_0, a_1, b_0, b_1, c_0, c_1, "flag")$ (trailing zeros are implicit); every executor and precompile chip _receives_ the messages for its opcodes; and the global public-output binding of @sec:statement _receives_ the $32$ `pubout` messages. Executor chips whose rows are not all used cancel their padding rows with a degree-zero term (@sec:continuation-bus).
 
-The main step $t$ plays two different roles depending on the kind of sub-chip on the receiving end. For sub-chips whose entire input/output is already conveyed by $(a, b, c)$ ---i.e. those that do not interact with memory--- $t$ is set to $0$ and carries no information: the operation is fully specified by its operands. For precompiles, by contrast, $(a, b, c)$ is not enough: precompiles read their inputs and write their outputs directly through the memory bus rather than through the operand triple, so each precompile invocation must be tied to a specific point in the execution timeline. In that case, $t$ is set to the current execution step of the Main chip, allowing the precompile's memory accesses to be ordered consistently with the rest of the trace.
+#definition(title: "Operation Bus Relation")[
+  A message $("op", a, b, c, "flag", t, x, "extra")$ received by a non-precompile chip is _valid_ if $(c, "flag") = "op"(a, b)$ according to @appendix:opcodes. A message received by a precompile chip is valid if $(c, "flag") = "op"(a, b)$ and the chip's memory messages (@sec:memory-bus) at memory steps $1 + 4t + 2$ (reads) and $1 + 4t + 3$ (writes) realise the memory effect $"Eff"_"op"$ of @sec:execution_model. Balancing of the Operation Bus in a satisfying circuit witness implies that every message sent by the Main is valid.
+] <def:operation-bus-relation>
 
-When the Main chip delegates an operation, it sends a message on the operation bus and asserts that $(c, "flag") = "op"(a, b)$ without verifying the operation locally. The corresponding sub-chip receives those messages and proves correctness through its own constraints.
+The implication holds because each receiving AIR's constraints accept only valid messages for the opcodes it handles, the frequent-operation tables are fixed columns containing only valid triples, and the multiset equality of the lookup argument means every sent message equals some received one. The only sender is the Main chip (and, for the `pubout` opcode, the global binding), so the relation is a property of the Main's rows.
 
-=== ROM Bus
+=== ROM Bus <sec:rom-bus>
 
-The _ROM bus_ ensures correctness of instruction fetching. Messages have the form:
+The _ROM Bus_ (identifier $7890$) ensures correctness of instruction fetching. Messages have the form
 $
-  ("pc", "a_imm", "b_imm", "op", "store_offset", "jmp_offsets", "flags"),
+  ("pc", "a_off", "a_imm1", "b_off", "b_imm1", "ind_w", "op", "store_off", "j1", "j2", "flags"),
 $
-where $"pc" in [0, 2^32)$ is the program counter, $"a_imm", "b_imm" in [0, 2^64)$ are the immediate values, $"op" in [0, 2^8)$ identifies the operation, $"store_offset" in [-2^32, 2^32)$ is the memory offset for store instructions, $"jmp_offsets" in [-2^32, 2^32)^2$ are the jump offsets for control flow instructions, and $"flags" in {0, 1}^k$ are flags indicating various instruction properties (e.g., whether it is a precompile call).
-
-Instruction executor chips query this bus to verify that the instruction they execute exists in the program ROM at the given program counter. A dedicated ROM chip provides the program ROM as a lookup table.
-
-=== Memory Bus
-
-The _memory bus_ is the channel through which every chip that reads from
-or writes to an address space submits its memory operations. Messages have the form:
+where the fields are those of @subsec:instruction_format and $"flags"$ packs the boolean fields as
 $
-  ("op"_"mem", "addr", t_"mem", "width", "data"),
+  "flags" = 1 + 2 dot [mono("a_src") = mono("IMM")] + 2^2 [mono("a_src") = mono("MEM")] + 2^3 "is_precompiled" + 2^4 [mono("b_src") = mono("IMM")] + 2^5 [mono("b_src") = mono("MEM")] + 2^6 "is_external_op" \
+  + 2^7 "store_pc" + 2^8 [mono("store") = mono("MEM")] + 2^9 [mono("store") = mono("IND")] + 2^(10) "set_pc" + 2^(11) "m32" + 2^(12) [mono("b_src") = mono("IND")] + 2^(13) [mono("a_src") = mono("REG")] + 2^(14) [mono("b_src") = mono("REG")] + 2^(15) [mono("store") = mono("REG")].
 $
-where $"op"_"mem" in {0, 1}$ is the access type (0: read, 1: write),
-$"addr" in [0, 2^32)$ is the target address, $t_"mem"$ is the memory step (@sec:memory-chip),
-$"width" in {1, 2, 4, 8}$ is the access width in bytes, and
-$"data" in [0, 2^(8 dot "width"))$ is the value read or written.
-The Memory chip collects all messages on this bus
-and enforces global memory consistency.
+The constant $1$ makes every genuine instruction distinct from the all-zero padding rows of the table. The Main chip _sends_ one message per row, formed from its decoded instruction columns; the ROM chip _receives_ them with a free multiplicity column against its cached columns, which hold the table $P$. Since the ROM chip's columns are committed once per program and bound to the program commitment $"root"_"ROM"$ (@sec:vk-ledger), balancing gives:
+
+#definition(title: "ROM Bus Relation")[
+  Balancing of the ROM Bus in a satisfying circuit witness implies that at every Main row the decoded instruction equals $P["pc"]$, where $P$ is the program committed to by $"root"_"ROM"$; i.e. $iota_t = "Fetch"_P (S_t)$ for every step $t$.
+] <def:rom-bus-relation>
+
+=== Memory Bus <sec:memory-bus>
+
+The _Memory Bus_ (identifier $10$) is the channel through which every chip that reads from or writes to an address space submits its memory operations. Messages have the form
+$
+  ("op"_"mem", "addr", t_"mem", "width", v_0, v_1),
+$
+where $"op"_"mem" in {mono("LOAD") = 1, mono("STORE") = 2, mono("REG") = 3}$, $"addr" in [0, 2^(32))$ is the byte address (or the register index for $mono("REG")$ messages), $t_"mem"$ is the memory step (@sec:timestamps), $"width" in {1, 2, 4, 8}$, and $(v_0, v_1)$ is the value. Requesters ---Main, MemAlign, the precompiles--- _send_ their operations; the three Memory AIRs _receive_ aligned ones; MemAlign receives unaligned ones and sends the aligned ones it decomposes them into; and the Main both sends and receives the $mono("REG")$ messages of its linked-step argument. The bus is a permutation argument, and its semantic relation is @lem:memory-argument together with its two refinements: balancing implies that the requested operations, taken over the whole execution, are consistent with the initial memory $"mem"_0$ of @sec:execution_model.
+
+=== Table Buses <sec:table-buses>
+
+The remaining buses connect executor chips to fixed tables. Each is a lookup argument (@appendix:arguments) whose receiving side is a table AIR with fixed columns and a free multiplicity column, so its semantic relation is simply membership of the sent message in the table. @tbl:table-buses lists them. The range-check buses are the specialisation of @appendix:arguments; all of them are hosted in the SpecifiedRanges AIR, and the two dual-byte tables in the VirtualTable AIRs.
+
+#figure(
+  {
+    set text(size: 8.5pt)
+    table(
+      stroke: 0.3pt,
+      columns: (1fr, 0.4fr, 2.7fr, 0.9fr),
+      align: (left, center, left, left),
+      table.header([*Table*], [*Id*], [*Message schema and meaning*], [*Senders*]),
+      [BinaryTable], [125], [$("pos", "op", a, b, "cin", c, "flags")$: one byte of a byte-sliced binary operation with carry in and result flags], [Binary],
+      [BinaryExtensionTable], [124], [$("op", "off" | "flags", a, b, c_0, c_1)$: one byte of a shift, rotation or sign extension], [BinaryExtension],
+      [ArithTable], [331], [$("op", "flags", "range"_"ab", "range"_"cd")$: operation decoding and range selectors for Arith], [Arith],
+      [ArithRangeTable], [330], [$("range_id", v)$: $16$-bit chunk and signed-carry ranges for Arith], [Arith],
+      [MemAlignRom], [133], [$("pc", Delta "pc", Delta "addr", "off", w, "flags")$: the MemAlign micro-program], [MemAlign],
+      [ArithEqLtTable], [5002], [$("lt", Delta)$: chunk-wise comparison for modular reduction], [ArithEq, ArithEq384],
+      [KeccakfTable], [126], [bit-sliced Keccak round tables], [Keccakf],
+      [FrequentOps (3 tables)], [5010--5012], [$("op", a, b, c, "flag")$ on the Operation Bus: cached results of frequent arithmetic, binary and shift operations], [(receive from Main)],
+      [DmaRom, DmaPrePostTable, DmaByteCmpTable], [8001--8003], [DMA micro-program, partial-word and byte-comparison tables], [Dma chips],
+      [DualByte, DualRange7Bits], [88, 77], [$(x, y)$ with $x, y in [0, 2^8)$ resp. $[0, 2^7)$: two range checks per lookup], [MemAlign, Dma chips],
+      [Range checks], [$>= 100$], [$(x)$ with $x in ["lo", "hi"]$ for each declared range], [all chips],
+    )
+  },
+  caption: [Table buses of ZisK v0.16.1. Every table is a fixed column set committed at setup (@sec:vk-ledger); the DMA chips additionally use an inter-chip permutation bus (identifier $8000$) to hand in-flight operations between their front-end and worker AIRs.],
+  kind: table,
+) <tbl:table-buses>

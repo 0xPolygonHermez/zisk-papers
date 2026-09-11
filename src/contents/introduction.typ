@@ -18,7 +18,7 @@ A central motivation for ZisK is _extensibility_. Application domains such as bl
 
 == Paper Overview
 
-@sec:isa defines the ZisK ISA: execution environment, machine state, and instruction format. @sec:arithmetization presents the arithmetization framework: AIRs, bus interactions, and LogUp-based circuit satisfiability. @sec:design describes the chip architecture and bus system. @sec:continuations explains trace splitting and how continuation buses chain segment boundaries. @sec:recursion covers the recursive aggregation tree, the recursive challenge derivation, and root-level bus balancing.
+@sec:isa defines the ZisK ISA: execution environment, machine state, instruction format, the full instruction set, and the formal step semantics. @sec:arithmetization presents the arithmetization framework: AIRs, bus interactions, and LogUp-based circuit satisfiability. @sec:design describes the chip architecture and bus system, including the memory-consistency relation, the encoding of 64-bit words over Goldilocks, and the schema and semantic relation of every bus. @sec:continuations explains trace splitting, the formal notion of a segment, and how continuation buses chain segment boundaries. @sec:recursion covers the recursive aggregation tree, the challenge derivation, and root-level bus balancing. @sec:statement states what ZisK proves as an execution relation with a knowledge-soundness target. @sec:backend fixes the proving backend and its parameters. @sec:security gives the topology of all proof-system calls, the deviations from a vanilla construction, the soundness sketch, and the ledger of remaining proof obligations.
 
 == Notation
 

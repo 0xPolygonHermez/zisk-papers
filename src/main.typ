@@ -2,7 +2,7 @@
 
 #show: ams-article.with(
   title: [ZisK Whitepaper#footnote[This document describes ZisK v0.16.1
-      [48cf7cc -- 2026-20-03]. \ ~~~ Source code available at #link("https://github.com/0xPolygonHermez/zisk")[github.com/0xPolygonHermez/zisk].]],
+      [48cf7cc -- 2026-03-20]. \ ~~~ Source code available at #link("https://github.com/0xPolygonHermez/zisk")[github.com/0xPolygonHermez/zisk].]],
   authors: (
     (
       name: "ZisK Core Team",
@@ -11,7 +11,7 @@
   abstract: [
     We present ZisK, a STARK-based zero-knowledge virtual machine (zkVM) that executes programs compiled from standard instruction set architectures and produces succinct, transparent proofs of their correct execution. ZisK targets the RISC-V ISA, allowing developers to use existing Rust and C toolchains without modification. Moreover, ZisK's modular architecture enables the addition of optimized constraint systems for expensive operations such as elliptic-curve arithmetic and bulk memory access, making it practical to prove complex computations at scale.
 
-    This paper provides a precise specification of the ZisK design: its instruction set architecture, the arithmetization framework, the circuit architecture and chip design, the continuation mechanism, and the recursive aggregation system.
+    This paper provides a precise specification of the ZisK design: its instruction set architecture and execution semantics, the arithmetization framework, the circuit architecture with the relation enforced by every chip and bus, the continuation mechanism, the recursive aggregation system, and the proving backend.
   ],
 )
 
@@ -94,6 +94,18 @@
 
 #include "contents/recursion.typ"
 
+= The ZisK Statement <sec:statement>
+
+#include "contents/statement.typ"
+
+= Proving Backend <sec:backend>
+
+#include "contents/backend.typ"
+
+= Soundness: Definitions, Deviations, and Proof Obligations <sec:security>
+
+#include "contents/security.typ"
+
 #pagebreak()
 
 #heading(outlined: false, numbering: none)[Acknowledgments]
@@ -122,3 +134,7 @@ We extend our gratitude to the Polygon zkEVM and Plonky3 @PLONKY3 teams for thei
 = Arguments <appendix:arguments>
 
 #include "appendix/arguments.typ"
+
+= Instruction Set <appendix:opcodes>
+
+#include "appendix/instruction-set.typ"

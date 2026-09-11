@@ -1,4 +1,4 @@
-#import "../lib.typ": definition
+#import "../lib.typ": definition, remark, lemma
 
 A single chip proof covers a trace of fixed height $N$. Real programs run for an a priori unbounded number of steps, so a single proof cannot certify an arbitrary execution. _Continuations_ are the mechanism by which a zkVM extends beyond this bound: the execution is divided into _segments_, each covered by an independent proof, and the proofs are linked into a single argument for the full run.
 
@@ -104,6 +104,20 @@ The prover then partitions each chip's trace independently into consecutive segm
     Padding layout for ZisK's trace-splitting approach. Chips define their own segment height $N_i$. Colored rows hold actual computation; gray rows are padding. Only the final segment of each chip requires padding.
   ],
 ) <fig:padding>
+
+=== Segments as Formal Objects <sec:segment-objects>
+
+We now make the segmentation precise. Fix a successful execution $S_0, dots, S_T$ of a program $P$ (@sec:execution_model). Each step $t$ is handled by the Main chip and, depending on the instruction, generates rows in other chips: a memory access generates rows in the Memory AIR of its region (and possibly MemAlign), a delegated operation generates a row in the executor chip for its opcode, a precompile call generates as many rows as the precompile needs. For each AIR $cal(A)_i$ of the circuit, let $"rows"_i (t)$ denote the finite sequence of rows that step $t$ contributes to $cal(A)_i$; this is a deterministic function of $(S_t, iota_t, h_t)$ ---it is the trace generation method of @def:step and the chip's witness generator--- and the _global trace_ of $cal(A)_i$ is the concatenation $bold(T)_i^"glob" := "rows"_i (0) || dots || "rows"_i (T - 1)$, followed for the Memory AIRs by the sorting of @def:sorted-access-trace and for the table AIRs by the multiplicity counts.
+
+#definition(title: "Segmentation and Segment")[
+  Fix trace heights $N_i$ for every AIR. The _segmentation_ of the execution is the family of partitions of each global trace $bold(T)_i^"glob"$ into consecutive slices of exactly $N_i$ rows, the last slice padded to $N_i$ rows: $bold(T)_i^"glob" = bold(T)_(i, 1) || dots || bold(T)_(i, m_i)$ with $m_i = ceil(|bold(T)_i^"glob"| \/ N_i)$ (and $m_i = 0$ if the AIR is unused). A _segment_ is a tuple
+  $
+    G = (tau, j, bold(T), bold(a), B^"in", B^"out"),
+  $
+  where $tau in [M]$ is the AIR type, $j in [m_tau]$ the segment index, $(bold(T), bold(a)) = (bold(T)_(tau, j), bold(a)_(tau, j))$ the AIR witness of the slice (the AIR values $bold(a)$ include $j$, the last-segment flag $[j = m_tau]$, and the boundary payloads), and $B^"in", B^"out" in cal(P)_tau$ the _boundary payloads_ of the chip type, whose payload space $cal(P)_tau$ is defined in @sec:continuation-bus; $cal(P)_tau = {bot}$ for chips without cross-segment state. The _leaf count_ of the execution is $sum_tau m_tau$.
+] <def:segment>
+
+For the Main chip, $m_"Main" = ceil(T \/ N_"Main")$ and the segment $j$ covers exactly the steps $t in [(j - 1) N, j N)$: the Main's global step is reconstructed inside the AIR as $t = (j - 1) N + r$ from the segment index carried in $bold(a)$ and the row $r$, so the _partition map_ from steps to Main segments is the map $t |-> floor(t \/ N) + 1$, enforced by constraint rather than assumed. For every other chip the partition is by row count and does not align with step boundaries; this is precisely why cross-segment consistency cannot be expressed as an equality of whole VM states $S_("end"_j) = S_("start"_(j+1))$ and is instead decomposed into per-chip boundary payloads plus the globally sorted memory argument, as explained next. The two-level structure is: the Main's payload carries the control state $("pc", c)$, the Memory AIRs' payloads carry the position in the sorted access trace, and the memory _contents_ are never carried across a boundary ---they are reconstructed by the extractor from the sorted access trace, which spans the whole execution.
 
 Trace splitting eliminates most padding ---in fact, it is equivalent to the Jagged PCS approach--- but it introduces two problems that must be solved.
 
@@ -264,11 +278,29 @@ For chips whose computation is self-contained within each segment ---such as bas
 
 == The Continuation Bus <sec:continuation-bus>
 
-The _continuation bus_ carries cross-segment state for each chip that requires it. Each segment instance sends its final state as a message on the bus and receives the initial state expected by the next instance. Bus balancing (@sec:circuits-and-balancing) ensures the chain is globally consistent: every sent message is received exactly once with matching content, so gaps, duplications, and reorderings are all ruled out.
+The _continuation bus_ carries cross-segment state for each chip that requires it. Each segment instance _receives_ the boundary payload it starts from and _sends_ the boundary payload it ends with; bus balancing (@sec:circuits-and-balancing) ensures the chain is globally consistent: every sent message is received exactly once with matching content, so gaps, duplications, and reorderings are all ruled out. Two _anchors_ ---degree-zero terms contributed once per proof rather than per row--- open and close each chain: the _genesis_ anchor sends the payload the first segment must start from, and the _terminus_ anchor receives the payload the last segment must end with. Continuation messages are formed from AIR values (one value per segment, not per row), which the AIR constraints tie to the first and last rows of its trace.
 
-The state payload is chip-specific. The Main chip carries the program counter $"pc"$ of the first instruction in the next segment and the last $c$ value, so the next segment begins from exactly the state where the previous one left off. The Memory chip carries the last accessed address and timestamp, preserving the global chronological ordering of memory accesses across boundaries. Every chip with state that must survive a segment boundary defines its own continuation bus with the appropriate payload.
+We now give the payload types and message schemas. Throughout, $j$ denotes the segment index, $"last" in {0, 1}$ the last-segment flag of the sending segment, and every segment sends exactly one and receives exactly one continuation message.
 
-The _genesis_ anchor injects the initial state assumed by the first segment instance; the _terminus_ anchor receives the final handoff and checks that execution ended at the designated program counter. A global check ensures that each anchor fires exactly once, ruling out invalid segment chaining.
+*Main.* Payload space $cal(P)_"Main" = [0, 2^(32)) times [0, 2^(64))$: the program counter and the value $c$ at the boundary. Bus identifier $1000$; messages $(j, "last", "pc", c_0, c_1)$. Segment $j$ receives $(j - 1, 0, "pc"^"in", c^"in")$ and sends $(j, "last", "pc"^"out", c^"out")$, where the AIR constrains $"pc"^"in"$ to equal the `pc` column at row $0$, $c^"in"$ to be the "previous $c$" used by row $0$, $"pc"^"out"$ to be the next program counter computed by the control-flow rule at row $N - 1$, and $c^"out"$ to be the $c$ column at row $N - 1$. The genesis anchor sends $(0, 0, "pc"_"BOOT", 0, 0)$ and the terminus anchor receives $(m_"Main", 1, "pc"_"END", 0, 0)$ ---but with the segment-index field of the sent message set to $0$ when $"last" = 1$, so that the terminus is the unique message with $"last" = 1$ and the tail of the last segment cannot be re-consumed as the head of a further one. Registers are not in the payload: they are carried on the Memory Bus by the end-of-segment reload of @sec:registers, which sends the $31$ register values at the last memory step of the segment and is consumed by the first accesses in the next segment.
+
+*Memory AIRs.* Payload space $cal(P)_"Mem" = [0, 2^(29)) times [0, 2^(38)) times [0, 2^(64))$: the last $("addr", t_"mem", v)$ row of the sorted access trace. Bus identifier $11$; messages $("base", j, ("addr", t_"mem", v_0, v_1))$, with the region's base address as first field so that the three regions' chains are disjoint. Segment $j$ receives $("base", j - 1, "row"^"in")$ and sends $("base", j, "row"^"out")$ if it is not the last; the AIR constrains $"row"^"in"$ to be the "previous row" of row $0$ in @def:sorted-access-trace and $"row"^"out"$ to be row $N - 1$. The genesis anchor sends $("base", 0, ("base" - 1, 0, 0, 0))$ (so that the first row must be an address change), and there is no terminus payload: the last segment simply sends nothing, the region end being enforced by the range check of @def:sorted-access-trace. The anchor is gated by a proof-level boolean that indicates whether the region is used at all.
+
+*Other chips.* The executor chips and the hash precompiles have $cal(P) = {bot}$ and use no continuation bus. The DMA workers carry the in-flight bulk operation across a boundary (source, destination, remaining count, main step, and for unaligned copies the eight in-flight bytes); their schemas follow the same three-part pattern with their own identifiers.
+
+#definition(title: "Continuation Relation")[
+  For a chip type $tau$ with non-trivial payload space, the _continuation relation_ $cal(R)_"CONT"^((tau))$ holds for a sequence of segments $G_1, dots, G_m$ of type $tau$ if
+  $
+    B^"in"_1 = "Genesis"_tau, quad forall j < m : B^"out"_j = B^"in"_(j+1), quad "and" quad B^"out"_m = "Terminus"_tau "or no terminus is required",
+  $
+  and each $G_j$ satisfies its AIR with $B^"in"_j, B^"out"_j$ bound to its first and last rows as described above. For the Main, $"Genesis" = ("pc"_"BOOT", 0)$ and $"Terminus" = ("pc"_"END", 0)$.
+] <def:continuation-relation>
+
+#lemma(title: "Stitching")[
+  Let ${G}$ be a collection of segments of type $tau$ appearing as leaves of an accepted proof, and suppose the continuation bus of type $tau$ balances (as a component of the global bus balancing of @def:global-bus-relation). Then the segments can be arranged as a single sequence $G_1, dots, G_m$ satisfying $cal(R)_"CONT"^((tau))$; in particular there is exactly one segment with index $1$ starting from $"Genesis"_tau$, exactly one last segment, no cycles, and no two segments with the same index.
+] <lem:stitching>
+
+The argument is a counting one. Every message on the bus carries the sender's segment index $j$ and is received only by a message with index $j$ in the receiving position; each segment receives exactly one message and sends at most one. The genesis anchor is the unique message with index $0$ in the receiving position, so exactly one segment has $j = 1$; by induction, for each $j$ at most one segment receives the message with index $j - 1$, since the sender with index $j - 1$ sends exactly one message, and the multiset equality forces a receiver for every sent message. A cycle would require a message with index $j$ received by a segment claiming index $j + 1$ whose own message is received by a segment of index $j + 2$, and so on, eventually exceeding any index that appears in the finite multiset unless some sender's message is received twice, which the exact multiset equality excludes. The Main's `last` flag prevents the degenerate cycle in which the last segment's output is consumed as the input of a segment of index $m + 1$: the terminus anchor is the only receiver of a message with `last` $= 1$. This lemma is a property of the constraint system and is recorded as a proof obligation in @sec:proof-obligations.
 
 #figure(
   {

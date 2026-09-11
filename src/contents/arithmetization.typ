@@ -102,11 +102,31 @@ $
     display(S_i (r-1) + sum_((b, m, bold(e)) in cal(I)_i) frac(m(r), alpha + hat(e)(r)))\, & " if" r > 1,
   )
 $
-The final value $s_i = S_i (N_i)$ is the AIR's total signed contribution to the bus. Global bus balancing then reduces to a single scalar constraint:
+The final value $s_i = S_i (N_i)$ is the AIR's total signed contribution to the bus. Since this value is referred to throughout the rest of the paper, we give it a name.
+
+#definition(title: "Bus Contribution")[
+  Let $(cal(A), cal(I))$ be an AIR with its set of interactions, let $(bold(T), bold(a))$ be a witness for $cal(A)$ of trace height $N$, and let $alpha in KK$ be a challenge (with $gamma$ derived from $alpha$ as above). The _bus contribution_ of the witness is the scalar
+  $
+    "BusCont"_alpha (cal(I), bold(T), bold(a)) := S(N) = sum_(r=1)^(N) sum_((b, m, bold(e)) in cal(I)) frac(m(r), alpha + hat(e)(r)) in KK,
+  $
+  i.e., the final value of the partial-sum column $S$ defined by the recurrence above. The function is well defined whenever $alpha + hat(e)(r) != 0$ for every interaction and every row; the AIR constraints enforce this by requiring the prover to exhibit the inverse of each denominator.
+] <def:bus-contribution>
+
+Global bus balancing then reduces to a single scalar constraint:
 $
-  sum_(i=1)^M s_i = 0
+  sum_(i=1)^M s_i = 0, quad "where" s_i = "BusCont"_alpha (cal(I)_i, bold(T)_i, bold(a)_i).
 $
-This constraint is enforced at the aggregation level: individual AIR proofs expose $s_i$ as a public output, and the aggregation step verifies that they sum to zero (see @sec:recursion).
+This constraint is enforced at the aggregation level: individual AIR proofs expose $s_i$ as a public output, and the aggregation step verifies that they sum to zero (see @sec:recursion). We make this precise as a named relation, since it is the object that the recursive verifiers of @sec:recursion actually check.
+
+#definition(title: "Global Bus Balancing Relation")[
+  Fix a circuit $cal(C) = {(cal(A)_i, cal(I)_i)}_(i=1)^M$ and a challenge $alpha in KK$. The _global bus balancing relation_ is
+  $
+    cal(R)_"BUS"^(alpha) = lr({ (s_1, dots, s_M) in KK^M mid(|) sum_(i=1)^M s_i = 0 }),
+  $
+  and a collection of witnesses ${(bold(T)_i, bold(a)_i)}_(i=1)^M$ _balances every bus at $alpha$_ if $("BusCont"_alpha (cal(I)_i, bold(T)_i, bold(a)_i))_(i=1)^M in cal(R)_"BUS"^(alpha)$.
+] <def:global-bus-relation>
+
+The relation $cal(R)_"BUS"^(alpha)$ is the succinct, challenge-dependent stand-in for @def:bus-balancing. The two are related by the standard LogUp soundness statement: if the witnesses do not balance some bus in the sense of @def:bus-balancing, then, for independent uniformly random $alpha, gamma in KK$, the identity $sum_i s_i = 0$ holds with probability at most $(N_"tot" + ell dot N_"tot"^2) / |KK|$, where $N_"tot" = sum_i N_i$ is the total number of interaction rows and $ell$ the message length: the second term bounds the probability that two distinct messages collide under the compression of @def:compressed-interaction-value, and the first bounds the roots of the resulting non-zero rational identity in $alpha$. ZisK derives $gamma$ from $alpha$ rather than sampling it independently; this is recorded as a deviation from the baseline analysis in @sec:deviations. The point for now is that the recursive layer checks $cal(R)_"BUS"^(alpha)$, and the reduction to @def:bus-balancing goes through the randomness of $alpha$ (@sec:proof-obligations).
 
 == Circuits <sec:circuits-and-balancing>
 
