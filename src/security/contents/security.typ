@@ -90,14 +90,15 @@ collision resistance of $cal(H)$, and the soundness of the bus fingerprint.
 ]
 
 #definition(title: "Straight-line extractable commitment")[
-  The trace commitment $Com$ is _straight-line extractable_ if there is a PPT
-  algorithm $cal(E)_Com$ that, given a transcript $cal(T)$ of random-oracle
-  queries and answers and a value $"com"$, outputs a witness or $bot$, such
-  that for every PPT adversary $cal(A)$ that at some point during its
-  execution announces a value $"com"$ and at the end outputs a witness $w$,
+  A deterministic commitment scheme $Com$ (@def:commitment) is
+  _straight-line extractable_ if there is a PPT algorithm $cal(E)_Com$ that,
+  given a transcript $cal(T)$ of random-oracle queries and answers and a
+  value $"com"$, outputs a message or $bot$, such that for every PPT
+  adversary $cal(A)$ that at some point during its execution announces a
+  value $"com"$ and at the end outputs a message $m$,
   $
     Adv("ext", Com)(cal(A)) := Pr[
-      Commit(w) = "com" and cal(E)_Com (cal(T)_(<= t), "com") != w
+      Commit(m) = "com" and cal(E)_Com (cal(T)_(<= t), "com") != m
     ] <= negl(lambda),
   $
   where $t$ is the time of the announcement and $cal(T)_(<= t)$ the transcript
@@ -109,8 +110,12 @@ from the tree of queried nodes below the root; it fails only if the adversary
 later opens the root to a leaf it had not queried, which requires guessing an
 oracle output or finding a collision, so
 $Adv("ext", Com)(cal(A)) <= (Q^2 + Q) slash abs("Range")$ for the range of the
-oracle. Straight-line extractability implies binding: two openings of one
-commitment would both have to equal the extractor's output.
+oracle. Straight-line extractability implies binding: if $cal(A)$ outputs
+$m != m'$ with $Commit(m) = Commit(m') = "com"$, the extractor's output on
+$"com"$ differs from at least one of them, so the adversary $cal(D)$ that
+runs $cal(A)$, announces $"com"$ and returns one of $m, m'$ chosen at
+random fails extraction with at least half of $cal(A)$'s success probability:
+$Adv("bind", Com)(cal(A)) <= 2 dot Adv("ext", Com)(cal(D))$.
 
 #definition(title: "Multiset collision resistance")[
   The multiset hash $cal(H)$ is _collision-resistant on multisets of
@@ -910,16 +915,22 @@ obligations for the sections that build on it.
   main cryptographic obligation left by this section; the bound that forking
   gives is valid but concretely loose.
 - *Circuit requirements.* The relations of @sec:relations-def require the
-  circuits to enforce the typing predicate on children, to
-  hash the type together with the commitment into the challenge contribution,
-  and to expose the trace commitment as a public input of the AIR argument.
-  Each is a small change relative to the whitepaper's description and each is
-  used by the proofs.
-- *Fixed and cached data.* $Local_tau$ treats cached columns as fixed data
-  bound through the verification key. The correctness of cached columns (for
-  instance precomputed operation tables) and the binding of the program ROM
-  are therefore part of the key ledger (@tbl:vk-ledger) and of the setup, not
-  of the recursion argument.
+  circuits to enforce the typing predicate on children, to hash the type
+  together with the commitment into the challenge contribution, to expose
+  the trace commitment as a public input of the AIR argument, and to have
+  that commitment bind the cached columns, or else to feed the cached-column
+  commitment into the challenge contribution by other means
+  (@sec:instantiation). Each is a small change relative to the whitepaper's
+  description and each is used by the proofs.
+- *Fixed and cached data.* Fixed columns are prescribed by the AIR
+  description, hence by the verification key. Cached columns, for instance
+  the program ROM and precomputed operation tables, are bound through the
+  cached-column commitment carried in the public statement (@def:columns):
+  $Local_tau$ only asserts that they open it. Deciding whether the
+  commitment in $bold(p)$ is that of the intended program is the task of the
+  consumer of the Final proof, and the equality of the cached columns across
+  all leaves of one type rests on the binding of that commitment, which the
+  theorem does not need and does not charge.
 - *Concrete parameters.* With $B = 20$ the running-time factor $3 kappa_"max"$
   is about $3 dot 10^6$ and the coefficient of the recursive
   knowledge-soundness terms is about $10^6$; both are polynomial but not

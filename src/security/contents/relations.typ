@@ -1,5 +1,5 @@
 #import "../../lib.typ": (
-  Adv, Balanced, BusCont, Com, Commit, DeriveKey, Local, Pr, accept, definition, mult, negl, poly, remark, vk,
+  Adv, Balanced, Bind, BusCont, Com, Commit, DeriveKey, Local, Pr, accept, definition, mult, negl, poly, remark, vk,
 )
 #import "@preview/fletcher:0.5.8" as fletcher: diagram, edge, node
 
@@ -67,27 +67,58 @@ _AIR types_
 $
   cal(C) = { (cal(A)_tau, cal(I)_tau) }_(tau in [M]),
 $
-where $cal(A)_tau$ is an AIR of width $W_tau$, depth $D_tau$ and $V_tau$
-values, $cal(I)_tau$ is a finite set of interactions of $cal(A)_tau$. Given a fixed trace height $N_tau$, we write $cal(W)_tau := FF^(N_tau times W_tau) times FF^(V_tau)$ for
+where each $cal(A)_tau$ is an AIR of width $W_tau$, depth $D_tau$ and $V_tau$
+values and $cal(I)_tau$ is a finite set of interactions of $cal(A)_tau$. Given a fixed trace height $N_tau$, we write $cal(W)_tau := FF^(N_tau times W_tau) times FF^(V_tau)$ for
 the witness space of type $tau$ and fix the public-statement space
 $cal(P) := FF^k$.
+
+#definition(title: "Column Classes and Public Bindings")[
+  The description of an AIR $cal(A)$ of width $W$ and $V$ values, used at
+  height $N$, partitions its column indices as
+  $[W] = J^"fix" union.sq J^"cach" union.sq J^"wit"$ and carries:
+  + The _fixed columns_ $J^"fix"$, whose values are prescribed as part of the
+    description of $cal(A)$ and hence known to both the prover and the verifier.
+  + The _cached columns_ $J^"cach"$, whose values are computed once and
+    reused across different proofs. Their values are not part of the
+    description; instead, a commitment to them (@def:commitment), travels in the public statement at the coordinates designated
+    by a _cached-commitment binding_ $gamma : [m] -> [k]$.
+  + The _witness columns_ $J^"wit"$, computed afresh for every proof and
+    only known in full to the prover.
+  + A _public binding map_ $beta : "dom"(beta) -> [k]$ from a set
+    $"dom"(beta) subset [V]$ to coordinates of the public statement.
+  The _prescribed data_ of $cal(A)$ is the family
+  $bold(d) = (d_j)_(j in J^"fix")$ of fixed columns $d_j in FF^N$. For a
+  trace $bold(T)$ and a set of columns $J$ we write $bold(T)|_J$ for the
+  submatrix of the columns in $J$.
+] <def:columns>
+
+Each AIR type carries this data; we index it by the type, as in
+$J^"fix"_tau$, $bold(d)_tau$ and $beta_tau$.
 
 #definition(title: "Local Satisfaction")[
   For $tau in [M]$, $bold(p) in cal(P)$ and $w = (bold(T), bold(a)) in cal(W)_tau$,
   the predicate $Local_tau (bold(p), w)$ holds if and only if
   + $w$ satisfies $cal(A)_tau$.
-  + The fixed columns of $bold(T)$ equal the fixed data prescribed by
-    $cal(A)_tau$ (cached columns, committed once at setup, are treated as fixed
-    data whose commitment is part of the verification key of type $tau$).
-  + $"Bind"_tau (bold(p), w)$: every trace cell and AIR value that
-    $cal(A)_tau$ designates as a binding to the public statement equals the
-    designated coordinate of $bold(p)$.
+  + $bold(T)$ agrees with the prescribed data on the fixed columns:
+    $T_j (r) = d_(tau, j)(r)$ for every $j in J^"fix"_tau$ and $r in [N_tau]$.
+  + $Bind_tau (bold(p), w)$: $a_j = p_(beta_tau (j))$ for every
+    $j in "dom"(beta_tau)$.
+  + The cached columns open the commitment carried in the public statement:
+    $Commit_"cach" (bold(T)|_(J^"cach"_tau)) = (p_(gamma_tau (1)), dots, p_(gamma_tau (m)))$.
 ] <def:local>
 
-The program being executed is not a separate parameter: the program ROM and
-the boot state are bound through cached columns of the relevant AIR
-type, hence through their verification keys. This plays the role of the
-program code hard-wired into the step circuit of the reference architecture.
+Fixed columns are part of the description of $cal(A)_tau$, hence of the
+verification key of type $tau$. Cached columns are not: they are computed
+once per program, committed with $Commit_"cach"$, and the commitment travels
+in the public statement, where the description of $cal(A)_tau$ designates
+its coordinates. The program being executed is therefore bound through
+$bold(p)$ rather than hard-wired into the circuits, as the program code is in
+the step circuit of the reference architecture: the program ROM and the boot
+state live in cached columns of the relevant AIR types, and whoever accepts a
+Final proof for $bold(p)$ must check that the cached commitments carried in
+$bold(p)$ are those of the intended program. Since every node of a valid
+tree carries the same $bold(p)$ (@sec:relations-def), binding of
+$Commit_"cach"$ makes the cached columns of all leaves of one type equal.
 
 #definition(title: "Message multiset of a witness")[
   Let $cal(V) := {(b, v) : b in cal(B), v in FF^(ell_b)}$ be the set of
@@ -304,18 +335,37 @@ $V(vk, x, pi)$ when the key is a variable. The relations of
 @sec:relations-def refer to argument systems only through their verifiers,
 and to the following fixed public maps only through their signatures. Their
 security properties are defined where they are used, in @sec:security, and
-ZisK's choices are given in @sec:instantiation.
+ZisK's choices are given in @sec:instantiation. Two of the maps are
+commitments, in the following sense.
 
+#definition(title: "Deterministic Commitment Scheme")[
+  A _deterministic commitment scheme_ $Com$ for a message space $cal(M)$ is
+  a polynomial-time computable function $Commit : cal(M) -> cal(C)$ into a
+  finite _commitment space_ $cal(C)$. It is _binding_ if for every PPT
+  adversary $cal(A)$
+  $
+    Adv("bind", Com)(cal(A)) := Pr[ (m, m') <- cal(A)(1^lambda) :
+      m != m' and Commit(m) = Commit(m') ] <= negl(lambda).
+  $
+  Since $Commit$ is deterministic, binding is collision resistance of
+  $Commit$; hiding is not required. When $cal(M)$ consists of vectors or
+  matrices over $FF$, the scheme is a _vector commitment_ if it also offers
+  openings of individual positions.
+] <def:commitment>
+
+The following interface elements are used throughout:
 - *Carriers.* A finite key space $cal(X)$ and an abelian group
   $cal(G)_(cal(F))$ of fingerprint values (@def:fingerprint), and a finite
   abelian _accumulator group_ $cal(G)_(cal(H))$.
-- *Trace commitment.* $Commit : union.big_(tau in [M]) cal(W)_tau -> {0, 1}^*$,
-  deterministic. A commitment $"com" = Commit(bold(T), bold(a))$ covers every
-  column of the trace and every AIR value; the auxiliary columns that the
-  prover of an AIR argument adds for its bus argument are internal to that
-  argument and are not part of the witness. The argument system for an AIR
-  type takes the key $chi in cal(X)$ as a public input, so the witness is
-  key-independent.
+- *Trace commitment.* A deterministic commitment scheme $Com$ with message
+  space $union.big_(tau in [M]) cal(W)_tau$ and commitment space ${0, 1}^*$.
+  A commitment $"com" = Commit(bold(T), bold(a))$ covers every column of the
+  trace and every AIR value. The argument system for an AIR type takes the key
+  $chi in cal(X)$ as a public input, so the witness is key-independent.
+- *Cached-column commitment.* A deterministic commitment scheme $Com_"cach"$
+  with message space $union.big_(tau in [M]) FF^(N_tau times abs(J^"cach"_tau))$
+  and commitment space $FF^m$. Its output for the cached columns of a type is
+  not part of a verification key but of the public statement (@def:columns).
 - *Hash-to-group and multiset hash.* $h : [M] times {0,1}^* -> cal(G)_(cal(H))$
   maps a _typed commitment_ $(tau, "com")$ to a group element, and
   $
@@ -637,4 +687,16 @@ term for a derived $alpha$ colliding with a previously queried input.
 
 *Trace commitment.* $Commit$ is a Merkle tree over Poseidon2, so it is
 straight-line extractable in the random-oracle model (@def:ext-com).
+
+*Cached-column commitment.* $Commit_"cach"$ is likewise a Merkle tree over
+Poseidon2. The program ROM is the cached column group of the ROM AIR type,
+and its root is one of the program's public inputs, so a proof is bound to a
+program through $bold(p)$. The analysis requires the leaf commitment
+$"com" = Commit(bold(T), bold(a))$ to bind the cached columns as well, since
+the challenge accumulator hashes $"com"$ and not $bold(p)$: if the leaf
+commitment covered the witness columns only, a prover could choose the ROM
+after seeing the key $chi$, and the fingerprint argument of
+@prop:bus-soundness would not apply. Either $"com"$ includes the cached
+commitment, or the latter must enter the challenge contribution by other
+means; this is a circuit requirement to be checked (@sec:discussion).
 

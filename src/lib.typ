@@ -72,6 +72,7 @@
 #let DeriveKey = math.sans("DeriveKey")
 #let BusCont = math.upright("BusCont")
 #let Local = math.upright("Local")
+#let Bind = math.upright("Bind")
 #let Balanced = math.upright("Balanced")
 #let mult = math.upright("mult")
 #let accept = math.upright("accept")
