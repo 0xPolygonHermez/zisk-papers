@@ -1,4 +1,7 @@
-#import "../../lib.typ": definition, remark, theorem, lemma, proposition, proof, game, Adv, Exp, Pr, Time, poly, negl, Com, Commit, vk, DeriveAlpha, BusCont, Local, Balanced, mult, accept
+#import "../../lib.typ": (
+  Adv, Balanced, BusCont, Com, Commit, DeriveKey, Exp, Local, Pr, Time, accept, definition, game, lemma, mult, negl,
+  poly, proof, proposition, remark, theorem, vk,
+)
 
 == Overview
 
@@ -68,7 +71,7 @@ instantiated by LogUp, at a random-oracle challenge.
   $cal(E)$, the _extractor_, such that for every PPT adversary $cal(A)$
   $
     Adv("ks", Pi)(cal(A)) := Pr[ & (x, pi) <- cal(A)(1^lambda); w <- cal(E)(x, pi) : \
-      & sans("Verify")(vk_Pi, x, pi) = accept and (x; w) in.not cal(R) ] <= negl(lambda),
+                                 & sans("Verify")(vk_Pi, x, pi) = accept and (x; w) in.not cal(R) ] <= negl(lambda),
   $
   the probability taken over the coins of $cal(A)$ and $cal(E)$ and the
   random oracles, to which all algorithms have access. We assume that the
@@ -116,11 +119,11 @@ commitment would both have to equal the extractor's output.
   cardinality below $2^B$_ if for every PPT adversary $cal(A)$
   $
     Adv("cr", cal(H))(cal(A)) := Pr[ & (cal(S), cal(S)') <- cal(A)(1^lambda) : \
-      & cal(S) != cal(S)' and abs(cal(S)), abs(cal(S)') < 2^B and cal(H)(cal(S)) = cal(H)(cal(S)') ] <= negl(lambda).
+        & cal(S) != cal(S)' and abs(cal(S)), abs(cal(S)') < 2^B and cal(H)(cal(S)) = cal(H)(cal(S)') ] <= negl(lambda).
   $
 ] <def:cr>
 
-The cardinality restriction is necessary: $ZZ_p^n$ has exponent $p$, so
+The cardinality restriction is necessary for ZisK's accumulator group: $ZZ_p^n$ has exponent $p$, so
 adding $p$ copies of any element to a multiset leaves $cal(H)$ unchanged, and
 $2^B < p$ rules this out. For LtHash, collision resistance on bounded
 multisets reduces to the short-integer-solution problem @STOC:Ajtai96
@@ -129,7 +132,7 @@ resistant on its own, which a single field element is not, so we assume the
 digest has at least $2 lambda$ bits (@sec:discussion).
 
 #definition(title: "Random-oracle model")[
-  The hash-to-group function $h$, the challenge derivation $DeriveAlpha$ and
+  The hash-to-group function $h$, the challenge derivation $DeriveKey$ and
   the hash function underlying $Com$ are independent random oracles. An
   adversary makes at most $Q$ queries in total; every algorithm, including
   verifiers and extractors, has oracle access.
@@ -138,12 +141,14 @@ digest has at least $2 lambda$ bits (@sec:discussion).
 #definition(title: "ZisK proof system")[
   A _ZisK proof system_ is a tuple
   $
-    sans("ZisK") = (cal(C), Com, h, cal(H), DeriveAlpha, cal(F), {Pi_"AIR"^((tau))}_(tau in [M]), {Pi_"LEAF"^((tau))}_(tau in [M]), Pi_"AGG", Pi_"FINAL")
+    sans("ZisK") = (cal(C), Com, h, cal(H), DeriveKey, cal(F), {Pi_"AIR"^((tau))}_(tau in [M]), {Pi_"LEAF"^((tau))}_(tau in [M]), Pi_"AGG", Pi_"FINAL")
   $
   consisting of the AIR-type family $cal(C)$, the components of
-  @sec:components and a statistically sound bus fingerprint $cal(F)$
-  (@def:fingerprint) with key space $KK^2$, values in $KK$ and every nonzero
-  multiset admissible, where the argument systems attest to the relations of
+  @sec:components with the carriers of the ZisK instantiation (key space
+  $cal(X) = KK^2$, fingerprint values $cal(G)_(cal(F)) = KK$, accumulator
+  group $cal(G)_(cal(H)) = ZZ_p^n$), a statistically sound bus fingerprint
+  $cal(F)$ (@def:fingerprint) admitting every nonzero multiset, and argument
+  systems attesting to the relations of
   @sec:relations-def, the key hard-coded by $Pi_"FINAL"$ is the key of
   $Pi_"AGG"$, and the parameters satisfy the standing assumptions of
   @sec:relations.
@@ -282,8 +287,8 @@ balance, and finally that the challenge the tree certifies is random enough.
 
 #lemma(title: "Zero test")[
   Let $cal(F)$ be a statistically sound bus fingerprint with key space
-  $KK^2$ that admits every nonzero multiset, let $L$ be a typed witness
-  collection with $not Balanced(L)$, and let $chi$ be uniform in $KK^2$. Then
+  $cal(X)$ that admits every nonzero multiset, let $L$ be a typed witness
+  collection with $not Balanced(L)$, and let $chi$ be uniform in $cal(X)$. Then
   $
     Pr_chi [ sum_(i=1)^(abs(L)) BusCont_chi (cal(I)_(tau_i), w_i) = 0 ]
     <= epsilon_(cal(F))(Lambda(L)).
@@ -310,7 +315,7 @@ an extracted collection, and bound it.
   + *Adversary.* $cal(A)(1^lambda)$ outputs a typed witness collection
     $L = ((tau_i, w_i))_(i in [abs(L)])$ and commitments $("com"_i)_(i in [abs(L)])$.
   + *Derivation.* Set $bold(c) := sum_(i=1)^(abs(L)) h(tau_i, "com"_i) in ZZ_p^n$
-    and $chi := DeriveAlpha(bold(c))$.
+    and $chi := DeriveKey(bold(c))$.
   + *Winning condition.* Return $1$ if and only if $1 <= abs(L) < 2^B$;
     $Commit(w_i) = "com"_i$ for every $i$;
     $sum_(i=1)^(abs(L)) BusCont_chi (cal(I)_(tau_i), w_i) = 0$; and
@@ -320,7 +325,7 @@ an extracted collection, and bound it.
 
 Substituting $s_i := BusCont_chi (cal(I)_(tau_i), w_i)$ and
 $bold(c)_i := h(tau_i, "com"_i)$ shows that the winning condition is
-precisely "the root checks $s = 0$ and $chi = DeriveAlpha(bold(c))$ pass on
+precisely "the root checks $s = 0$ and $chi = DeriveKey(bold(c))$ pass on
 values honestly computed from $L$, yet $L$ is unbalanced". This is the form in
 which the game is invoked in the proof of @thm:main.
 
@@ -341,14 +346,14 @@ which the game is invoked in the proof of @thm:main.
 
 #proof[
   Let $(L, ("com"_i)_i)$ be $cal(A)$'s output and $bold(c)$, $chi$ as in the
-  game. Number the $DeriveAlpha$ queries in the order they are made and let
+  game. Number the $DeriveKey$ queries in the order they are made and let
   $t^* in [Q + 1]$ be the index of the first query at $bold(c)$, with
   $t^* := Q + 1$ if $cal(A)$ never queried $bold(c)$; in the latter case the
   game's own derivation plays the role of a final, fresh query. For
   $t in [Q + 1]$ write $bold(c)_t$ for the $t$-th query point, $chi_t$ for its
   answer and $cal(T)_(<t)$ for the transcript of all oracle queries and answers
   made before it; a typed commitment is _known at time $t$_ if it was queried
-  to $h$ before the $t$-th $DeriveAlpha$ query. We define bad events, bound
+  to $h$ before the $t$-th $DeriveKey$ query. We define bad events, bound
   each by a reduction or a counting argument, and show that off all of them
   the adversary cannot win.
 
@@ -469,14 +474,14 @@ deterministic.
   experiment $Exp("fin", (cal(E)_"FIN", cal(A)))(lambda)$ is:
   #game(
     [$cal(A)(1^lambda)$ outputs a public statement $bold(p) in cal(P)$ and a
-     proof $pi_"FIN"$.],
+      proof $pi_"FIN"$.],
     [If $V_"FINAL"(bold(p), pi_"FIN") != accept$, return $0$.],
     [Run $(chi, sigma, pi) <- cal(E)_"FIN"(bold(p), pi_"FIN")$, with
-     $sigma = (s, tau, kappa, bold(c))$.],
+      $sigma = (kappa, tau, bold(c), s)$.],
     [Return $1$ if and only if $(bold(p); (chi, sigma, pi)) in.not cal(R)_"FINAL"$,
-     i.e. unless $sans("Typed")(tau, kappa)$,
-     $V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) = accept$,
-     $s = 0$ and $chi = DeriveAlpha(bold(c))$.],
+      i.e. unless $sans("Typed")(tau, kappa)$,
+      $V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) = accept$,
+      $s = 0$ and $chi = DeriveKey(bold(c))$.],
   )
   We write $Adv("fin", cal(E)_"FIN")(cal(A))$ for the probability that the
   experiment returns $1$.
@@ -505,8 +510,7 @@ deterministic.
 
 The aggregation extractor unrolls the tree below the Final Verifier's child
 until it reaches leaf-verifier proofs. The counter $kappa$ of the child
-statement tells it in advance how many leaves to expect, and
-@rem:wellfounded guarantees that it never has to descend further than
+statement tells it in advance how many leaves to expect, and it guarantees that it never has to descend further than
 $kappa - 1$ aggregation nodes.
 
 #definition(title: "Aggregation extraction game")[
@@ -514,16 +518,16 @@ $kappa - 1$ aggregation nodes.
   adversary $cal(A)$, the experiment $Exp("agg", (kappa, cal(E)_"REC", cal(A)))(lambda)$ is:
   #game(
     [$cal(A)(1^lambda)$ outputs $(bold(p), chi, sigma, pi)$ with
-     $sigma = (s, tau, kappa, bold(c))$.],
+      $sigma = (kappa, tau, bold(c), s)$.],
     [If $not sans("Typed")(tau, kappa)$ or
-     $V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) != accept$,
-     return $0$. (These are the conjuncts of $cal(R)_"FINAL"$ that concern the
-     child.)],
+      $V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) != accept$,
+      return $0$. (These are the conjuncts of $cal(R)_"FINAL"$ that concern the
+      child.)],
     [Run $((sigma_1, pi_1), dots, (sigma_kappa, pi_kappa)) <- cal(E)_"REC"(bold(p), chi, sigma, pi)$,
-     with $sigma_i = (s_i, tau_i, kappa_i, bold(c)_i)$.],
+      with $sigma_i = (kappa_i, tau_i, bold(c)_i, s_i)$.],
     [Return $1$ unless, for every $i in [kappa]$, $tau_i in [M]$, $kappa_i = 1$
-     and $V_"LEAF"^((tau_i))((bold(p), chi, sigma_i, vk_"AGG"), pi_i) = accept$,
-     and moreover $sum_(i=1)^kappa s_i = s$ and $sum_(i=1)^kappa bold(c)_i = bold(c)$.],
+      and $V_"LEAF"^((tau_i))((bold(p), chi, sigma_i, vk_"AGG"), pi_i) = accept$,
+      and moreover $sum_(i=1)^kappa s_i = s$ and $sum_(i=1)^kappa bold(c)_i = bold(c)$.],
   )
   We write $Adv("agg", (kappa, cal(E)_"REC"))(cal(A))$ for the probability
   that the experiment returns $1$.
@@ -639,15 +643,15 @@ architecture's combine layer.
   $cal(A)$, the experiment $Exp("leaf", (tau, cal(E)_"LEAF"^((tau)), cal(A)))(lambda)$ is:
   #game(
     [$cal(A)(1^lambda)$ outputs $(bold(p), chi, sigma, vk)$ with
-     $sigma = (s, tau', kappa, bold(c))$, and a proof $pi_"LEAF"$.],
+      $sigma = (kappa, tau', bold(c), s)$, and a proof $pi_"LEAF"$.],
     [If $V_"LEAF"^((tau))((bold(p), chi, sigma, vk), pi_"LEAF") != accept$,
-     return $0$.],
+      return $0$.],
     [Run $("com", pi_"AIR") <- cal(E)_"LEAF"^((tau))((bold(p), chi, sigma, vk), pi_"LEAF")$.],
     [Return $1$ if and only if
-     $((bold(p), chi, sigma, vk); ("com", pi_"AIR")) in.not cal(R)_"LEAF"^((tau))$,
-     i.e. unless $tau' = tau$, $kappa = 1$,
-     $V_"AIR"^((tau))((bold(p), chi, s, "com"), pi_"AIR") = accept$ and
-     $bold(c) = h(tau, "com")$.],
+      $((bold(p), chi, sigma, vk); ("com", pi_"AIR")) in.not cal(R)_"LEAF"^((tau))$,
+      i.e. unless $tau' = tau$, $kappa = 1$,
+      $V_"AIR"^((tau))((bold(p), chi, s, "com"), pi_"AIR") = accept$ and
+      $bold(c) = h(tau, "com")$.],
   )
   We write $Adv("leaf", (tau, cal(E)_"LEAF"^((tau))))(cal(A))$ for the
   probability that the experiment returns $1$.
@@ -686,13 +690,13 @@ extractor a _typed_ collection.
   $cal(A)$, the experiment $Exp("air", (tau, cal(E)_"AIR"^((tau)), cal(A)))(lambda)$ is:
   #game(
     [$cal(A)(1^lambda)$ outputs a statement $x = (bold(p), chi, s, "com")$ and
-     a proof $pi_"AIR"$.],
+      a proof $pi_"AIR"$.],
     [If $V_"AIR"^((tau))(x, pi_"AIR") != accept$, return $0$.],
     [Run $(bold(T), bold(a)) <- cal(E)_"AIR"^((tau))(x, pi_"AIR")$.],
     [Return $1$ if and only if $(x; (bold(T), bold(a))) in.not cal(R)_"AIR"^((tau))$,
-     i.e. unless $Local_tau (bold(p), (bold(T), bold(a)))$,
-     $s = BusCont_chi (cal(I)_tau, (bold(T), bold(a)))$ and
-     $Commit(bold(T), bold(a)) = "com"$.],
+      i.e. unless $Local_tau (bold(p), (bold(T), bold(a)))$,
+      $s = BusCont_chi (cal(I)_tau, (bold(T), bold(a)))$ and
+      $Commit(bold(T), bold(a)) = "com"$.],
   )
   We write $Adv("air", (tau, cal(E)_"AIR"^((tau))))(cal(A))$ for the
   probability that the experiment returns $1$.
@@ -730,13 +734,13 @@ extractor a _typed_ collection.
   and $cal(D)^"ext"$ such that
   $
     epsilon <= & Adv("ks", Pi_"FINAL")(cal(D)_"FIN")
-    + (kappa_"max" - 1) dot Adv("ks", Pi_"AGG")(cal(D)_"AGG") \
-    & + kappa_"max" dot max_(tau in [M]) Adv("ks", Pi_"LEAF"^((tau)))(cal(D)_"LEAF"^((tau)))
-    + kappa_"max" dot max_(tau in [M]) Adv("ks", Pi_"AIR"^((tau)))(cal(D)_"AIR"^((tau))) \
-    & + (Q + 1) dot epsilon_(cal(F))(Lambda_"max")
-    + Adv("cr", cal(H))(cal(D)^"cr")
-    + Adv("ext", Com)(cal(D)^"ext")
-    + frac(Q + 2^B, p^n).
+                 + (kappa_"max" - 1) dot Adv("ks", Pi_"AGG")(cal(D)_"AGG") \
+               & + kappa_"max" dot max_(tau in [M]) Adv("ks", Pi_"LEAF"^((tau)))(cal(D)_"LEAF"^((tau)))
+                 + kappa_"max" dot max_(tau in [M]) Adv("ks", Pi_"AIR"^((tau)))(cal(D)_"AIR"^((tau))) \
+               & + (Q + 1) dot epsilon_(cal(F))(Lambda_"max")
+                 + Adv("cr", cal(H))(cal(D)^"cr")
+                 + Adv("ext", Com)(cal(D)^"ext")
+                 + frac(Q + 2^B, p^n).
   $
   All reduction adversaries invoke $cal(A)$ exactly once and run in time at
   most $(3 kappa_"max" + 1) dot Time(cal(A)) + poly(lambda)$. In particular, if
@@ -754,10 +758,10 @@ extractor a _typed_ collection.
   win.
 
   *Step 1 (Final layer).* Apply $cal(E)_"FIN"$ to $(bold(p), pi_"FIN")$ to
-  obtain $(chi, sigma, pi)$ with $sigma = (s, tau, kappa, bold(c))$ such that
+  obtain $(chi, sigma, pi)$ with $sigma = (kappa, tau, bold(c), s)$ such that
   $sans("Typed")(tau, kappa)$,
   $V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) = accept$,
-  $s = 0$ and $chi = DeriveAlpha(bold(c))$. This fails with probability at
+  $s = 0$ and $chi = DeriveKey(bold(c))$. This fails with probability at
   most $Adv("ks", Pi_"FINAL")(cal(D)_"FIN")$ by @lem:fin. In particular
   $kappa in [1, 2^B)$, so $kappa <= kappa_"max"$.#footnote[
     This composition is where the first idealization of @rem:idealized is
@@ -769,7 +773,7 @@ extractor a _typed_ collection.
   *Step 2 (Aggregation layer).* Apply $cal(E)_"REC"$ to
   $(bold(p), chi, sigma, pi)$; its filter is satisfied by Step 1. Obtain
   $((sigma_1, pi_1), dots, (sigma_kappa, pi_kappa))$ with
-  $sigma_i = (s_i, tau_i, 1, bold(c)_i)$, $tau_i in [M]$,
+  $sigma_i = (1, tau_i, bold(c)_i, s_i)$, $tau_i in [M]$,
   $V_"LEAF"^((tau_i))((bold(p), chi, sigma_i, vk_"AGG"), pi_i) = accept$,
   $sum_i s_i = s = 0$ and $sum_i bold(c)_i = bold(c)$. This fails with
   probability at most $(kappa - 1) dot Adv("ks", Pi_"AGG")(cal(D)_"AGG")$ by
@@ -796,7 +800,7 @@ extractor a _typed_ collection.
   Deterministically, given that Steps 1 to 4 succeeded:
   $abs(L) = kappa in [1, 2^B)$; $Local_(tau_i)(bold(p), w_i)$ for every $i$;
   $bold(c) = sum_i h(tau_i, "com"_i) = sum_i h(tau_i, Commit(w_i))$;
-  $chi = DeriveAlpha(bold(c))$; and
+  $chi = DeriveKey(bold(c))$; and
   $sum_i BusCont_chi (cal(I)_(tau_i), w_i) = sum_i s_i = s = 0$.
 
   *Step 6 (Bus soundness).* Let $cal(A)_"bus"$ be the algorithm that runs
@@ -816,11 +820,11 @@ extractor a _typed_ collection.
   $(bold(p); L) in cal(R)_sans("ZisK")$ by Step 5 and @def:r-zisk, so
   $cal(A)$ does not win. Summing the failure probabilities,
   $
-    epsilon <= & Adv("ks", Pi_"FINAL")(cal(D)_"FIN") & "(Step 1)" \
-    & + (kappa - 1) dot Adv("ks", Pi_"AGG")(cal(D)_"AGG") & "(Step 2)" \
-    & + kappa dot max_tau Adv("ks", Pi_"LEAF"^((tau)))(cal(D)_"LEAF"^((tau))) & "(Step 3)" \
-    & + kappa dot max_tau Adv("ks", Pi_"AIR"^((tau)))(cal(D)_"AIR"^((tau))) & "(Step 4)" \
-    & + Adv("bus")(cal(A)_"bus") & "(Step 6)",
+    epsilon <= & Adv("ks", Pi_"FINAL")(cal(D)_"FIN")                                     &  "(Step 1)" \
+               & + (kappa - 1) dot Adv("ks", Pi_"AGG")(cal(D)_"AGG")                     &  "(Step 2)" \
+               & + kappa dot max_tau Adv("ks", Pi_"LEAF"^((tau)))(cal(D)_"LEAF"^((tau))) &  "(Step 3)" \
+               & + kappa dot max_tau Adv("ks", Pi_"AIR"^((tau)))(cal(D)_"AIR"^((tau)))   &  "(Step 4)" \
+               & + Adv("bus")(cal(A)_"bus")                                              & "(Step 6)",
   $
   and replacing $kappa$ by $kappa_"max"$, which only increases the right-hand
   side, gives the stated bound. All coefficients are polynomially bounded, so
@@ -858,14 +862,31 @@ the obligations that a full security argument must discharge.
     columns: (27%, 21%, 52%),
     align: (left, left, left),
     table.header([*Term*], [*Status*], [*Where / what remains*]),
-    [$Adv("ks", Pi_"AIR"^((tau)))$], [backend assumption], [Knowledge soundness of each STARK argument for $cal(R)_"AIR"^((tau))$ in commit-and-prove form (@def:r-air); quantified by the backend's own analysis.],
-    [$Adv("ks", Pi_"LEAF"^((tau)))$, $Adv("ks", Pi_"AGG")$, $Adv("ks", Pi_"FINAL")$], [backend assumption], [Knowledge soundness of the recursive STARK circuits for @def:r-leaf, @def:r-agg, @def:r-final, including the typing predicate and the $vk$-dispatch.],
-    [straight-line composition], [idealization], [@rem:idealized (first item); relativized arguments do not exist @EPRINT:BarChiGua24.],
+    [$Adv("ks", Pi_"AIR"^((tau)))$],
+    [backend assumption],
+    [Knowledge soundness of each STARK argument for $cal(R)_"AIR"^((tau))$ in commit-and-prove form (@def:r-air); quantified by the backend's own analysis.],
+
+    [$Adv("ks", Pi_"LEAF"^((tau)))$, $Adv("ks", Pi_"AGG")$, $Adv("ks", Pi_"FINAL")$],
+    [backend assumption],
+    [Knowledge soundness of the recursive STARK circuits for @def:r-leaf, @def:r-agg, @def:r-final, including the typing predicate and the $vk$-dispatch.],
+
+    [straight-line composition],
+    [idealization],
+    [@rem:idealized (first item); relativized arguments do not exist @EPRINT:BarChiGua24.],
+
     [$Adv("ext", Com)$], [defined (@def:ext-com)], [Standard for Merkle trees over a random oracle.],
-    [$Adv("cr", cal(H))$], [defined (@def:cr)], [LtHash on multisets of cardinality below $2^B$; requires a collision-resistant inner digest of at least $2 lambda$ bits.],
+    [$Adv("cr", cal(H))$],
+    [defined (@def:cr)],
+    [LtHash on multisets of cardinality below $2^B$; requires a collision-resistant inner digest of at least $2 lambda$ bits.],
+
     [accumulator uniqueness], [idealization], [@rem:idealized (second item); rigorous alternatives in @rem:forking.],
-    [$epsilon_(cal(F))$], [defined (@def:fingerprint); proved for LogUp (@lem:logup)], [Statistical; requires the challenge pair to be a random-oracle output (@def:rom). The circuit proves a sub-relation of $cal(R)_"AIR"^((tau))$ (@sec:arithmetization).],
-    [$Balanced(L)$], [proved (@prop:bus-soundness)], [Field-valued; integer balance needs multiplicity range checks (@rem:integer-balance).],
+    [$epsilon_(cal(F))$],
+    [defined (@def:fingerprint); proved for LogUp (@lem:logup)],
+    [Statistical; requires the challenge pair to be a random-oracle output (@def:rom). The circuit proves a sub-relation of $cal(R)_"AIR"^((tau))$ (@sec:instantiation).],
+
+    [$Balanced(L)$],
+    [proved (@prop:bus-soundness)],
+    [Field-valued; integer balance needs multiplicity range checks (@rem:integer-balance).],
   ),
   caption: [
     Definition and obligation ledger for the terms of @thm:main.
@@ -892,7 +913,7 @@ obligations for the sections that build on it.
   main cryptographic obligation left by this section; the bound that forking
   gives is valid but concretely loose.
 - *Circuit requirements.* The relations of @sec:relations-def require the
-  circuits to enforce the typing predicate on children (@rem:wellfounded), to
+  circuits to enforce the typing predicate on children, to
   hash the type together with the commitment into the challenge contribution,
   and to expose the trace commitment as a public input of the AIR argument.
   Each is a small change relative to the whitepaper's description and each is
