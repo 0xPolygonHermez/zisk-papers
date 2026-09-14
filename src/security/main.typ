@@ -1,7 +1,16 @@
-#import "@preview/unequivocal-ams:0.1.2": ams-article
-#import "../style.typ": title-page
+#import "../style.typ": article, title-page
+
+// Page geometry
+#let margin = 1in
+#let title-margin = (
+  top: (116pt / 279mm) * 100%,
+  left: (126pt / 216mm) * 100%,
+  right: (128pt / 216mm) * 100%,
+  bottom: (94pt / 279mm) * 100%,
+)
 
 #title-page(
+  margin: title-margin,
   title: [ZisK's Recursion],
   authors: (
     (
@@ -43,15 +52,13 @@
   ),
 )
 
-#show: ams-article.with(
-  // The title page above replaces the template's title block, so the
-  // template receives an empty title; the running header is set below.
-  title: [],
+#show: article.with(
+  title: "ZisK's Recursion",
+  authors: ("Héctor Masip-Ardevol",),
+  margin: margin,
   bibliography: bibliography(("./refs.bib", "../whitepaper/refs.bib")),
 )
 
-// Set text properties for the entire document
-#set text(font: "Libertinus Serif", size: 11pt)
 // Monospace for URL links only; internal cross-references keep the text font.
 #show link: it => if type(it.dest) == str {
   set text(font: "DejaVu Sans Mono")
@@ -67,20 +74,11 @@
 // Remarks have their own counter, reset in the same way.
 #let sec-numbering(n) = numbering("1.1", counter(heading).get().first(), n)
 
-// Top-level headings: left-aligned and bold (the template centres them in
-// small capitals).
+// The remark counter restarts at every top-level heading, like the theorem
+// counter (which `article` resets).
 #show heading.where(level: 1): it => {
-  counter(figure.where(kind: "theorem")).update(0)
   counter(figure.where(kind: "remark")).update(0)
-  set align(left)
-  set par(first-line-indent: 0em)
-  block(above: 20pt, below: 12pt, text(size: 13pt, weight: "bold", {
-    if it.numbering != none {
-      counter(heading).display(it.numbering)
-      h(0.5em)
-    }
-    it.body
-  }))
+  it
 }
 
 #show ref: it => {
@@ -103,7 +101,7 @@
 // Theorem-like environments: bold head, upright body for definitions, italic
 // body for theorems, lemmas, propositions and corollaries.
 #let italic-envs = ([Theorem], [Lemma], [Proposition], [Corollary])
-#show figure.where(kind: "theorem"): it => block(spacing: 11.5pt, breakable: true, {
+#show figure.where(kind: "theorem"): it => block(width: 100%, spacing: 11.5pt, breakable: true, {
   strong({
     it.supplement
     if it.numbering != none {
@@ -122,7 +120,7 @@
 })
 
 // Italic styling for remarks (including title)
-#show figure.where(kind: "remark"): it => block(spacing: 11.5pt, breakable: true, align(left, emph({
+#show figure.where(kind: "remark"): it => block(width: 100%, spacing: 11.5pt, breakable: true, align(left, emph({
   strong({
     it.supplement
     if it.numbering != none {
@@ -150,11 +148,6 @@
 
 #outline(depth: 2)
 #pagebreak()
-
-// No running header
-#set page(header: none, footer: context {
-  align(center, text(size: 7.97224pt, counter(page).display()))
-})
 
 = Preliminaries and Recursive Relations <sec:relations>
 

@@ -103,8 +103,8 @@ $J^"fix"_tau$, $bold(d)_tau$ and $beta_tau$.
     $T_j (r) = d_(tau, j)(r)$ for every $j in J^"fix"_tau$ and $r in [N_tau]$.
   + $Bind_tau (bold(p), w)$: $a_j = p_(beta_tau (j))$ for every
     $j in "dom"(beta_tau)$.
-  + The cached columns open the commitment carried in the public statement:
-    $Commit_"cach" (bold(T)|_(J^"cach"_tau)) = (p_(gamma_tau (1)), dots, p_(gamma_tau (m)))$.
+  + The cached columns open the commitment carried in $bold(p)$:
+    $ Commit_"cach" (bold(T)|_(J^"cach"_tau)) = (p_(gamma_tau (1)), dots, p_(gamma_tau (m))). $
 ] <def:local>
 
 Fixed columns are part of the description of $cal(A)_tau$, hence of the
