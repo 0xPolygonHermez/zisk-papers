@@ -1,13 +1,52 @@
 #import "@preview/unequivocal-ams:0.1.2": ams-article
+#import "../style.typ": title-page
+
+#title-page(
+  title: [ZisK's Recursion],
+  authors: (
+    (
+      name: "Héctor Masip-Ardevol",
+      email: "hector@zisk.technology",
+      affiliation: "ZisK Core Team",
+    ),
+  ),
+  // Fixed on purpose: the build script pins SOURCE_DATE_EPOCH for
+  // reproducible PDFs, so `datetime.today()` would not give the real date.
+  date: [September 14, 2026],
+  abstract: [
+    This document analyzes the security of the recursive aggregation layer of
+    ZisK. It first gives a self-contained statement of the relations proved by
+    the AIR arguments, the leaf verifiers, the aggregation nodes and the Final
+    Verifier. The bus argument that ties the AIR instances together is
+    abstracted as an additive fingerprint of a weighted multiset of messages,
+    and the per-node bookkeeping as accumulators over a commutative monoid;
+    the LogUp running sum and the LtHash challenge accumulator of ZisK are
+    instances of these notions.
+
+    It then proves that any adversary producing an accepting Final proof for a
+    public statement can be turned into an extractor that outputs a typed
+    collection of AIR witnesses that are locally satisfying and bus balanced.
+    The bound is an explicit sum of the knowledge-soundness errors of the four
+    argument systems, weighted by the size of the unrolled aggregation tree,
+    the soundness error of the fingerprint, the collision resistance of the
+    challenge accumulator and the extractability of the trace commitment, in
+    the random-oracle model. Two idealizations are made explicit, straight-line
+    composition and the uniqueness of the accumulated multiset, and the
+    assumptions inherited from the backend together with the obligations left
+    for a complete proof are recorded in a ledger.
+  ],
+  keywords: (
+    "zero-knowledge virtual machines",
+    "recursive proof composition",
+    "knowledge soundness",
+    "lookup arguments",
+  ),
+)
 
 #show: ams-article.with(
-  title: [Recursion Security],
-  // authors: (
-  //   (
-  //     name: "ZisK Core Team",
-  //   ),
-  // ),
-  // abstract: [],
+  // The title page above replaces the template's title block, so the
+  // template receives an empty title; the running header is set below.
+  title: [],
   bibliography: bibliography(("./refs.bib", "../whitepaper/refs.bib")),
 )
 
@@ -28,9 +67,20 @@
 // Remarks have their own counter, reset in the same way.
 #let sec-numbering(n) = numbering("1.1", counter(heading).get().first(), n)
 
+// Top-level headings: left-aligned and bold (the template centres them in
+// small capitals).
 #show heading.where(level: 1): it => {
+  counter(figure.where(kind: "theorem")).update(0)
   counter(figure.where(kind: "remark")).update(0)
-  it
+  set align(left)
+  set par(first-line-indent: 0em)
+  block(above: 20pt, below: 12pt, text(size: 13pt, weight: "bold", {
+    if it.numbering != none {
+      counter(heading).display(it.numbering)
+      h(0.5em)
+    }
+    it.body
+  }))
 }
 
 #show ref: it => {
@@ -98,7 +148,13 @@
 // Remove background fill from top-level outline entries
 #show outline.entry.where(level: 1): set outline.entry(fill: none)
 
-// #outline(depth: 1)
+#outline(depth: 2)
+#pagebreak()
+
+// No running header
+#set page(header: none, footer: context {
+  align(center, text(size: 7.97224pt, counter(page).display()))
+})
 
 = Preliminaries and Recursive Relations <sec:relations>
 

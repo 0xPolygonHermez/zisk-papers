@@ -58,8 +58,12 @@
 )
 #let Adv(sup, ..sub) = _attach-op("Adv", sup, sub)
 #let Exp(sup, ..sub) = _attach-op("Exp", sup, sub)
+
+#let Zisk = math.sans("ZisK")
 #let Pr = math.op("Pr")
 #let Time = math.sans("Time")
+#let Prove = math.sans("Prove")
+#let Verify = math.sans("Verify")
 #let poly = math.sans("poly")
 #let negl = math.sans("negl")
 #let Com = math.sans("Com")

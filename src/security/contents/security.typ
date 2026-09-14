@@ -1,6 +1,6 @@
 #import "../../lib.typ": (
-  Adv, Balanced, BusCont, Com, Commit, DeriveKey, Exp, Local, Pr, Time, accept, definition, game, lemma, mult, negl,
-  poly, proof, proposition, remark, theorem, vk,
+  Adv, Balanced, BusCont, Com, Commit, DeriveKey, Exp, Local, Pr, Prove, Time, Verify, Zisk, accept, definition, game,
+  lemma, mult, negl, poly, proof, proposition, remark, theorem, vk,
 )
 
 == Overview
@@ -14,8 +14,7 @@ descends the aggregation tree of @sec:relations layer by layer, reducing
 everything to the knowledge soundness of the four kinds of argument systems
 ($Pi_"AIR"^((tau))$, $Pi_"LEAF"^((tau))$, $Pi_"AGG"$ and $Pi_"FINAL"$), the
 straight-line extractability of the trace commitment $Com$, the multiset
-collision resistance of $cal(H)$, and the soundness of the bus fingerprint,
-instantiated by LogUp, at a random-oracle challenge.
+collision resistance of $cal(H)$, and the soundness of the bus fingerprint.
 
 #remark(numbered: true, title: "Idealized proof model")[
   The analysis is idealized in three respects.
@@ -35,8 +34,7 @@ instantiated by LogUp, at a random-oracle challenge.
   answers at $bold(c)$. For the trace commitments this follows from
   straight-line extractability of Merkle trees in the ROM. For the algebraic
   accumulator $cal(H)$ it does not: distinct multisets with equal hash exist
-  in abundance (the group $ZZ_p^n$ is far smaller than the set of multisets of
-  fewer than $2^B$ commitments), only the hardness of finding them protects
+  in abundance, only the hardness of finding them protects
   the scheme, and recovering a multiset from its accumulator is a subset-sum
   problem. We therefore charge the event that two admissible multisets known
   to the adversary share an accumulator to the collision resistance of
@@ -66,12 +64,12 @@ instantiated by LogUp, at a random-oracle challenge.
 == Definitions <sec:definitions>
 
 #definition(title: "Knowledge soundness")[
-  A non-interactive argument system $Pi = (sans("Prove"), sans("Verify"))$ for
+  A non-interactive argument system $Pi = (Prove, Verify)$ for
   a relation $cal(R)$ is _knowledge-sound_ if there exists a PPT algorithm
-  $cal(E)$, the _extractor_, such that for every PPT adversary $cal(A)$
+  $cal(E)$, the _extractor_, such that for every PPT adversary $cal(A)$:
   $
     Adv("ks", Pi)(cal(A)) := Pr[ & (x, pi) <- cal(A)(1^lambda); w <- cal(E)(x, pi) : \
-                                 & sans("Verify")(vk_Pi, x, pi) = accept and (x; w) in.not cal(R) ] <= negl(lambda),
+                                 & Verify(vk_Pi, x, pi) = accept and (x; w) in.not cal(R) ] <= negl(lambda),
   $
   the probability taken over the coins of $cal(A)$ and $cal(E)$ and the
   random oracles, to which all algorithms have access. We assume that the
@@ -141,12 +139,10 @@ digest has at least $2 lambda$ bits (@sec:discussion).
 #definition(title: "ZisK proof system")[
   A _ZisK proof system_ is a tuple
   $
-    sans("ZisK") = (cal(C), Com, h, cal(H), DeriveKey, cal(F), {Pi_"AIR"^((tau))}_(tau in [M]), {Pi_"LEAF"^((tau))}_(tau in [M]), Pi_"AGG", Pi_"FINAL")
+    Zisk = (cal(C), Com, h, cal(H), DeriveKey, cal(F), {Pi_"AIR"^((tau))}_(tau in [M]), {Pi_"LEAF"^((tau))}_(tau in [M]), Pi_"AGG", Pi_"FINAL")
   $
   consisting of the AIR-type family $cal(C)$, the components of
-  @sec:components with the carriers of the ZisK instantiation (key space
-  $cal(X) = KK^2$, fingerprint values $cal(G)_(cal(F)) = KK$, accumulator
-  group $cal(G)_(cal(H)) = ZZ_p^n$), a statistically sound bus fingerprint
+  @sec:components with the carriers of the ZisK instantiation, a statistically sound bus fingerprint
   $cal(F)$ (@def:fingerprint) admitting every nonzero multiset, and argument
   systems attesting to the relations of
   @sec:relations-def, the key hard-coded by $Pi_"FINAL"$ is the key of
@@ -155,10 +151,10 @@ digest has at least $2 lambda$ bits (@sec:discussion).
 ] <def:zisk>
 
 #definition(title: "Bounded global satisfiability")[
-  The _target relation_ $cal(R)_sans("ZisK")$ has public statements
+  The _target relation_ $cal(R)_Zisk$ has public statements
   $bold(p) in cal(P)$ and typed witness collections $L$ as witnesses:
   $
-    (bold(p); L) in cal(R)_sans("ZisK")
+    (bold(p); L) in cal(R)_Zisk
     <=>
     cases(
       1 <= abs(L) < 2^B\,,
@@ -179,11 +175,11 @@ consequence of $Local$ and $Balanced$ for the specific AIRs of the circuit and
 is outside this section.
 
 #definition(title: "Final argument system")[
-  The _final argument system_ of $sans("ZisK")$ is the non-interactive
-  argument system $Pi^*$ for $cal(R)_sans("ZisK")$ whose proofs are Final
+  The _final argument system_ of $Zisk$ is the non-interactive
+  argument system $Pi^*$ for $cal(R)_Zisk$ whose proofs are Final
   proofs and whose verifier is
   $
-    Pi^* . sans("Verify")(bold(p), pi_"FIN") := V_"FINAL"(bold(p), pi_"FIN").
+    Pi^* . Verify(bold(p), pi_"FIN") := V_"FINAL"(bold(p), pi_"FIN").
   $
   Its prover is the honest proving pipeline (execute, split, prove every
   instance, aggregate) and plays no role below.#footnote[
@@ -197,32 +193,32 @@ the Final statement is exactly the external public statement $bold(p)$. The
 two systems differ only in the relation against which they are judged.
 
 #definition(title: "Correct-witness extractability")[
-  $sans("ZisK")$ is _correct-witness extractable_ (CWE) if $Pi^*$ is
-  knowledge-sound for $cal(R)_sans("ZisK")$ in the sense of @def:ks. We write
+  $Zisk$ is _correct-witness extractable_ (CWE) if $Pi^*$ is
+  knowledge-sound for $cal(R)_Zisk$ in the sense of @def:ks. We write
   $
-    Adv("cwe", sans("ZisK"))(cal(A)) := Adv("ks", Pi^*)(cal(A))
+    Adv("cwe", Zisk)(cal(A)) := Adv("ks", Pi^*)(cal(A))
   $
-  for the _CWE advantage_ of a PPT adversary $cal(A)$ and $cal(E)_sans("ZisK")$
+  for the _CWE advantage_ of a PPT adversary $cal(A)$ and $cal(E)_Zisk$
   for the extractor whose existence is asserted; the running-time convention
   of @def:ks applies to it unchanged.
 ] <def:cwe>
 
 #remark(numbered: true, title: "Unrolling the definition")[
-  Written out, @def:cwe says that there is a PPT extractor $cal(E)_sans("ZisK")$
+  Written out, @def:cwe says that there is a PPT extractor $cal(E)_Zisk$
   such that for every PPT adversary $cal(A)$ the following experiment returns
   $1$ with negligible probability.
   + *Adversary.* $cal(A)(1^lambda)$ outputs a public statement $bold(p)$ and a
     proof $pi_"FIN"$.
   + *Verification.* If $V_"FINAL"(bold(p), pi_"FIN") != accept$, return $0$.
-  + *Extraction.* Run $cal(E)_sans("ZisK")(bold(p), pi_"FIN")$ to obtain a typed
+  + *Extraction.* Run $cal(E)_Zisk(bold(p), pi_"FIN")$ to obtain a typed
     witness collection $L = ((tau_1, w_1), dots, (tau_(abs(L)), w_(abs(L))))$.
   + *Winning condition.* Return $1$ if and only if
-    $(bold(p); L) in.not cal(R)_sans("ZisK")$, i.e. if $abs(L) = 0$ or
+    $(bold(p); L) in.not cal(R)_Zisk$, i.e. if $abs(L) = 0$ or
     $abs(L) >= 2^B$, or $Local_(tau_i)(bold(p), w_i)$ fails for some $i$, or
     some bus is unbalanced.
-  This is @def:ks instantiated at $(cal(R)_sans("ZisK"), Pi^*)$ verbatim. The
-  statement carries only $bold(p)$, so, in contrast with the reference
-  architecture, succinctness of $Pi^*$ and of $Pi_"FINAL"$ coincide.
+  // This is @def:ks instantiated at $(cal(R)_Zisk, Pi^*)$ verbatim. The
+  // statement carries only $bold(p)$, so, in contrast with the reference
+  // architecture, succinctness of $Pi^*$ and of $Pi_"FINAL"$ coincide.
 ] <rem:unrolled>
 
 == From the Root Check to Bus Balancing <sec:bus>
@@ -484,7 +480,7 @@ deterministic.
       $s = 0$ and $chi = DeriveKey(bold(c))$.],
   )
   We write $Adv("fin", cal(E)_"FIN")(cal(A))$ for the probability that the
-  experiment returns $1$.
+  experiment $Exp("fin", (cal(E)_"FIN", cal(A)))(lambda)$ returns $1$.
 ] <def:game-fin>
 
 #lemma(title: "Final extraction")[
@@ -561,7 +557,8 @@ $kappa - 1$ aggregation nodes.
   candidate is not a valid $cal(R)_"AGG"$-witness, the extractor aborts. For
   $t >= 1$ let
   $
-    B_t : quad "the first" cal(E)_(Pi_"AGG") "invocation (in unroll order) that does not return a valid" cal(R)_"AGG" "-witness for its node's statement is invocation" t.
+    B_t & : quad "the first " cal(E)_(Pi_"AGG") " invocation in unroll order that does not return " \
+        & quad "a valid " cal(R)_"AGG""-witness for its node's statement is invocation " t "."
   $
   The events are disjoint, and at every invocation the node's proof verifies
   under $V(vk_"AGG", dot, dot)$: the root's by the filter (since
@@ -725,10 +722,10 @@ extractor a _typed_ collection.
 == Main Theorem <sec:theorem>
 
 #theorem(title: "Correct-witness extractability")[
-  Let $sans("ZisK")$ be a ZisK proof system (@def:zisk) and let
+  Let $Zisk$ be a ZisK proof system (@def:zisk) and let
   $kappa_"max" := 2^B - 1$. Under the idealizations of @rem:idealized, for
   every PPT adversary $cal(A)$ making at most $Q$ random-oracle queries, with
-  CWE advantage $epsilon := Adv("cwe", sans("ZisK"))(cal(A))$, there exist PPT
+  CWE advantage $epsilon := Adv("cwe", Zisk)(cal(A))$, there exist PPT
   reduction adversaries $cal(D)_"FIN"$, $cal(D)_"AGG"$,
   ${cal(D)_"LEAF"^((tau))}_tau$, ${cal(D)_"AIR"^((tau))}_tau$, $cal(D)^"cr"$
   and $cal(D)^"ext"$ such that
@@ -745,12 +742,12 @@ extractor a _typed_ collection.
   All reduction adversaries invoke $cal(A)$ exactly once and run in time at
   most $(3 kappa_"max" + 1) dot Time(cal(A)) + poly(lambda)$. In particular, if
   every advantage on the right-hand side is negligible in $lambda$, then
-  $sans("ZisK")$ is correct-witness extractable (@def:cwe).
+  $Zisk$ is correct-witness extractable (@def:cwe).
 ] <thm:main>
 
 #proof[
   Let $cal(A)$ be a PPT adversary with CWE advantage $epsilon$; we bound
-  $epsilon$. We construct $cal(E)_sans("ZisK")$ by composing the sub-extractors
+  $epsilon$. We construct $cal(E)_Zisk$ by composing the sub-extractors
   of @lem:fin, @lem:agg, @lem:leaf and @lem:air, each straight-line and each
   applied to the values extracted by the preceding layer. Let
   $(bold(p), pi_"FIN")$ be $cal(A)$'s output and assume
@@ -817,7 +814,7 @@ extractor a _typed_ collection.
   $cal(A)_"bus"$ once.
 
   *Conclusion.* If Steps 1 to 4 succeed and $L$ is balanced, then
-  $(bold(p); L) in cal(R)_sans("ZisK")$ by Step 5 and @def:r-zisk, so
+  $(bold(p); L) in cal(R)_Zisk$ by Step 5 and @def:r-zisk, so
   $cal(A)$ does not win. Summing the failure probabilities,
   $
     epsilon <= & Adv("ks", Pi_"FINAL")(cal(D)_"FIN")                                     &  "(Step 1)" \
@@ -833,12 +830,12 @@ extractor a _typed_ collection.
   but part of the extracted witness; the bound with $kappa$ is therefore a
   per-tree refinement and the bound with $kappa_"max"$ the unconditional one.
 
-  _Running time._ $cal(E)_sans("ZisK")$ never runs $cal(A)$; its cost is the
+  _Running time._ $cal(E)_Zisk$ never runs $cal(A)$; its cost is the
   straight-line sub-extractor calls plus deterministic work: one call to
   $cal(E)_(Pi_"FINAL")$, at most $kappa - 1$ calls to $cal(E)_(Pi_"AGG")$, and
   $kappa$ calls each to the leaf-verifier and AIR extractors, i.e. at most
   $3 kappa$ calls in total. Under the convention that each call costs at most
-  $Time(cal(A)) + poly(lambda)$, $Time(cal(E)_sans("ZisK")) <= 3 kappa_"max" dot Time(cal(A)) + poly(lambda)$.
+  $Time(cal(A)) + poly(lambda)$, $Time(cal(E)_Zisk) <= 3 kappa_"max" dot Time(cal(A)) + poly(lambda)$.
   Each reduction adversary runs $cal(A)$ once and re-runs the extraction chain
   above its own layer, hence runs in at most
   $(3 kappa_"max" + 1) dot Time(cal(A)) + poly(lambda)$. (Strictly, the
@@ -846,7 +843,7 @@ extractor a _typed_ collection.
   adversary that produced its input, which compounds along the recursion to
   $O(kappa_"max"^2) dot Time(cal(A))$; the linear figure uses the per-call
   convention and is part of the idealization of @rem:idealized.) In particular
-  $cal(E)_sans("ZisK")$ is PPT whenever $cal(A)$ is, since $2^B <= poly(lambda)$.
+  $cal(E)_Zisk$ is PPT whenever $cal(A)$ is, since $2^B <= poly(lambda)$.
 ]
 
 == Discussion <sec:discussion>
