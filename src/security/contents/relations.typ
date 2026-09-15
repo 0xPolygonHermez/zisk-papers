@@ -316,7 +316,7 @@ this is why the accumulators below are commutative monoids.
     statement and the proof a node produces, which the node above takes as
     witness: an AIR instance of type $tau$ proves $(bold(p), chi, s, "com")$; a
     leaf verifier re-exposes it as $(bold(p), chi, sigma, vk)$ with
-    $sigma = (1, tau, bold(c), s)$; an aggregation node adds its children's
+    $sigma = (tau, 1, bold(c), s)$; an aggregation node adds its children's
     accumulators, dispatches on their types and declares type $M + 1$; the
     Final Verifier fixes $vk = vk_"AGG"$, checks the root predicates and
     exposes only $bold(p)$. The dashed arrows are the public inputs common to
@@ -395,7 +395,7 @@ The following interface elements are used throughout:
 The recursion carries three accumulators. Their values at a node, together
 with the node's type, form the _recursive statement_
 $
-  sigma = (kappa, tau, bold(c), s),
+  sigma = (tau, kappa, bold(c), s),
 $
 where the type $tau in [M + 1]$ is the AIR type for a leaf verifier and the
 marker $M + 1$ for an aggregation node.
@@ -502,7 +502,7 @@ per type, with verifier $V_"AIR"^((tau))$ and key $vk_"AIR"^((tau))$.
         cases(
           delim: #none,
           gap: #(0pt + 0.4em),
-          sigma = (1, tau, bold(c), s),
+          sigma = (tau, 1, bold(c), s),
           and quad V_"AIR"^((tau))((bold(p), chi, s, "com"), pi_"AIR") = accept,
           and quad bold(c) = h(tau, "com")
         )
@@ -544,7 +544,7 @@ typing predicate is what makes the counter meaningful (@sec:accumulators).
 
 #definition(title: "Aggregation relation")[
   Write $x_X := (bold(p), chi, sigma_X, vk)$ for the statement of the child
-  $X in {L, R}$ and $sigma_X = (kappa_X, tau_X, bold(c)_X, s_X)$ for its
+  $X in {L, R}$ and $sigma_X = (tau_X, kappa_X, bold(c)_X, s_X)$ for its
   recursive statement. Then
   $
     cal(R)_"AGG" = lr(
@@ -559,7 +559,7 @@ typing predicate is what makes the counter meaningful (@sec:accumulators).
         cases(
           delim: #none,
           gap: #(0pt + 0.4em),
-          sigma = (kappa, M + 1, bold(c), s),
+          sigma = (M + 1, kappa, bold(c), s),
           and quad sans("Typed")(tau_X, kappa_X) "for" X in {L, R},
           and quad V_"REC"^((tau_X))[vk](x_X, pi_X) = accept "for" X in {L, R},
           and quad kappa = kappa_L + kappa_R "and" bold(c) = bold(c)_L + bold(c)_R "and" s = s_L + s_R
@@ -601,7 +601,7 @@ $V_"REC"^((M+1))[vk_"AGG"] = V_"AGG"$.
         cases(
           delim: #none,
           gap: #(0pt + 0.4em),
-          sigma = (kappa, tau, bold(c), s) "and" sans("Typed")(tau, kappa),
+          sigma = (tau, kappa, bold(c), s) "and" sans("Typed")(tau, kappa),
           and quad V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) = accept,
           and quad s = 0,
           and quad chi = DeriveKey(bold(c))

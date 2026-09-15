@@ -26,7 +26,7 @@ collision resistance of $cal(H)$, and the soundness of the bus fingerprint.
   extraction across the layers of a recursion tree, however, requires every
   argument to remain knowledge-sound relative to the same oracle, and such
   relativized succinct arguments do not exist in general
-  @EPRINT:BarChiGua24. Like the reference architecture, we idealize over this
+  @EPRINT:BarChiGua24. In our analysis we idealize over this
   obstruction and assume that straight-line extraction composes.
 
   Second, the bus argument is sound only if the collection of witnesses that
@@ -47,7 +47,7 @@ collision resistance of $cal(H)$, and the soundness of the bus fingerprint.
   sound and the relations compose) rather than as a concrete security level.
 ] <rem:idealized>
 
-#remark(title: "Scope")[
+#remark(numbered: true, title: "Scope")[
   The target relation of this section speaks about AIR witnesses, not about
   guest executions: it is the recursion layer of the chain that leads from an
   accepting final proof to a correct execution of the guest program. Not
@@ -208,24 +208,6 @@ two systems differ only in the relation against which they are judged.
   of @def:ks applies to it unchanged.
 ] <def:cwe>
 
-#remark(numbered: true, title: "Unrolling the definition")[
-  Written out, @def:cwe says that there is a PPT extractor $cal(E)_Zisk$
-  such that for every PPT adversary $cal(A)$ the following experiment returns
-  $1$ with negligible probability.
-  + *Adversary.* $cal(A)(1^lambda)$ outputs a public statement $bold(p)$ and a
-    proof $pi_"FIN"$.
-  + *Verification.* If $V_"FINAL"(bold(p), pi_"FIN") != accept$, return $0$.
-  + *Extraction.* Run $cal(E)_Zisk(bold(p), pi_"FIN")$ to obtain a typed
-    witness collection $L = ((tau_1, w_1), dots, (tau_(abs(L)), w_(abs(L))))$.
-  + *Winning condition.* Return $1$ if and only if
-    $(bold(p); L) in.not cal(R)_Zisk$, i.e. if $abs(L) = 0$ or
-    $abs(L) >= 2^B$, or $Local_(tau_i)(bold(p), w_i)$ fails for some $i$, or
-    some bus is unbalanced.
-  // This is @def:ks instantiated at $(cal(R)_Zisk, Pi^*)$ verbatim. The
-  // statement carries only $bold(p)$, so, in contrast with the reference
-  // architecture, succinctness of $Pi^*$ and of $Pi_"FINAL"$ coincide.
-] <rem:unrolled>
-
 == From the Root Check to Bus Balancing <sec:bus>
 
 The Final Verifier checks a single field equation, $s = 0$, on a value
@@ -237,6 +219,14 @@ whereas the target relation demands $cal(M)_L = 0$. This section bridges the
 gap. We first record that LogUp is a bus fingerprint in the sense of
 @def:fingerprint, then that a zero test at a random challenge certifies
 balance, and finally that the challenge the tree certifies is random enough.
+
+Recall ZisK's fingerprint from @sec:instantiation. A key is a challenge pair
+$chi = (alpha, gamma) in KK^2$, a message $(b, v)$ is compressed to
+$hat(e)_gamma (b, v) = b + sum_(j=1)^(ell_b) gamma^j v_j in KK$, and
+$
+  cal(F)^"LogUp"_chi (D) = sum_((b, v) in "supp" D) frac(D(b, v), alpha + hat(e)_gamma (b, v)),
+$
+with $cal(F)^"LogUp"_chi (D) := bot$ if some denominator vanishes.
 
 #lemma(title: "LogUp fingerprint")[
   $cal(F)^"LogUp"$ is a statistically sound bus fingerprint, with key space
@@ -478,7 +468,7 @@ deterministic.
       proof $pi_"FIN"$.],
     [If $V_"FINAL"(bold(p), pi_"FIN") != accept$, return $0$.],
     [Run $(chi, sigma, pi) <- cal(E)_"FIN"(bold(p), pi_"FIN")$, with
-      $sigma = (kappa, tau, bold(c), s)$.],
+      $sigma = (tau, kappa, bold(c), s)$.],
     [Return $1$ if and only if $(bold(p); (chi, sigma, pi)) in.not cal(R)_"FINAL"$,
       i.e. unless $sans("Typed")(tau, kappa)$,
       $V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) = accept$,
@@ -519,13 +509,13 @@ $kappa - 1$ aggregation nodes.
   adversary $cal(A)$, the experiment $Exp("agg", (kappa, cal(E)_"REC", cal(A)))(lambda)$ is:
   #game(
     [$cal(A)(1^lambda)$ outputs $(bold(p), chi, sigma, pi)$ with
-      $sigma = (kappa, tau, bold(c), s)$.],
+      $sigma = (tau, kappa, bold(c), s)$.],
     [If $not sans("Typed")(tau, kappa)$ or
       $V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) != accept$,
       return $0$. (These are the conjuncts of $cal(R)_"FINAL"$ that concern the
       child.)],
     [Run $((sigma_1, pi_1), dots, (sigma_kappa, pi_kappa)) <- cal(E)_"REC"(bold(p), chi, sigma, pi)$,
-      with $sigma_i = (kappa_i, tau_i, bold(c)_i, s_i)$.],
+      with $sigma_i = (tau_i, kappa_i, bold(c)_i, s_i)$.],
     [Return $1$ unless, for every $i in [kappa]$, $tau_i in [M]$, $kappa_i = 1$
       and $V_"LEAF"^((tau_i))((bold(p), chi, sigma_i, vk_"AGG"), pi_i) = accept$,
       and moreover $sum_(i=1)^kappa s_i = s$ and $sum_(i=1)^kappa bold(c)_i = bold(c)$.],
@@ -645,7 +635,7 @@ architecture's combine layer.
   $cal(A)$, the experiment $Exp("leaf", (tau, cal(E)_"LEAF"^((tau)), cal(A)))(lambda)$ is:
   #game(
     [$cal(A)(1^lambda)$ outputs $(bold(p), chi, sigma, vk)$ with
-      $sigma = (kappa, tau', bold(c), s)$, and a proof $pi_"LEAF"$.],
+      $sigma = (tau', kappa, bold(c), s)$, and a proof $pi_"LEAF"$.],
     [If $V_"LEAF"^((tau))((bold(p), chi, sigma, vk), pi_"LEAF") != accept$,
       return $0$.],
     [Run $("com", pi_"AIR") <- cal(E)_"LEAF"^((tau))((bold(p), chi, sigma, vk), pi_"LEAF")$.],
@@ -760,7 +750,7 @@ extractor a _typed_ collection.
   win.
 
   *Step 1 (Final layer).* Apply $cal(E)_"FIN"$ to $(bold(p), pi_"FIN")$ to
-  obtain $(chi, sigma, pi)$ with $sigma = (kappa, tau, bold(c), s)$ such that
+  obtain $(chi, sigma, pi)$ with $sigma = (tau, kappa, bold(c), s)$ such that
   $sans("Typed")(tau, kappa)$,
   $V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) = accept$,
   $s = 0$ and $chi = DeriveKey(bold(c))$. This fails with probability at
@@ -775,7 +765,7 @@ extractor a _typed_ collection.
   *Step 2 (Aggregation layer).* Apply $cal(E)_"REC"$ to
   $(bold(p), chi, sigma, pi)$; its filter is satisfied by Step 1. Obtain
   $((sigma_1, pi_1), dots, (sigma_kappa, pi_kappa))$ with
-  $sigma_i = (1, tau_i, bold(c)_i, s_i)$, $tau_i in [M]$,
+  $sigma_i = (tau_i, 1, bold(c)_i, s_i)$, $tau_i in [M]$,
   $V_"LEAF"^((tau_i))((bold(p), chi, sigma_i, vk_"AGG"), pi_i) = accept$,
   $sum_i s_i = s = 0$ and $sum_i bold(c)_i = bold(c)$. This fails with
   probability at most $(kappa - 1) dot Adv("ks", Pi_"AGG")(cal(D)_"AGG")$ by
