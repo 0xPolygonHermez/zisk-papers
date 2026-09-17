@@ -17,6 +17,13 @@ straight-line extractability of the trace commitment $Com$, the preimage
 awareness of the accumulator $cal(H)$, and the soundness of the bus
 fingerprint.
 
+The section follows the reference architecture of the EF zkVM security sprint
+@EF:VanillaVM in structure as well as in method: an idealized-model remark,
+the definitions of the assumptions, a bridging proposition, one extraction
+game and lemma per layer of the recursion, and a main theorem whose bound is
+an explicit sum over those lemmas. Where ZisK departs from that architecture,
+the departure is flagged at the point where it matters.
+
 #remark(numbered: true, title: "Idealized proof model")[
   The analysis is idealized in three respects.
 

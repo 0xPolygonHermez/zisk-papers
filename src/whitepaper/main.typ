@@ -1,29 +1,51 @@
-#import "@preview/unequivocal-ams:0.1.2": ams-article, proof, theorem
+#import "../style.typ": article, title-page, zisk-version
 
-#show: ams-article.with(
-  title: [ZisK Whitepaper#footnote[This document describes ZisK v0.16.1
-      [48cf7cc -- 2026-20-03]. \ ~~~ Source code available at #link("https://github.com/0xPolygonHermez/zisk")[github.com/0xPolygonHermez/zisk].]],
+// Page geometry: 1in body margins, with the wider classical margins kept for
+// the title page (see `security/main.typ`, which uses the same pair).
+#let margin = 1in
+#let title-margin = (
+  top: (116pt / 279mm) * 100%,
+  left: (126pt / 216mm) * 100%,
+  right: (128pt / 216mm) * 100%,
+  bottom: (94pt / 279mm) * 100%,
+)
+
+#let zisk-abstract = [
+  We present ZisK, a STARK-based zero-knowledge virtual machine (zkVM) that executes programs compiled from standard instruction set architectures and produces succinct, transparent proofs of their correct execution. ZisK targets the RISC-V ISA, allowing developers to use existing Rust and C toolchains without modification. Moreover, ZisK's modular architecture enables the addition of optimized constraint systems for expensive operations such as elliptic-curve arithmetic and bulk memory access, making it practical to prove complex computations at scale.
+
+  This paper provides a precise specification of the ZisK design: its instruction set architecture, the arithmetization framework, the circuit architecture and chip design, the continuation mechanism, and the recursive aggregation system.
+]
+
+#title-page(
+  margin: title-margin,
+  title: [ZisK Whitepaper#zisk-version],
   authors: (
     (
       name: "ZisK Core Team",
     ),
   ),
-  abstract: [
-    We present ZisK, a STARK-based zero-knowledge virtual machine (zkVM) that executes programs compiled from standard instruction set architectures and produces succinct, transparent proofs of their correct execution. ZisK targets the RISC-V ISA, allowing developers to use existing Rust and C toolchains without modification. Moreover, ZisK's modular architecture enables the addition of optimized constraint systems for expensive operations such as elliptic-curve arithmetic and bulk memory access, making it practical to prove complex computations at scale.
-
-    This paper provides a precise specification of the ZisK design: its instruction set architecture, the arithmetization framework, the circuit architecture and chip design, the continuation mechanism, and the recursive aggregation system.
-  ],
+  abstract: zisk-abstract,
 )
 
-// Set text properties for the entire document
-#set text(font: "New Computer Modern", size: 11pt)
-#show link: set text(font: "DejaVu Sans Mono")
+#show: article.with(
+  title: "ZisK Whitepaper",
+  authors: ("ZisK Core Team",),
+  margin: margin,
+  // The bibliography is placed by hand below, before the appendix.
+  bibliography: none,
+)
+
+// Monospace for URL links only; internal cross-references keep the text font.
+#show link: it => if type(it.dest) == str {
+  set text(font: "DejaVu Sans Mono")
+  it
+} else { it }
 
 // Set bibliography style to alphanumeric
 #set cite(style: "alphanumeric")
 
 // Override AMS theorem styling
-#show figure.where(kind: "theorem"): it => block(spacing: 11.5pt, {
+#show figure.where(kind: "theorem"): it => block(width: 100%, spacing: 11.5pt, breakable: true, {
   strong({
     it.supplement
     if it.numbering != none {
@@ -42,7 +64,7 @@
 })
 
 // Italic styling for remarks (including title)
-#show figure.where(kind: "remark"): it => block(spacing: 11.5pt, align(left, emph({
+#show figure.where(kind: "remark"): it => block(width: 100%, spacing: 11.5pt, breakable: true, align(left, emph({
   strong({
     it.supplement
     if it.numbering != none {
@@ -60,6 +82,11 @@
   it.body
 })))
 
+// Long definitions and remarks must be allowed to break across pages.
+#show figure.where(kind: "theorem"): set block(breakable: true)
+#show figure.where(kind: "remark"): set block(breakable: true)
+#show figure.where(kind: table): set block(breakable: true)
+
 // Make top-level outline entries bold
 #show outline.entry.where(level: 1): it => {
   strong(it)
@@ -68,7 +95,8 @@
 // Remove background fill from top-level outline entries
 #show outline.entry.where(level: 1): set outline.entry(fill: none)
 
-#outline(depth: 1)
+#outline(depth: 2)
+#pagebreak()
 
 = Introduction <sec:introduction>
 

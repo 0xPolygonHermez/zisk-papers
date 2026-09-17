@@ -1,3 +1,10 @@
+// The ZisK release these documents describe. Both papers carry it as a
+// footnote on the title, so there is a single place to bump.
+#let zisk-version = footnote[
+  This document describes ZisK v0.16.1 [48cf7cc -- 2026-20-03]. \
+  ~~~~~ Source code available at #link("https://github.com/0xPolygonHermez/zisk").
+]
+
 // Stand-alone title page
 #let title-page(
   title: none,
@@ -21,9 +28,9 @@
   set par(justify: true)
   counter(page).update(0)
 
-  v(1.5em)
+  v(1em)
   align(center, text(size: 22pt, title))
-  v(3em)
+  v(2em)
 
   let author-cell(a) = align(center, {
     text(size: 12pt, a.name)
@@ -46,14 +53,14 @@
   }
 
   if date != none {
-    v(2.5em)
+    v(1.5em)
     align(center, text(size: 12pt, date))
   }
 
   if abstract != none {
-    v(4em)
+    v(2.2em)
     align(center, text(size: 12pt, weight: "bold")[Abstract])
-    v(0.8em)
+    v(0.6em)
     block({
       set par(first-line-indent: (amount: 1.5em, all: true), spacing: 0.65em)
       abstract
@@ -61,7 +68,7 @@
   }
 
   if keywords.len() > 0 {
-    v(1.8em)
+    v(1.2em)
     [*Keywords*: #keywords.join("; ")]
   }
 }

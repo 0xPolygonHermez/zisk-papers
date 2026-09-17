@@ -1,4 +1,4 @@
-#import "../style.typ": article, title-page
+#import "../style.typ": article, title-page, zisk-version
 
 // Page geometry
 #let margin = 1in
@@ -11,7 +11,7 @@
 
 #title-page(
   margin: title-margin,
-  title: [ZisK's Recursion],
+  title: [ZisK's Recursion#zisk-version],
   authors: (
     (
       name: "Héctor Masip-Ardevol",
@@ -156,3 +156,5 @@
 = Security <sec:security>
 
 #include "contents/security.typ"
+
+#pagebreak()
