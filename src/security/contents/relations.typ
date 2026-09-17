@@ -1,5 +1,5 @@
 #import "../../lib.typ": (
-  Adv, Balanced, Bind, BusCont, Com, Commit, DeriveKey, Local, Pr, accept, definition, mult, negl, poly, remark, vk,
+  Adv, Balanced, Bind, BusCont, Com, Commit, DeriveKey, Local, Pr, definition, mult, negl, poly, remark, vk,
 )
 #import "@preview/fletcher:0.5.8" as fletcher: diagram, edge, node
 
@@ -111,7 +111,8 @@ once per program, committed with $Commit_"cach"$, and the commitment travels
 in the public statement, where the description of $cal(C)_tau$ designates
 its coordinates. The program being executed is therefore bound through
 $bold(p)$ rather than hard-wired into the circuits, as the program code is in
-the step circuit of the reference architecture: the program ROM and the boot
+the step circuit of the reference architecture @EF:VanillaVM: the program ROM
+and the boot
 state live in cached columns of the relevant AIR types, and whoever accepts a
 Final proof for $bold(p)$ must check that the cached commitments carried in
 $bold(p)$ are those of the intended program. Since every node of a valid
@@ -254,14 +255,14 @@ this is why the accumulators below are commutative monoids.
     let box(f, s, w, h) = (fill: f, stroke: 0.5pt + s, width: w, height: h, inset: 3pt, corner-radius: 2pt)
     let agg-body = align(center)[
       *Aggregation node* #linebreak()
-      #sub[$V_"REC"[vk](pi_L), V_"REC"[vk](pi_R) = accept$] #linebreak()
+      #sub[$V_"REC"[vk](pi_L), V_"REC"[vk](pi_R) = 1$] #linebreak()
       #sub[$sans("Typed")(tau_L, kappa_L), quad sans("Typed")(tau_R, kappa_R)$] #linebreak()
       #sub[$kappa = kappa_L + kappa_R, quad s = s_L + s_R$] #linebreak()
       #sub[$bold(c) = bold(c)_L + bold(c)_R$]
     ]
     let lv-body = align(center)[
       *Leaf verifier* $tau$ #linebreak()
-      #sub[$V_"AIR"^((tau))(pi_"AIR") = accept$] #linebreak()
+      #sub[$V_"AIR"^((tau))(pi_"AIR") = 1$] #linebreak()
       #sub[$kappa = 1, quad bold(c) = h(tau, "com")$]
     ]
     let air-body = align(center)[*AIR instance* #linebreak() #sub[type $tau$, witness $w$]]
@@ -275,7 +276,7 @@ this is why the accumulators below are commutative monoids.
         (0, 0),
         align(center)[
           *Final Verifier* #linebreak()
-          #sub[$V_"REC"[vk_"AGG"](pi) = accept$] #linebreak()
+          #sub[$V_"REC"[vk_"AGG"](pi) = 1$] #linebreak()
           #sub[$sans("Typed")(tau, kappa), quad s = 0$] #linebreak()
           #sub[$chi = DeriveKey(bold(c))$]
         ],
@@ -324,12 +325,14 @@ this is why the accumulators below are commutative monoids.
 
 == Interfaces <sec:components>
 
-A _non-interactive argument system_ for a relation $cal(R)$ is a pair
-$Pi = (sans("Prove"), sans("Verify"))$ with a verification key $vk_Pi$
-produced at setup; $sans("Verify")(vk_Pi, x, pi) in {accept, "reject"}$ is
-deterministic. We write $V_X (x, pi) := sans("Verify")(vk_X, x, pi)$ for the
-verifier of the system attesting to the relation $cal(R)_X$, and simply
-$V(vk, x, pi)$ when the key is a variable. The relations of
+A _non-interactive argument system_ $Pi$ for a relation $cal(R)$ consists of a
+prover and a deterministic _verifier_ $V$, together with a verification key
+$vk_Pi$ produced at setup, where $V(vk_Pi, x, pi) in {0, 1}$ and the value $1$
+means that the proof $pi$ is accepted for the statement $x$. We write
+$V_X (x, pi) := V(vk_X, x, pi)$ for the verifier of the system attesting to the
+relation $cal(R)_X$, and keep the explicit form $V(vk, x, pi)$ where the key is
+a variable. The relations below refer to argument systems only through their
+verifiers, so the prover is never named again. The relations of
 @sec:relations-def refer to argument systems only through their verifiers,
 and to the following fixed public maps only through their signatures. Their
 security properties are defined where they are used, in @sec:security, and
@@ -396,7 +399,8 @@ $
   sigma = (tau, kappa, bold(c), s),
 $
 where the type $tau in [M + 1]$ is the AIR type for a leaf verifier and the
-marker $M + 1$ for an aggregation node.
+marker $M + 1$ for an aggregation node. We write $sigma . tau$, $sigma . kappa$,
+$sigma . bold(c)$ and $sigma . s$ for the components of a recursive statement.
 
 #figure(
   {
@@ -503,7 +507,7 @@ per type, with verifier $V_"AIR"^((tau))$ and key $vk_"AIR"^((tau))$.
           delim: #none,
           gap: #(0pt + 0.4em),
           sigma = (tau, 1, bold(c), s),
-          and quad V_"AIR"^((tau))((bold(p), chi, s, "com"), pi_"AIR") = accept,
+          and quad V_"AIR"^((tau))((bold(p), chi, s, "com"), pi_"AIR") = 1,
           and quad bold(c) = h(tau, "com")
         )
       }
@@ -561,7 +565,7 @@ typing predicate is what makes the counter meaningful (@sec:accumulators).
           gap: #(0pt + 0.4em),
           sigma = (M + 1, kappa, bold(c), s),
           and quad sans("Typed")(tau_X, kappa_X) "for" X in {L, R},
-          and quad V_"REC"^((tau_X))[vk](x_X, pi_X) = accept "for" X in {L, R},
+          and quad V_"REC"^((tau_X))[vk](x_X, pi_X) = 1 "for" X in {L, R},
           and quad kappa = kappa_L + kappa_R "and" bold(c) = bold(c)_L + bold(c)_R "and" s = s_L + s_R
         )
       }
@@ -602,7 +606,7 @@ $V_"REC"^((M+1))[vk_"AGG"] = V_"AGG"$.
           delim: #none,
           gap: #(0pt + 0.4em),
           sigma = (tau, kappa, bold(c), s) "and" sans("Typed")(tau, kappa),
-          and quad V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) = accept,
+          and quad V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) = 1,
           and quad s = 0,
           and quad chi = DeriveKey(bold(c))
         )

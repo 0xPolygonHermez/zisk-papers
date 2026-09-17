@@ -1,6 +1,6 @@
 #import "../../lib.typ": (
-  Adv, Balanced, BusCont, Com, Commit, DeriveKey, Exp, Local, Pr, Prove, Time, Verify, Zisk, accept, definition, game,
-  lemma, mult, negl, poly, proof, proposition, remark, theorem, vk,
+  Adv, Balanced, BusCont, Com, Commit, DeriveKey, Exp, Local, Pr, Time, Zisk, definition, game, lemma, mult, negl, poly,
+  proof, proposition, remark, theorem, vk,
 )
 
 == Overview
@@ -74,12 +74,11 @@ the departure is flagged at the point where it matters.
 == Definitions <sec:definitions>
 
 #definition(title: "Knowledge soundness")[
-  A non-interactive argument system $Pi = (Prove, Verify)$ for
+  A non-interactive argument system $Pi$ for
   a relation $cal(R)$ is _knowledge-sound_ if there exists a PPT algorithm
   $cal(E)$, the _extractor_, such that for every PPT adversary $cal(A)$:
   $
-    Adv("ks", Pi)(cal(A)) := Pr[ & (x, pi) <- cal(A)(1^lambda); w <- cal(E)(x, pi) : \
-                                 & Verify(vk_Pi, x, pi) = accept and (x; w) in.not cal(R) ] <= negl(lambda),
+    Adv("ks", Pi)(cal(A)) := Pr[ & (x, pi) <- cal(A)(1^lambda); w <- cal(E)(x, pi) : V(vk_Pi, x, pi) = 1 and (x; w) in.not cal(R) ] <= negl(lambda),
   $
   the probability taken over the coins of $cal(A)$ and $cal(E)$ and the
   random oracles, to which all algorithms have access. We assume that the
@@ -118,9 +117,7 @@ the departure is flagged at the point where it matters.
 For a Merkle tree over a random oracle the extractor recomputes the leaves
 from the tree of queried nodes below the root; it fails only if the adversary
 later opens the root to a leaf it had not queried, which requires guessing an
-oracle output or finding a collision, so
-$Adv("ext", Com)(cal(A)) <= (Q^2 + Q) slash abs("Range")$ for the range of the
-oracle. Straight-line extractability implies binding: if $cal(A)$ outputs
+oracle output or finding a collision. Straight-line extractability implies binding: if $cal(A)$ outputs
 $m != m'$ with $Commit(m) = Commit(m') = "com"$, the extractor's output on
 $"com"$ differs from at least one of them, so the adversary $cal(D)$ that
 runs $cal(A)$, announces $"com"$ and returns one of $m, m'$ chosen at
@@ -177,15 +174,56 @@ statistical, and it is exactly what the extractor of @def:cr rules out.
 #definition(title: "ZisK proof system")[
   A _ZisK proof system_ is a tuple
   $
-    Zisk = (frak(A), Com, h, cal(H), DeriveKey, cal(F), {Pi_"AIR"^((tau))}_(tau in [M]), {Pi_"LEAF"^((tau))}_(tau in [M]), Pi_"AGG", Pi_"FINAL")
+    Zisk = (frak(A), Com, Com_"cach", h, cal(H), DeriveKey, cal(F), {Pi_"AIR"^((tau))}_(tau in [M]), {Pi_"LEAF"^((tau))}_(tau in [M]), Pi_"AGG", Pi_"FINAL")
   $
-  consisting of the AIR-type family $frak(A)$, the components of
-  @sec:components with the carriers of the ZisK instantiation, a statistically sound bus fingerprint
-  $cal(F)$ (@def:fingerprint) admitting every nonzero multiset, and argument
-  systems attesting to the relations of
-  @sec:relations-def, the key hard-coded by $Pi_"FINAL"$ is the key of
-  $Pi_"AGG"$, and the parameters satisfy the standing assumptions of
-  @sec:relations.
+  consisting of the following components:
+  + *AIR-type family.* $frak(A) = {(cal(C)_tau, cal(I)_tau)}_(tau in [M])$, the
+    constraint systems and interaction sets of @sec:arithmetization, each with
+    its trace height $N_tau$, its column classes, its prescribed data and its
+    binding maps (@def:columns).
+
+  + *Trace commitment.* $Com$, a deterministic commitment scheme
+    (@def:commitment) on witnesses of any type, straight-line extractable
+    (@def:ext-com). It is exposed in the AIR statements (@def:r-air), and its
+    digests are what the leaf verifiers hash into the challenge accumulator.
+
+  + *Cached-column commitment.* $Com_"cach"$, a deterministic commitment
+    scheme on cached submatrices with commitment space $FF^m$. Its output
+    travels in the public statement and is what binds a proof to a program
+    (@def:local).
+
+  + *Hash to the accumulator group.* $h : [M] times {0,1}^* -> cal(G)_(cal(H))$,
+    modelled as a random oracle (@def:rom), which maps a typed commitment to
+    the leaf contribution of the challenge accumulator.
+
+  + *Multiset hash.* $cal(H)$, the additively homomorphic extension of $h$ to
+    finite multisets of typed commitments, preimage aware on multisets of
+    cardinality below $2^B$ (@def:cr).
+
+  + *Key derivation.* $DeriveKey : cal(G)_(cal(H)) -> cal(X)$, modelled as a
+    random oracle (@def:rom), which turns the accumulated value into the
+    fingerprint key that the Final Verifier checks.
+
+  + *Bus fingerprint.* $cal(F)$ (@def:fingerprint), with key space $cal(X)$ and
+    values in $cal(G)_(cal(F))$, statistically sound with error
+    $epsilon_(cal(F))$ and admitting every nonzero multiset.
+
+  + *Argument systems.* Each is a non-interactive argument system in the sense
+    of @sec:components, for the relation named.
+    - ${Pi_"AIR"^((tau))}_(tau in [M])$: one per type, for
+      $cal(R)_"AIR"^((tau))$ (@def:r-air), proving a single AIR instance.
+    - ${Pi_"LEAF"^((tau))}_(tau in [M])$: one per type, for
+      $cal(R)_"LEAF"^((tau))$ (@def:r-leaf), the leaf verifier, whose circuit
+      hard-codes $vk_"AIR"^((tau))$.
+    - $Pi_"AGG"$: for $cal(R)_"AGG"$ (@def:r-agg), the aggregation node, which
+      hard-codes the $M$ leaf-verifier keys and reads the aggregation key from
+      its own statement.
+    - $Pi_"FINAL"$: for $cal(R)_"FINAL"$ (@def:r-final), the Final Verifier,
+      which hard-codes $vk_"AGG"$ and whose verifier the external party runs.
+
+  The carriers are those of the ZisK instantiation (@sec:instantiation), the
+  key hard-coded by $Pi_"FINAL"$ is the key of $Pi_"AGG"$, and the parameters
+  satisfy the standing assumptions of @sec:relations.
 ] <def:zisk>
 
 #definition(title: "Bounded global satisfiability")[
@@ -217,7 +255,7 @@ is outside this section.
   argument system $Pi^*$ for $cal(R)_Zisk$ whose proofs are Final
   proofs and whose verifier is
   $
-    Pi^* . Verify(bold(p), pi_"FIN") := V_"FINAL"(bold(p), pi_"FIN").
+    V^* (bold(p), pi_"FIN") := V_"FINAL"(bold(p), pi_"FIN").
   $
   Its prover is the honest proving pipeline (execute, split, prove every
   instance, aggregate) and plays no role below.#footnote[
@@ -225,10 +263,14 @@ is outside this section.
   ]
 ] <def:final-as>
 
-Unlike the reference architecture, where the external verifier first commits
-to the boundary states, $Pi^*$ coincides with $Pi_"FINAL"$ as an algorithm:
-the Final statement is exactly the external public statement $bold(p)$. The
-two systems differ only in the relation against which they are judged.
+In the reference architecture @EF:VanillaVM the two systems differ as
+algorithms: its target relation has boundary machine states as statements,
+with memory given in full, while its last recursive proof speaks about states
+whose memory has been replaced by a commitment, so its external verifier must
+commit to the two boundary memories before it can run that proof's verifier.
+ZisK needs no such step: the Final relation and $cal(R)_Zisk$ have the same
+statement, the public statement $bold(p)$, so $Pi^*$ and $Pi_"FINAL"$ are the same
+algorithm and differ only in the relation against which each is judged.
 
 #definition(title: "Correct-witness extractability")[
   $Zisk$ is _correct-witness extractable_ (CWE) if $Pi^*$ is
@@ -493,12 +535,12 @@ deterministic.
   #game(
     [$cal(A)(1^lambda)$ outputs a public statement $bold(p) in cal(P)$ and a
       proof $pi_"FIN"$.],
-    [If $V_"FINAL"(bold(p), pi_"FIN") != accept$, return $0$.],
+    [If $V_"FINAL"(bold(p), pi_"FIN") != 1$, return $0$.],
     [Run $(chi, sigma, pi) <- cal(E)_"FIN"(bold(p), pi_"FIN")$, with
       $sigma = (tau, kappa, bold(c), s)$.],
     [Return $1$ if and only if $(bold(p); (chi, sigma, pi)) in.not cal(R)_"FINAL"$,
       i.e. unless $sans("Typed")(tau, kappa)$,
-      $V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) = accept$,
+      $V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) = 1$,
       $s = 0$ and $chi = DeriveKey(bold(c))$.],
   )
   We write $Adv("fin", cal(E)_"FIN")(cal(A))$ for the probability that the
@@ -538,13 +580,13 @@ $kappa - 1$ aggregation nodes.
     [$cal(A)(1^lambda)$ outputs $(bold(p), chi, sigma, pi)$ with
       $sigma = (tau, kappa, bold(c), s)$.],
     [If $not sans("Typed")(tau, kappa)$ or
-      $V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) != accept$,
+      $V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) != 1$,
       return $0$. (These are the conjuncts of $cal(R)_"FINAL"$ that concern the
       child.)],
     [Run $((sigma_1, pi_1), dots, (sigma_kappa, pi_kappa)) <- cal(E)_"REC"(bold(p), chi, sigma, pi)$,
       with $sigma_i = (tau_i, kappa_i, bold(c)_i, s_i)$.],
     [Return $1$ unless, for every $i in [kappa]$, $tau_i in [M]$, $kappa_i = 1$
-      and $V_"LEAF"^((tau_i))((bold(p), chi, sigma_i, vk_"AGG"), pi_i) = accept$,
+      and $V_"LEAF"^((tau_i))((bold(p), chi, sigma_i, vk_"AGG"), pi_i) = 1$,
       and moreover $sum_(i=1)^kappa s_i = s$ and $sum_(i=1)^kappa bold(c)_i = bold(c)$.],
   )
   We write $Adv("agg", (kappa, cal(E)_"REC"))(cal(A))$ for the probability
@@ -617,7 +659,7 @@ $kappa - 1$ aggregation nodes.
   - _Leaf nodes._ If $sigma_v . tau in [M]$, then $sans("Typed")$ (asserted by the
     parent's valid witness, or by the filter for the root) gives
     $kappa_v = 1$, and the same source gives
-    $V_"REC"^((tau_v))[vk_"AGG"](x_v, pi_v) = V_"LEAF"^((tau_v))(x_v, pi_v) = accept$.
+    $V_"REC"^((tau_v))[vk_"AGG"](x_v, pi_v) = V_"LEAF"^((tau_v))(x_v, pi_v) = 1$.
     The sums are trivial.
   - _Aggregation nodes._ If $sigma_v . tau = M + 1$, the valid witness
     returned for $v$ provides typed children with $kappa_L + kappa_R = kappa_v$
@@ -663,13 +705,13 @@ architecture's combine layer.
   #game(
     [$cal(A)(1^lambda)$ outputs $(bold(p), chi, sigma, vk)$ with
       $sigma = (tau', kappa, bold(c), s)$, and a proof $pi_"LEAF"$.],
-    [If $V_"LEAF"^((tau))((bold(p), chi, sigma, vk), pi_"LEAF") != accept$,
+    [If $V_"LEAF"^((tau))((bold(p), chi, sigma, vk), pi_"LEAF") != 1$,
       return $0$.],
     [Run $("com", pi_"AIR") <- cal(E)_"LEAF"^((tau))((bold(p), chi, sigma, vk), pi_"LEAF")$.],
     [Return $1$ if and only if
       $((bold(p), chi, sigma, vk); ("com", pi_"AIR")) in.not cal(R)_"LEAF"^((tau))$,
       i.e. unless $tau' = tau$, $kappa = 1$,
-      $V_"AIR"^((tau))((bold(p), chi, s, "com"), pi_"AIR") = accept$ and
+      $V_"AIR"^((tau))((bold(p), chi, s, "com"), pi_"AIR") = 1$ and
       $bold(c) = h(tau, "com")$.],
   )
   We write $Adv("leaf", (tau, cal(E)_"LEAF"^((tau))))(cal(A))$ for the
@@ -710,7 +752,7 @@ extractor a _typed_ collection.
   #game(
     [$cal(A)(1^lambda)$ outputs a statement $x = (bold(p), chi, s, "com")$ and
       a proof $pi_"AIR"$.],
-    [If $V_"AIR"^((tau))(x, pi_"AIR") != accept$, return $0$.],
+    [If $V_"AIR"^((tau))(x, pi_"AIR") != 1$, return $0$.],
     [Run $(bold(T), bold(a)) <- cal(E)_"AIR"^((tau))(x, pi_"AIR")$.],
     [Return $1$ if and only if $(x; (bold(T), bold(a))) in.not cal(R)_"AIR"^((tau))$,
       i.e. unless $Local_tau (bold(p), (bold(T), bold(a)))$,
@@ -772,13 +814,13 @@ extractor a _typed_ collection.
   of @lem:fin, @lem:agg, @lem:leaf and @lem:air, each straight-line and each
   applied to the values extracted by the preceding layer. Let
   $(bold(p), pi_"FIN")$ be $cal(A)$'s output and assume
-  $V_"FINAL"(bold(p), pi_"FIN") = accept$, since otherwise $cal(A)$ does not
+  $V_"FINAL"(bold(p), pi_"FIN") = 1$, since otherwise $cal(A)$ does not
   win.
 
   *Step 1 (Final layer).* Apply $cal(E)_"FIN"$ to $(bold(p), pi_"FIN")$ to
   obtain $(chi, sigma, pi)$ with $sigma = (tau, kappa, bold(c), s)$ such that
   $sans("Typed")(tau, kappa)$,
-  $V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) = accept$,
+  $V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) = 1$,
   $s = 0$ and $chi = DeriveKey(bold(c))$. This fails with probability at
   most $Adv("ks", Pi_"FINAL")(cal(D)_"FIN")$ by @lem:fin. In particular
   $kappa in [1, 2^B)$, so $kappa <= kappa_"max"$.#footnote[
@@ -792,7 +834,7 @@ extractor a _typed_ collection.
   $(bold(p), chi, sigma, pi)$; its filter is satisfied by Step 1. Obtain
   $((sigma_1, pi_1), dots, (sigma_kappa, pi_kappa))$ with
   $sigma_i = (tau_i, 1, bold(c)_i, s_i)$, $tau_i in [M]$,
-  $V_"LEAF"^((tau_i))((bold(p), chi, sigma_i, vk_"AGG"), pi_i) = accept$,
+  $V_"LEAF"^((tau_i))((bold(p), chi, sigma_i, vk_"AGG"), pi_i) = 1$,
   $sum_i s_i = s = 0$ and $sum_i bold(c)_i = bold(c)$. This fails with
   probability at most $(kappa - 1) dot Adv("ks", Pi_"AGG")(cal(D)_"AGG")$ by
   @lem:agg, and the extractor runs in $(kappa - 1) dot Time(cal(A)) + poly(lambda)$.
@@ -800,7 +842,7 @@ extractor a _typed_ collection.
   *Step 3 (Leaf-verifier layer, applied $kappa$ times).* For each $i in [kappa]$
   apply $cal(E)_"LEAF"^((tau_i))$ to $((bold(p), chi, sigma_i, vk_"AGG"), pi_i)$
   to obtain $("com"_i, pi_i^"AIR")$ with
-  $V_"AIR"^((tau_i))((bold(p), chi, s_i, "com"_i), pi_i^"AIR") = accept$ and
+  $V_"AIR"^((tau_i))((bold(p), chi, s_i, "com"_i), pi_i^"AIR") = 1$ and
   $bold(c)_i = h(tau_i, "com"_i)$. Each invocation fails with probability at
   most $Adv("ks", Pi_"LEAF"^((tau_i)))(cal(D)_"LEAF"^((tau_i)))$ by @lem:leaf;
   the total over $kappa$ calls is at most
@@ -847,7 +889,8 @@ extractor a _typed_ collection.
   and replacing $kappa$ by $kappa_"max"$, which only increases the right-hand
   side, gives the stated bound. All coefficients are polynomially bounded, so
   the right-hand side is negligible whenever each advantage is. Unlike the
-  step count of the reference architecture, $kappa$ is not a system parameter
+  step count of the reference architecture @EF:VanillaVM, $kappa$ is not a system
+  parameter
   but part of the extracted witness; the bound with $kappa$ is therefore a
   per-tree refinement and the bound with $kappa_"max"$ the unconditional one.
 
