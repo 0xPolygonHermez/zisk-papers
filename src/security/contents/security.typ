@@ -13,8 +13,9 @@ with $bold(p)$, and every bus balances across the whole collection. The proof
 descends the aggregation tree of @sec:relations layer by layer, reducing
 everything to the knowledge soundness of the four kinds of argument systems
 ($Pi_"AIR"^((tau))$, $Pi_"LEAF"^((tau))$, $Pi_"AGG"$ and $Pi_"FINAL"$), the
-straight-line extractability of the trace commitment $Com$, the multiset
-collision resistance of $cal(H)$, and the soundness of the bus fingerprint.
+straight-line extractability of the trace commitment $Com$, the preimage
+awareness of the accumulator $cal(H)$, and the soundness of the bus
+fingerprint.
 
 #remark(numbered: true, title: "Idealized proof model")[
   The analysis is idealized in three respects.
@@ -29,17 +30,19 @@ collision resistance of $cal(H)$, and the soundness of the bus fingerprint.
   @EPRINT:BarChiGua24. In our analysis we idealize over this
   obstruction and assume that straight-line extraction composes.
 
-  Second, the bus argument is sound only if the collection of witnesses that
-  is hashed into the accumulator $bold(c)$ is fixed before the random oracle
-  answers at $bold(c)$. For the trace commitments this follows from
-  straight-line extractability of Merkle trees in the ROM. For the algebraic
-  accumulator $cal(H)$ it does not: distinct multisets with equal hash exist
-  in abundance, only the hardness of finding them protects
-  the scheme, and recovering a multiset from its accumulator is a subset-sum
-  problem. We therefore charge the event that two admissible multisets known
-  to the adversary share an accumulator to the collision resistance of
-  $cal(H)$, although a straight-line reduction cannot in general exhibit the
-  second multiset; @rem:forking discusses the rigorous alternative.
+  Second, the bus argument is sound only if the multiset of typed commitments
+  that the accumulator $bold(c)$ stands for is fixed before the random oracle
+  answers at $bold(c)$. For the trace commitments this is the straight-line
+  extractability of Merkle trees in the ROM (@def:ext-com). For the
+  accumulator we assume the analogous property, preimage awareness
+  (@def:cr): a straight-line extractor recovers, from the transcript at the
+  time a value is announced, the multiset the adversary later opens it to.
+  For the algebraic accumulator $cal(H)$ this is an idealization. Distinct
+  small multisets with equal hash exist in abundance, only the hardness of
+  finding them protects the scheme, and recovering a multiset from its
+  accumulator is a subset-sum problem, so no straight-line extractor is
+  known; only collision resistance follows from standard assumptions.
+  @rem:forking discusses the rigorous alternative.
 
   Third, while the analysis produces explicit advantage bounds and reduction
   running times (@thm:main), the two idealizations mean that these should be
@@ -117,22 +120,45 @@ runs $cal(A)$, announces $"com"$ and returns one of $m, m'$ chosen at
 random fails extraction with at least half of $cal(A)$'s success probability:
 $Adv("bind", Com)(cal(A)) <= 2 dot Adv("ext", Com)(cal(D))$.
 
-#definition(title: "Multiset collision resistance")[
-  The multiset hash $cal(H)$ is _collision-resistant on multisets of
-  cardinality below $2^B$_ if for every PPT adversary $cal(A)$
+#definition(title: "Preimage awareness of the accumulator")[
+  The multiset hash $cal(H)$ is _preimage aware on multisets of cardinality
+  below $2^B$_ @EC:DodRisShr09 if there is a PPT algorithm $cal(E)_(cal(H))$
+  that, given a transcript $cal(T)$ of random-oracle queries and answers and a
+  value $y in cal(G)_(cal(H))$, outputs a multiset of typed commitments or
+  $bot$, such that for every PPT adversary $cal(A)$ that at some point during
+  its execution announces a value $y$ and at the end outputs a multiset
+  $cal(S)$,
   $
-    Adv("cr", cal(H))(cal(A)) := Pr[ & (cal(S), cal(S)') <- cal(A)(1^lambda) : \
-        & cal(S) != cal(S)' and abs(cal(S)), abs(cal(S)') < 2^B and cal(H)(cal(S)) = cal(H)(cal(S)') ] <= negl(lambda).
+    Adv("pa", cal(H))(cal(A)) := Pr[
+      abs(cal(S)) < 2^B and cal(H)(cal(S)) = y and cal(E)_(cal(H)) (cal(T)_(<= t), y) != cal(S)
+    ] <= negl(lambda),
   $
+  where $t$ is the time of the announcement and $cal(T)_(<= t)$ the transcript
+  up to it.
 ] <def:cr>
 
-The cardinality restriction is necessary for ZisK's accumulator group: $ZZ_p^n$ has exponent $p$, so
-adding $p$ copies of any element to a multiset leaves $cal(H)$ unchanged, and
-$2^B < p$ rules this out. For LtHash, collision resistance on bounded
-multisets reduces to the short-integer-solution problem @STOC:Ajtai96
-@ZISK:LTHASH; the reduction requires the inner digest of $h$ to be collision
-resistant on its own, which a single field element is not, so we assume the
-digest has at least $2 lambda$ bits (@sec:discussion).
+The definition mirrors @def:ext-com, with the accumulator in the role of the
+commitment: what is announced is a value of $cal(G)_(cal(H))$, and what is
+extracted is the small multiset the adversary later opens it to. The
+cardinality restriction is necessary for ZisK's accumulator group: $ZZ_p^n$
+has exponent $p$, so adding $p$ copies of any element to a multiset leaves
+$cal(H)$ unchanged, and $2^B < p$ rules this out. Preimage awareness implies
+collision resistance on such multisets, since two distinct small multisets
+with the same hash would both have to equal the extractor's output.
+
+For LtHash, collision resistance on bounded multisets reduces to the
+short-integer-solution problem @STOC:Ajtai96 @ZISK:LTHASH; the reduction
+requires the inner digest of $h$ to be collision resistant on its own, which
+a single field element is not, so we assume the digest has at least
+$2 lambda$ bits (@sec:discussion). Preimage awareness, however, is not known
+to follow from any standard assumption for an algebraic accumulator, and
+assuming it is the second idealization of @rem:idealized. It is nevertheless
+the property the analysis needs, and collision resistance alone would not do:
+an adversary may fix a target $y$ by querying $DeriveKey$ at it and only
+afterwards obtain the $h$-values of the elements it assembles into a multiset
+hashing to $y$, choosing which fresh values to combine after seeing them.
+Whether this succeeds is a preimage question, computational rather than
+statistical, and it is exactly what the extractor of @def:cr rules out.
 
 #definition(title: "Random-oracle model")[
   The hash-to-group function $h$, the challenge derivation $DeriveKey$ and
@@ -144,9 +170,9 @@ digest has at least $2 lambda$ bits (@sec:discussion).
 #definition(title: "ZisK proof system")[
   A _ZisK proof system_ is a tuple
   $
-    Zisk = (cal(C), Com, h, cal(H), DeriveKey, cal(F), {Pi_"AIR"^((tau))}_(tau in [M]), {Pi_"LEAF"^((tau))}_(tau in [M]), Pi_"AGG", Pi_"FINAL")
+    Zisk = (frak(A), Com, h, cal(H), DeriveKey, cal(F), {Pi_"AIR"^((tau))}_(tau in [M]), {Pi_"LEAF"^((tau))}_(tau in [M]), Pi_"AGG", Pi_"FINAL")
   $
-  consisting of the AIR-type family $cal(C)$, the components of
+  consisting of the AIR-type family $frak(A)$, the components of
   @sec:components with the carriers of the ZisK instantiation, a statistically sound bus fingerprint
   $cal(F)$ (@def:fingerprint) admitting every nonzero multiset, and argument
   systems attesting to the relations of
@@ -167,7 +193,7 @@ digest has at least $2 lambda$ bits (@sec:discussion).
       Balanced(L).
     )
   $
-  The family $cal(C)$, the local predicates and $B$ are implicit in the
+  The family $frak(A)$, the local predicates and $B$ are implicit in the
   notation.
 ] <def:r-zisk>
 
@@ -232,7 +258,7 @@ with $cal(F)^"LogUp"_chi (D) := bot$ if some denominator vanishes.
   $cal(F)^"LogUp"$ is a statistically sound bus fingerprint, with key space
   $KK^2$, values in $KK$ and every nonzero multiset admissible, with error
   $
-    epsilon_(cal(F))(Lambda) = frac(ell dot binom(Lambda, 2) + Lambda - 1, abs(KK)).
+    epsilon_(cal(F))(Lambda) = frac(ell dot binom(Lambda, 2) + max(Lambda - 1, 0), abs(KK)).
   $
 ] <lem:logup>
 
@@ -243,7 +269,9 @@ with $cal(F)^"LogUp"_chi (D) := bot$ if some denominator vanishes.
   contained in that union, and the sum defining $cal(F)^"LogUp"_chi (D + D')$
   splits message by message.
 
-  _Soundness._ The key is drawn after the adversary has output its multiset,
+  _Soundness._ If $Lambda = 0$, there is no admissible nonzero multiset,
+  so the advantage and the stated error are both zero. Assume $Lambda >= 1$.
+  The key is drawn after the adversary has output its multiset,
   so it suffices to fix an arbitrary $D != 0$ with $abs(D) <= Lambda$ and to
   bound the probability over the key alone. Let $chi = (alpha, gamma)$ be
   uniform in $KK^2$ and write $z_gamma (b, v) := hat(e)_gamma (b, v)$ for
@@ -323,110 +351,102 @@ which the game is invoked in the proof of @thm:main.
 #proposition(title: "Bus soundness")[
   Let $cal(F)$ be the bus fingerprint of the system. Under the idealizations
   of @rem:idealized, for every PPT adversary $cal(A)$ making at most $Q$
-  random-oracle queries there are reduction adversaries $cal(D)^"cr"$ and
+  random-oracle queries there are reduction adversaries $cal(D)^"pa"$ and
   $cal(D)^"ext"$, each running $cal(A)$ once in time
   $Time(cal(A)) + poly(lambda)$, such that
   $
     Adv("bus")(cal(A))
     <= (Q + 1) dot epsilon_(cal(F))(Lambda_"max")
-    + Adv("cr", cal(H))(cal(D)^"cr")
-    + Adv("ext", Com)(cal(D)^"ext")
-    + frac(Q + 2^B, p^n).
+    + Adv("pa", cal(H))(cal(D)^"pa")
+    + Adv("ext", Com)(cal(D)^"ext").
   $
 ] <prop:bus-soundness>
 
 #proof[
   Let $(L, ("com"_i)_i)$ be $cal(A)$'s output and $bold(c)$, $chi$ as in the
-  game. Number the $DeriveKey$ queries in the order they are made and let
-  $t^* in [Q + 1]$ be the index of the first query at $bold(c)$, with
+  game, and let $cal(S) := {(tau_i, "com"_i)}_i$ be the multiset of typed
+  commitments of the output, so that $bold(c) = cal(H)(cal(S))$. Number the
+  $DeriveKey$ queries in the order they are made, counting only the first
+  query at each point (a repeated query returns the answer already given),
+  and let $t^* in [Q + 1]$ be the index of the query at $bold(c)$, with
   $t^* := Q + 1$ if $cal(A)$ never queried $bold(c)$; in the latter case the
   game's own derivation plays the role of a final, fresh query. For
   $t in [Q + 1]$ write $bold(c)_t$ for the $t$-th query point, $chi_t$ for its
   answer and $cal(T)_(<t)$ for the transcript of all oracle queries and answers
-  made before it; a typed commitment is _known at time $t$_ if it was queried
-  to $h$ before the $t$-th $DeriveKey$ query. We define bad events, bound
-  each by a reduction or a counting argument, and show that off all of them
-  the adversary cannot win.
+  made before it. We define bad events, bound each by a reduction to one of
+  the assumptions or by @lem:zero-test, and show that off all of them the
+  adversary cannot win.
 
   _Bad events._
-  - $E_"fresh"$: some pair $(tau_i, "com"_i)$ of the output is not known at
-    time $t^*$. Order the $h$-evaluations of the output pairs in time,
-    counting the game's own evaluations last, and consider the last pair to
-    receive its value $g$. At that moment $bold(c)$ has been fixed (since
-    time $t^*$) and so have the values of all other pairs, so
-    $bold(c) = sum_i h(tau_i, "com"_i)$ forces $mu dot g$ to equal a fixed
-    target, where $mu in [1, 2^B)$ is the multiplicity of the pair in the
-    collection and is invertible modulo $p$ because $2^B < p$. A fresh oracle
-    output hits the required value with probability $p^(-n)$, and there are
-    at most $Q + 2^B$ candidates for the last evaluation, so
-    $Pr[E_"fresh"] <= (Q + 2^B) slash p^n$.
-  - $E_"ext"$: $not E_"fresh"$ and $cal(E)_Com (cal(T)_(<t^*), "com"_i) != w_i$
-    for some $i$. Off $E_"fresh"$ the commitment $"com"_i$ was announced (queried
-    to $h$) before time $t^*$, so this is the failure event of @def:ext-com for
-    the adversary $cal(D)^"ext"$ that runs $cal(A)$, announces $"com"_i$ at its
-    first $h$-query, and outputs $("com"_i, w_i)$. Hence
-    $Pr[E_"ext"] <= Adv("ext", Com)(cal(D)^"ext")$.
-  - $E_"uniq"$: at time $t^*$ there are two distinct multisets
-    $cal(S) != cal(S)'$ of typed commitments known at time $t^*$, both of
-    cardinality below $2^B$, with $cal(H)(cal(S)) = cal(H)(cal(S)') = bold(c)$.
-    The reduction $cal(D)^"cr"$ runs $cal(A)$ and outputs $(cal(S), cal(S)')$,
-    so $Pr[E_"uniq"] <= Adv("cr", cal(H))(cal(D)^"cr")$. Exhibiting the second
-    multiset is the step covered by the second idealization of
-    @rem:idealized: the pair is determined by the transcript, but a
-    straight-line reduction cannot in general compute it for an algebraic
-    accumulator (@rem:forking).
+  - $E_"pa"$: $abs(L) < 2^B$ and $cal(E)_(cal(H)) (cal(T)_(<t^*), bold(c)) != cal(S)$.
+    The reduction $cal(D)^"pa"$ runs $cal(A)$, announces every $DeriveKey$
+    query point at the time of the query, and outputs $cal(S)$. Its
+    announcement at time $t^*$ is $bold(c)$ (if $t^* = Q + 1$, the game's
+    derivation is that announcement), so $E_"pa"$ is its winning event of
+    @def:cr for that announcement and $Pr[E_"pa"] <= Adv("pa", cal(H))(cal(D)^"pa")$.
+    The reduction is straight-line and needs no transcript; it is the
+    assumption, not the reduction, that is idealized (@rem:idealized).
+  - $E_"ext"$: $not E_"pa"$ and $cal(E)_Com (cal(T)_(<t^*), "com"_i) != w_i$
+    for some $i$. Off $E_"pa"$ the extracted multiset at time $t^*$ is
+    $cal(S)$, so this is the failure event of @def:ext-com for the adversary
+    $cal(D)^"ext"$ that runs $cal(A)$, at every $DeriveKey$ query $t$
+    announces the commitments of $cal(E)_(cal(H)) (cal(T)_(<t), bold(c)_t)$,
+    and outputs $("com"_i, w_i)_i$; its announcement at time $t^*$ contains
+    every $"com"_i$. Hence $Pr[E_"ext"] <= Adv("ext", Com)(cal(D)^"ext")$.
   - $E_chi^((t))$ for $t in [Q + 1]$: define the _candidate collection_
-    $L^*_t$ as follows. If there is a unique multiset $cal(S)_t$ of typed
-    commitments known at time $t$, of cardinality below $2^B$, with
-    $cal(H)(cal(S)_t) = bold(c)_t$, let
+    $L^*_t$ as follows. If $cal(E)_(cal(H)) (cal(T)_(<t), bold(c)_t)$ returns a
+    multiset $cal(S)_t$, let
     $L^*_t := ((tau, cal(E)_Com (cal(T)_(<t), "com")))_((tau, "com") in cal(S)_t)$
     in a canonical order, discarding the collection if some extraction
     returns $bot$; otherwise $L^*_t := bot$. The event $E_chi^((t))$ is that
-    $L^*_t != bot$, $not Balanced(L^*_t)$ and
+    $L^*_t != bot$, $abs(L^*_t) < 2^B$, $not Balanced(L^*_t)$ and
     $sum_i BusCont_(chi_t)(cal(I)_(tau_i), w_i) = 0$ over the entries of
     $L^*_t$. The candidate is a function of $cal(T)_(<t)$ alone, whereas
-    $chi_t$ is uniform in $KK^2$ and independent of $cal(T)_(<t)$; since
-    $abs(L^*_t) < 2^B$ implies $Lambda(L^*_t) <= Lambda_"max"$, @lem:zero-test gives
+    $chi_t$ is uniform in $KK^2$ and independent of $cal(T)_(<t)$ because $t$
+    is the first query at its point; since $abs(L^*_t) < 2^B$ implies
+    $Lambda(L^*_t) <= Lambda_"max"$, @lem:zero-test gives
     $Pr[E_chi^((t))] <= epsilon_(cal(F))(Lambda_"max")$.
 
   _Step A: off all events, the adversary does not win._ Suppose $cal(A)$
-  wins and none of $E_"fresh"$, $E_"ext"$, $E_"uniq"$, $E_chi^((t^*))$ occurs.
-  Off $E_"fresh"$ every $(tau_i, "com"_i)$ is known at time $t^*$, so the
-  multiset $cal(S) := {(tau_i, "com"_i)}_i$ is a known multiset of cardinality
-  $abs(L) < 2^B$ with $cal(H)(cal(S)) = bold(c) = bold(c)_(t^*)$; off
-  $E_"uniq"$ it is the unique such multiset, so $cal(S)_(t^*) = cal(S)$. Off
-  $E_"ext"$, $cal(E)_Com (cal(T)_(<t^*), "com"_i) = w_i$ for every $i$, so
+  wins and none of $E_"pa"$, $E_"ext"$, $E_chi^((t^*))$ occurs. The win gives
+  $abs(L) < 2^B$, so off $E_"pa"$, $cal(E)_(cal(H)) (cal(T)_(<t^*), bold(c)_(t^*)) = cal(S)$.
+  Off $E_"ext"$, $cal(E)_Com (cal(T)_(<t^*), "com"_i) = w_i$ for every $i$, so
   $L^*_(t^*)$ is a reordering of $L$; every quantity in the winning condition
   is invariant under reordering. The winning condition then says
   $not Balanced(L^*_(t^*))$ and $sum_i BusCont_(chi_(t^*))(cal(I)_(tau_i), w_i) = 0$
   with $chi = chi_(t^*)$, which is $E_chi^((t^*))$: a contradiction.
 
   _Conclusion._ By Step A a win implies one of the bad events, and a union
-  bound over $E_"fresh"$, $E_"ext"$, $E_"uniq"$ and $E_chi^((1)), dots, E_chi^((Q+1))$
+  bound over $E_"pa"$, $E_"ext"$ and $E_chi^((1)), dots, E_chi^((Q+1))$
   gives the stated sum. Both reductions run $cal(A)$ once and perform a
   scan of the transcript, so they run in $Time(cal(A)) + poly(lambda)$.
 ]
 
 #remark(numbered: true, title: "Removing the idealization")[
-  Without the second idealization of @rem:idealized, the event $E_"uniq"$ must
-  be handled by rewinding. Run $cal(A)$ a second time from its state just
-  before the query $t^*$, answering it with a fresh $chi'$. If both runs win
-  with the same accumulator and the extracted collections differ, the two
-  multisets (or two openings of one commitment) form a collision for $cal(H)$
-  or a break of @def:ext-com; if they coincide, a single unbalanced collection
-  has passed the zero test at two independent challenges, which @lem:zero-test
-  bounds. The general forking lemma @CCS:BelNev06 then yields, schematically,
+  Without preimage awareness of $cal(H)$, the second idealization of
+  @rem:idealized, the event $E_"pa"$ must be handled by rewinding, using only
+  the collision resistance of $cal(H)$ on multisets of cardinality below
+  $2^B$, with advantage
+  $Adv("cr", cal(H))(cal(A)) := Pr[(cal(S), cal(S)') <- cal(A) : cal(S) != cal(S)' and abs(cal(S)), abs(cal(S)') < 2^B and cal(H)(cal(S)) = cal(H)(cal(S)')]$,
+  which for LtHash reduces to the short-integer-solution problem. Run
+  $cal(A)$ a second time from its state just before the query $t^*$,
+  answering it with a fresh $chi'$. If both runs win with the same
+  accumulator and the output collections differ, the two multisets (or two
+  openings of one commitment) form a collision for $cal(H)$ or a break of
+  @def:ext-com; if they coincide, a single unbalanced collection has passed
+  the zero test at two independent challenges, which @lem:zero-test bounds.
+  The general forking lemma @CCS:BelNev06 then yields, schematically,
   $
     Adv("bus")(cal(A)) <= epsilon_(cal(F))(Lambda_"max") + sqrt((Q + 1) (epsilon_(cal(F))(Lambda_"max") + Adv("cr", cal(H))(cal(D)^"cr") + Adv("ext", Com)(cal(D)^"ext"))) + frac(Q + 1, abs(KK)),
   $
   with reductions that run $cal(A)$ twice. The square-root loss is inherent to
   rewinding at a Fiat–Shamir query @C:FiaSha86 and is far from concretely
   tight. Making the linear bound of @prop:bus-soundness rigorous is a proof
-  obligation for the full security argument: either a knowledge-type
-  assumption on LtHash (an efficient extractor that recovers the multiset from
-  an accumulator the adversary produced), or an accumulator that is
-  straight-line extractable in the ROM, at the cost of the homomorphism that
-  makes independent aggregation possible.
+  obligation for the full security argument: either preimage awareness of
+  LtHash as a knowledge-type assumption (an efficient extractor that recovers
+  the multiset from an accumulator the adversary produced), or an accumulator
+  that is preimage aware in the ROM by construction, at the cost of the
+  homomorphism that makes independent aggregation possible.
 ] <rem:forking>
 
 #remark(numbered: true, title: "Field versus integer balance")[
@@ -448,7 +468,7 @@ lemma composes the straight-line extractors guaranteed by @def:ks.
 
 *Advantage notation.* We collect the advantages introduced above:
 $Adv("ks", Pi)$ (knowledge-soundness error, @def:ks), $Adv("ext", Com)$
-(@def:ext-com), $Adv("cr", cal(H))$ (@def:cr) and $Adv("bus")$
+(@def:ext-com), $Adv("pa", cal(H))$ (@def:cr) and $Adv("bus")$
 (@def:bus-game). All advantages are functions of $lambda$. In each lemma we
 exhibit explicit reduction adversaries $cal(D)$ and state their running
 times; when a bound has the form $k dot Adv(dot)(cal(D))$, the reduction
@@ -620,7 +640,7 @@ $kappa - 1$ aggregation nodes.
 
 The proof relies on the typing predicate at three places where a proof could
 _verify_ for a statement outside the relation's support, which knowledge
-soundness does not exclude: a child of type $M + 1$ with counter $1$ (whose
+soundness excludes only up to its error probability: a child of type $M + 1$ with counter $1$ (whose
 statement has no witness), a child of type in $[M]$ with a counter other than
 $1$ (outside the support of the leaf relation), and a child type outside
 $[M + 1]$ (for which no verifier is selected). In each case the parent's valid
@@ -661,7 +681,7 @@ architecture's combine layer.
 
 #proof[
   The experiment is the knowledge-soundness game of $Pi_"LEAF"^((tau))$: same
-  filter, same extractor, and the winning condition is membership of the
+  filter, same extractor, and the winning condition is non-membership of the
   extracted pair in $cal(R)_"LEAF"^((tau))$. A statement with $tau' != tau$ or
   $kappa != 1$ lies outside the support of the relation; a verifying proof for
   it is a knowledge-soundness break, and the experiment returns $1$ for it as
@@ -672,7 +692,7 @@ architecture's combine layer.
 The type under which a leaf is extracted is the type $sigma_i . tau$ read from
 its statement, which is also the type that selected the verifier in the
 aggregation layer. The extracted AIR proof is therefore a proof for
-$cal(A)_(sigma_i . tau)$, and this is what makes the output of the composed
+$cal(C)_(sigma_i . tau)$, and this is what makes the output of the composed
 extractor a _typed_ collection.
 
 === AIR Layer
@@ -722,7 +742,7 @@ extractor a _typed_ collection.
   every PPT adversary $cal(A)$ making at most $Q$ random-oracle queries, with
   CWE advantage $epsilon := Adv("cwe", Zisk)(cal(A))$, there exist PPT
   reduction adversaries $cal(D)_"FIN"$, $cal(D)_"AGG"$,
-  ${cal(D)_"LEAF"^((tau))}_tau$, ${cal(D)_"AIR"^((tau))}_tau$, $cal(D)^"cr"$
+  ${cal(D)_"LEAF"^((tau))}_tau$, ${cal(D)_"AIR"^((tau))}_tau$, $cal(D)^"pa"$
   and $cal(D)^"ext"$ such that
   $
     epsilon <= & Adv("ks", Pi_"FINAL")(cal(D)_"FIN")
@@ -730,9 +750,8 @@ extractor a _typed_ collection.
                & + kappa_"max" dot max_(tau in [M]) Adv("ks", Pi_"LEAF"^((tau)))(cal(D)_"LEAF"^((tau)))
                  + kappa_"max" dot max_(tau in [M]) Adv("ks", Pi_"AIR"^((tau)))(cal(D)_"AIR"^((tau))) \
                & + (Q + 1) dot epsilon_(cal(F))(Lambda_"max")
-                 + Adv("cr", cal(H))(cal(D)^"cr")
-                 + Adv("ext", Com)(cal(D)^"ext")
-                 + frac(Q + 2^B, p^n).
+                 + Adv("pa", cal(H))(cal(D)^"pa")
+                 + Adv("ext", Com)(cal(D)^"ext").
   $
   All reduction adversaries invoke $cal(A)$ exactly once and run in time at
   most $(3 kappa_"max" + 1) dot Time(cal(A)) + poly(lambda)$. In particular, if
@@ -803,9 +822,9 @@ extractor a _typed_ collection.
   game's derivation reproduces the extracted $bold(c)$ and $chi$. Hence
   $
     Pr["Steps 1 to 4 succeed" and not Balanced(L)] & <= Adv("bus")(cal(A)_"bus") \
-    & <= (Q + 1) dot epsilon_(cal(F))(Lambda_"max") + Adv("cr", cal(H))(cal(D)^"cr") + Adv("ext", Com)(cal(D)^"ext") + frac(Q + 2^B, p^n)
+    & <= (Q + 1) dot epsilon_(cal(F))(Lambda_"max") + Adv("pa", cal(H))(cal(D)^"pa") + Adv("ext", Com)(cal(D)^"ext")
   $
-  by @prop:bus-soundness, where $cal(D)^"cr"$ and $cal(D)^"ext"$ run
+  by @prop:bus-soundness, where $cal(D)^"pa"$ and $cal(D)^"ext"$ run
   $cal(A)_"bus"$ once.
 
   *Conclusion.* If Steps 1 to 4 succeed and $L$ is balanced, then
@@ -867,11 +886,10 @@ the obligations that a full security argument must discharge.
     [@rem:idealized (first item); relativized arguments do not exist @EPRINT:BarChiGua24.],
 
     [$Adv("ext", Com)$], [defined (@def:ext-com)], [Standard for Merkle trees over a random oracle.],
-    [$Adv("cr", cal(H))$],
-    [defined (@def:cr)],
-    [LtHash on multisets of cardinality below $2^B$; requires a collision-resistant inner digest of at least $2 lambda$ bits.],
+    [$Adv("pa", cal(H))$],
+    [idealization],
+    [@def:cr and @rem:idealized (second item). LtHash is only known to be collision resistant, from the short-integer-solution problem, with an inner digest of at least $2 lambda$ bits; the rigorous alternative is @rem:forking.],
 
-    [accumulator uniqueness], [idealization], [@rem:idealized (second item); rigorous alternatives in @rem:forking.],
     [$epsilon_(cal(F))$],
     [defined (@def:fingerprint); proved for LogUp (@lem:logup)],
     [Statistical; requires the challenge pair to be a random-oracle output (@def:rom). The circuit proves a sub-relation of $cal(R)_"AIR"^((tau))$ (@sec:instantiation).],
@@ -901,9 +919,10 @@ obligations for the sections that build on it.
   multiplicity column, in particular on the receiving side of shared lookup
   tables, is needed to lift field balance to multiset equality.
 - *The accumulator.* The linear bound of @prop:bus-soundness rests on the
-  second idealization of @rem:idealized. Discharging it (@rem:forking) is the
-  main cryptographic obligation left by this section; the bound that forking
-  gives is valid but concretely loose.
+  preimage awareness of $cal(H)$ (@def:cr), the second idealization of
+  @rem:idealized. Discharging it (@rem:forking) is the main cryptographic
+  obligation left by this section; the bound that forking gives is valid but
+  concretely loose.
 - *Circuit requirements.* The relations of @sec:relations-def require the
   circuits to enforce the typing predicate on children, to hash the type
   together with the commitment into the challenge contribution, to expose

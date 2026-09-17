@@ -37,10 +37,10 @@
     collection of AIR witnesses that are locally satisfying and bus balanced.
     The bound is an explicit sum of the knowledge-soundness errors of the four
     argument systems, weighted by the size of the unrolled aggregation tree,
-    the soundness error of the fingerprint, the collision resistance of the
+    the soundness error of the fingerprint, the preimage awareness of the
     challenge accumulator and the extractability of the trace commitment, in
     the random-oracle model. Two idealizations are made explicit, straight-line
-    composition and the uniqueness of the accumulated multiset, and the
+    composition and preimage awareness of the accumulator, and the
     assumptions inherited from the backend together with the obligations left
     for a complete proof are recorded in a ledger.
   ],
