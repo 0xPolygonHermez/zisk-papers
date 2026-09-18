@@ -1,4 +1,4 @@
-#import "../lib.typ": definition
+#import "../../lib.typ": definition
 
 Recent advances in zero-knowledge (ZK) proving systems @EPRINT:GabWilCio19, @ICALP:BBHR18, @EPRINT:DiaPos23b, @EPRINT:HabLevPap24  have opened the door to a new class of cryptographic applications: systems that can verify the correct execution of an arbitrary computation without revealing its private inputs, in time and space sublinear in the original computation. These properties underpin a rapidly expanding class of applications in blockchain scalability—such as validity rollups, verifiable coprocessors, and trustless cross-chain bridges—as well as an increasingly broad range of off-chain computation protocols.
 

@@ -1,4 +1,4 @@
-#import "../lib.typ": definition, remark
+#import "../../lib.typ": definition, remark
 #import "@preview/fletcher:0.5.8" as fletcher: diagram, edge, node
 
 ZisK uses proof recursion to combine the independent per-segment proofs produced by trace splitting into a single, globally consistent argument. This section introduces proof recursion in general, identifies the two specific problems it resolves in ZisK, and details the aggregation structure.
@@ -249,7 +249,6 @@ Both checks reduce to simple arithmetic on values propagated up the tree as publ
         inset: 5pt,
         corner-radius: 2pt,
       ),
-
 
       // Level 0: Final Verifier
       node(
