@@ -26,6 +26,11 @@
   )
   set text(font: font, size: 11pt)
   set par(justify: true)
+
+  show link: it => if type(it.dest) == str {
+    set text(font: "DejaVu Sans Mono", size: 0.85em)
+    it
+  } else { it }
   counter(page).update(0)
 
   v(1em)
@@ -94,6 +99,12 @@
 ) = {
   set document(title: title, author: authors)
   set text(size: size, font: font)
+
+  // Monospace for URL links only; internal cross-references keep the text font.
+  show link: it => if type(it.dest) == str {
+    set text(font: "DejaVu Sans Mono", size: 0.85em)
+    it
+  } else { it }
 
   set page(
     paper: paper-size,

@@ -44,12 +44,12 @@
     assumptions inherited from the backend together with the obligations left
     for a complete proof are recorded in a ledger.
   ],
-  keywords: (
-    "zero-knowledge virtual machines",
-    "recursive proof composition",
-    "knowledge soundness",
-    "lookup arguments",
-  ),
+  // keywords: (
+  //   "zero-knowledge virtual machines",
+  //   "recursive proof composition",
+  //   "knowledge soundness",
+  //   "lookup arguments",
+  // ),
 )
 
 #show: article.with(
@@ -58,12 +58,6 @@
   margin: margin,
   bibliography: bibliography(("./refs.bib", "../whitepaper/refs.bib")),
 )
-
-// Monospace for URL links only; internal cross-references keep the text font.
-#show link: it => if type(it.dest) == str {
-  set text(font: "DejaVu Sans Mono")
-  it
-} else { it }
 
 // Set bibliography style to alphanumeric
 #set cite(style: "alphanumeric")
