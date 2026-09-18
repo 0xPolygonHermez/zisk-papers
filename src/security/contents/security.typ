@@ -433,8 +433,6 @@ which the game is invoked in the proof of @thm:main.
     announcement at time $t^*$ is $bold(c)$ (if $t^* = Q + 1$, the game's
     derivation is that announcement), so $E_"pa"$ is its winning event of
     @def:cr for that announcement and $Pr[E_"pa"] <= Adv("pa", cal(H))(cal(D)^"pa")$.
-    The reduction is straight-line and needs no transcript; it is the
-    assumption, not the reduction, that is idealized (@rem:idealized).
   - $E_"ext"$: $not E_"pa"$ and $cal(E)_Com (cal(T)_(<t^*), "com"_i) != w_i$
     for some $i$. Off $E_"pa"$ the extracted multiset at time $t^*$ is
     $cal(S)$, so this is the failure event of @def:ext-com for the adversary
@@ -581,8 +579,7 @@ $kappa - 1$ aggregation nodes.
       $sigma = (tau, kappa, bold(c), s)$.],
     [If $not sans("Typed")(tau, kappa)$ or
       $V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) != 1$,
-      return $0$. (These are the conjuncts of $cal(R)_"FINAL"$ that concern the
-      child.)],
+      return $0$.],
     [Run $((sigma_1, pi_1), dots, (sigma_kappa, pi_kappa)) <- cal(E)_"REC"(bold(p), chi, sigma, pi)$,
       with $sigma_i = (tau_i, kappa_i, bold(c)_i, s_i)$.],
     [Return $1$ unless, for every $i in [kappa]$, $tau_i in [M]$, $kappa_i = 1$
@@ -694,8 +691,7 @@ statement has no witness), a child of type in $[M]$ with a counter other than
 $1$ (outside the support of the leaf relation), and a child type outside
 $[M + 1]$ (for which no verifier is selected). In each case the parent's valid
 witness excludes the child, so the offending proof is charged to the parent's
-invocation. This is the role played by the step-count typing in the reference
-architecture's combine layer.
+invocation.
 
 === Leaf-Verifier Layer
 
@@ -979,8 +975,7 @@ obligations for the sections that build on it.
   the trace commitment as a public input of the AIR argument, and to have
   that commitment bind the cached columns, or else to feed the cached-column
   commitment into the challenge contribution by other means
-  (@sec:instantiation). Each is a small change relative to the whitepaper's
-  description and each is used by the proofs.
+  (@sec:instantiation).
 - *Fixed and cached data.* Fixed columns are prescribed by the AIR
   description, hence by the verification key. Cached columns, for instance
   the program ROM and precomputed operation tables, are bound through the
