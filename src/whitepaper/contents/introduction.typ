@@ -18,7 +18,7 @@ A central motivation for ZisK is _extensibility_. Application domains such as bl
 
 == Paper Overview
 
-@sec:isa defines the ZisK ISA: the supported RISC-V subset and its transpilation, the execution environment, machine state and instruction format, and the step semantics; the full instruction set is listed in @appendix:opcodes. @sec:arithmetization presents the arithmetization framework: AIRs, bus interactions, and LogUp-based circuit satisfiability. @sec:design describes the chip architecture, the encoding of 64-bit words over Goldilocks, and the bus system. @sec:continuations explains trace splitting, the segments it produces, and how continuation buses chain segment boundaries. @sec:recursion covers the recursive aggregation tree, the recursive challenge derivation, and root-level bus balancing. @sec:backend fixes the proving backend and its parameters.
+@sec:isa defines the ZisK ISA: the supported RISC-V subset and its transpilation, the execution environment, machine state and instruction format, and the step semantics; the full instruction set is listed in @appendix:opcodes. @sec:arithmetization presents the arithmetization framework: AIRs, bus interactions, and LogUp-based circuit satisfiability. @sec:design describes the chip architecture, the encoding of 64-bit words over Goldilocks, and the bus system. @sec:continuations explains trace splitting, the segments it produces, and how continuation buses chain segment boundaries. @sec:recursion covers the recursive aggregation tree, the recursive challenge derivation, and root-level bus balancing, and states the extractability theorem proved in the companion security analysis of the recursion @ZISK:RECURSION. @sec:backend fixes the proving backend and its parameters.
 
 == Notation
 

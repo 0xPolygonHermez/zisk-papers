@@ -85,7 +85,7 @@ $
 $
 Here, by _challenge_ we refer to a random field element sent by the verifier after the prover has committed to its witness; because the prover cannot predict it before committing, the challenge breaks any attempt to craft a witness that satisfies the identity by accident. In the non-interactive setting, challenges are derived deterministically from the prover's commitments via a collision-resistant hash (Fiat-Shamir transform @C:FiaSha86), preserving the same guarantee without interaction.
 
-To apply this idea to bus balancing, we first need to compress each multi-element message $bold(e)(r)$ into a single field element. This compression itself uses a challenge $gamma in KK$, distinct from $alpha$ but not independent of it: $gamma$ is derived deterministically from $alpha$ (e.g., as a hash of $alpha$), so that fixing $alpha$ determines $gamma$ as well. From the prover's and verifier's points of view, the two challenges thus form a single Fiat-Shamir-derived secret that becomes available only after the witness has been committed.
+To apply this idea to bus balancing, we first need to compress each multi-element message $bold(e)(r)$ into a single field element. This compression itself uses a second challenge $gamma in KK$. The two challenges are derived together: the pair $chi = (alpha, gamma) in KK^2$, which we call the _key_ of the bus argument, is a single Fiat-Shamir output that becomes available only after the witness has been committed (@sec:challenge-derivation).
 
 #definition(title: "Compressed Interaction Value")[
   Given an interaction $(b, m, bold(e))$ of length $ell$ and a challenge $gamma in KK$, the _compressed value_ at row $r$ is:
@@ -102,11 +102,15 @@ $
     display(S_i (r-1) + sum_((b, m, bold(e)) in cal(I)_i) frac(m(r), alpha + hat(e)(r)))\, & " if" r > 1,
   )
 $
-The final value $s_i = S_i (N_i)$ is the AIR's total signed contribution to the bus. Global bus balancing then reduces to a single scalar constraint:
+The final value $s_i = S_i (N_i)$ is the AIR's total signed contribution to the bus. We call it the _bus contribution_ of the witness under the key $chi$ and write
 $
-  sum_(i=1)^M s_i = 0
+  s_i = "BusCont"_chi (cal(I)_i, (bold(T)_i, bold(a)_i)).
 $
-This constraint is enforced at the aggregation level: individual AIR proofs expose $s_i$ as a public output, and the aggregation step verifies that they sum to zero (see @sec:recursion).
+Global bus balancing then reduces to a single scalar constraint:
+$
+  sum_(i=1)^M s_i + s_"glob" = 0,
+$
+where $s_"glob"$ is the same LogUp sum taken over the _global messages_: messages that no AIR emits but that the system as a whole adds to some buses, such as the anchors that open and close the continuation chains (@sec:continuation-bus). They are determined by the public statement, and @sec:zisk-statement lists them. This constraint is enforced at the aggregation level: individual AIR proofs expose $s_i$ as a public output, and the recursion verifies that they sum, together with $s_"glob"$, to zero (see @sec:recursion).
 
 == Circuits <sec:circuits-and-balancing>
 
@@ -125,5 +129,5 @@ Together with the bus-balancing condition introduced in @def:bus-balancing, loca
 #definition(title: "Circuit Satisfiability")[
   A circuit $cal(C) = {(cal(A)_i, cal(I)_i)}_(i=1)^M$ is _satisfied_ by witnesses ${(bold(T)_i, bold(a)_i)}$ if:
   + Each witness $(bold(T)_i, bold(a)_i)$ satisfies its corresponding AIR $cal(A)_i$.
-  + Every bus $b in cal(B)$ is balanced.
+  + Every bus $b in cal(B)$ is balanced, counting the global messages of the public statement among its messages.
 ]
