@@ -34,23 +34,28 @@ The standard construction builds $cal(H)$ from an inner _hash-to-group_ function
 $
   cal(H)(S) = sum_(x in S) m_S (x) dot h(x),
 $
-where $m_S (x) in NN$ is the multiplicity of $x$ in $S$. As a consequence, segment provers can independently hash and sum their own commitments, and partial accumulators from disjoint subsets can be merged later by addition. The common challenge is then obtained from the global accumulator $"acc" = cal(H)({"com"_1, dots, "com"_M})$ via a deterministic projection $"DeriveAlpha" : cal(G) -> KK$, which we instantiate as a Poseidon2 hash of the accumulator vector whose output is interpreted as an element of $KK$:
+where $m_S (x) in NN$ is the multiplicity of $x$ in $S$. As a consequence, segment provers can independently hash and sum their own commitments, and partial accumulators from disjoint subsets can be merged later by addition. The common challenge is then obtained from the global accumulator $"acc" = cal(H)({"com"_1, dots, "com"_M})$ via a deterministic projection, which we instantiate as a Poseidon2 hash whose output is interpreted as an element of $KK$. The projection also absorbs the public statement $bold(p)$ (@sec:zisk-statement) and the proof-level flags that switch the optional continuation anchors on (@sec:continuation-bus), so that the challenge is bound to the statement as well as to the commitments:
 $
-  alpha = "DeriveAlpha"("acc") in KK.
+  alpha = "DeriveAlpha"(bold(p), "acc") in KK.
 $
-Multiset collision-resistance ensures that the only way for a malicious prover to alter $alpha$ is to alter the multiset of commitments, which would in turn invalidate at least one segment proof.
+Multiset collision-resistance ensures that the only way for a malicious prover to alter $alpha$ is to alter the statement or the multiset of commitments, which would in turn invalidate at least one segment proof.
 
-ZisK instantiates this scheme with _LtHash_ @ZISK:LTHASH, a lattice-based multiset hash. The group is $cal(G)$ is the vector space $ZZ_p^n$, and the inner hash $h : FF^k -> ZZ_p^n$ is realised by hashing a commitment $"com"$ to a single field element $c = H("com")$ via Poseidon2 @AFRICACRYPT:GraKhoSch23, then iteratively expanding $c$ into a long pseudorandom vector $h("com") in ZZ_p^n$. Multiset collision-resistance for LtHash reduces to the Short Integer Solution (SIS) @STOC:Ajtai96 lattice problem, which is believed to remain hard even against quantum adversaries. ZisK targets $128$-bit security with concrete parameters $n = 372$ and cardinality bound $B = 2^(20)$ (introduced below).
+ZisK instantiates this scheme with _LtHash_ @ZISK:LTHASH, a lattice-based multiset hash. The group $cal(G)$ is the vector space $ZZ_p^n$. The element hashed for a segment is its _commitment_ $"com"$: the identifier of its AIR, the Merkle root of its stage-1 trace commitment (@sec:backend), and its stage-1 AIR values. The inner hash $h$ absorbs $"com"$ into a Poseidon2 sponge @AFRICACRYPT:GraKhoSch23 and squeezes its $16$-element state, then applies $22$ further Poseidon2 permutations in a chain, concatenating the $23$ states into a pseudorandom vector $h("com") in ZZ_p^n$ with $n = 23 dot 16 = 368$. Multiset collision-resistance for LtHash reduces to the Short Integer Solution (SIS) @STOC:Ajtai96 lattice problem, which is believed to remain hard even against quantum adversaries.
 
-The LtHash group has finite exponent $p$: adding $p$ copies of the same element to a multiset leaves $H$ unchanged, since $p dot h(x) equiv 0 in ZZ_p^n$. To rule out such trivial collisions, the scheme is restricted to multisets of cardinality at most $B << p$. ZisK enforces this bound by tracking the multiset cardinality alongside the accumulator, via the leaf-count counter $kappa$ that the recursion carries and range-checks against $2^B$ at every aggregation node (introduced in the next section). Equivalently, one may think of LtHash as using an augmented per-element hash $h'(x) = (h(x), 1) in ZZ_p^(n+1)$, so that the last coordinate of the multiset hash tracks the total cardinality automatically.
+The LtHash group has finite exponent $p$: adding $p$ copies of the same element to a multiset leaves $cal(H)$ unchanged, since $p dot h(x) equiv 0 in ZZ_p^n$. To rule out such trivial collisions, the scheme is restricted to multisets of cardinality less than $2^B << p$, with $B = 20$. ZisK enforces this bound by tracking the multiset cardinality alongside the accumulator, via the leaf-count counter $kappa$ that the recursion carries and range-checks against $2^B$ at every aggregation node (introduced in the next section). Equivalently, one may think of LtHash as using an augmented per-element hash $h'(x) = (h(x), 1) in ZZ_p^(n+1)$, so that the last coordinate of the multiset hash tracks the total cardinality automatically.
 
 Correctness of the assumed challenge $alpha$ must be verified ---otherwise a malicious prover could substitute any $alpha$ to make the partial sums balance artificially. Since $cal(H)$ is homomorphic over multiset union, this verification is embedded directly into the aggregation tree: each node carries a _partial accumulator_ over the commitments in its subtree, and a parent node combines the two by addition. At the root, the fully accumulated value is checked against the claimed $alpha$, confirming that it was correctly derived from the entire set of commitments.
 
 == What ZisK Proves <sec:zisk-statement>
 
-Before describing the recursive verifiers, we make explicit what ZisK as a whole proves. Given a fixed program $P$, ZisK proves that there exists a valid execution of $P$ on some input producing some output. Some elements of this relation ---typically a subset of the program's inputs and a subset of its outputs--- can be exposed to the verifier as publics; we collect all such public elements into a single vector $bold(p) in FF^k$, the _public statement_. Everything else (the prover's hints, intermediate memory state, and any non-public output) stays inside the prover.
+Before describing the recursive verifiers, we make explicit what ZisK as a whole proves. Given a fixed program $P$, ZisK proves that there exists a successful execution of $P$ (@sec:execution_model), on some input and some hint stream, that declares a given list of public outputs. The elements exposed to the verifier are collected into a single vector $bold(p) in FF^(68)$, the _public statement_:
+- the program commitment $"root"_"ROM" in FF^4$, the Merkle root of the Rom chip's cached columns, which hold the program code (@sec:rom-bus);
+- the $32$ public outputs $"out"_0, dots, "out"_(31) in [0, 2^(64))$ of @sec:public-outputs, each as two $32$-bit limbs (@sec:word-encoding), for $64$ field elements.
+Everything else ---the input, the hints, the intermediate states of the execution--- stays inside the prover.
 
-The execution is split into segments and proved piecewise: given ZisK's circuit $cal(C) = {(cal(A)_i, cal(I)_i)}_(i=1)^M$, each segment is an instance of one of the AIRs $(cal(A)_i, cal(I)_i) in cal(C)$, and its trace covers a contiguous range of execution steps. The segments are stitched together by the global bus-balancing condition (@def:bus-balancing) and the global challenge $alpha in KK$, derived from the prover's commitments via Fiat-Shamir as described in @sec:challenge-derivation.
+These publics are bound to the execution by two mechanisms. The program commitment is the root of a commitment that the Rom AIR's proof opens, so every instruction fetched on the ROM Bus belongs to the program committed by $"root"_"ROM"$ (@sec:rom-bus). The public outputs are bound by $32$ global terms on the Operation Bus, which receive the messages $(mono("pubout"), i, 0, "out"_(i,0), "out"_(i,1), "out"_(i,0), "out"_(i,1))$ for $i in [0, 32)$, where $("out"_(i,0), "out"_(i,1))$ are the limbs of $"out"_i$. The only sender of `pubout` messages is the Main chip, at the `pubout` instructions of the epilogue, so balancing the Operation Bus forces the execution to declare exactly the outputs in $bold(p)$.
+
+The execution is split into segments and proved piecewise (@def:segmentation): given ZisK's circuit $cal(C) = {(cal(A)_i, cal(I)_i)}_(i=1)^M$ (@tbl:chip-inventory), each segment is a witness for one of the AIRs $cal(A)_i$. The segments are stitched together by the global bus-balancing condition (@def:bus-balancing) ---which includes the continuation buses of @sec:continuation-bus --- under the global challenge $alpha in KK$, derived from the prover's commitments as described in @sec:challenge-derivation.
 
 == Recursive Structure
 
@@ -66,7 +71,7 @@ Two quantities are accumulated upward at every internal node: the bus partial su
 
 The challenge $alpha$ is an input to the entire structure, not something derived inside it. Before proving starts, $alpha$ is derived according to @sec:challenge-derivation and broadcast to every leaf prover. Each leaf proof takes $alpha$ as a public input and uses it to compute its partial bus sum $s$. The verifiers then accumulate both $s$ and the challenge contributions $bold(c)$ upward, and the Final Verifier receives $alpha$ as a public input to check that it matches what the tree actually accumulated.
 
-The tree has four kinds of nodes: AIR leaves, leaf verifiers, aggregation verifiers, and the Final Verifier.
+The tree has four kinds of nodes: AIR leaves, leaf verifiers, aggregation verifiers, and the Final Verifier. For some AIRs a fifth kind, the _compressor_, sits between the AIR leaf and its leaf verifier: the STARK proofs of these AIRs are large, and verifying them directly would make the leaf verifier circuit large as well. A compressor is a recursive verifier that verifies the AIR proof and re-proves the same statement at a lower rate (@sec:backend), so that the leaf verifier verifies the compressor's proof instead. Since it changes neither the statement nor its meaning, we fold the compressor into the leaf verifier in the relations below; it appears separately only in the topology of @sec:topology.
 
 === AIR Leaves
 
@@ -75,7 +80,7 @@ A _leaf_ of the aggregation tree corresponds to a particular segment instance of
 As public statement, the proof at a leaf takes the program-level publics $bold(p)$, the challenge $alpha$ and the AIR-level summary $s$. The circuit type $tau$ itself is _not_ part of the leaf's public statement: it is determined by which AIR the leaf instantiates and is lifted into the public statement by the leaf verifier above (described next), so that the upper levels of the tree can read it and decide which AIR's verification key to use.
 
 Given $alpha in KK$, $bold(p) in FF^(k)$, $s in KK$, a proof for a leaf of circuit type $tau$ attests that there exists $bold(T) in FF^(N times W)$, $bold(a) in FF^(V)$ such that:
-- The witness $(bold(T), bold(a))$ satisfies the AIR $cal(A)_tau$, and is consistent with the program-level publics $bold(p)$ ---i.e., the cells of the trace and AIR values that the AIR designates as bindings to the program's publics match $bold(p)$.
+- The witness $(bold(T), bold(a))$ satisfies the AIR $cal(A)_tau$, and is consistent with the program-level publics $bold(p)$. For the Rom AIR this means that its cached columns are the ones committed by $"root"_"ROM"$; the public outputs enter only through the global terms of the Operation Bus described above, which are part of the bus contribution checked at the root.
 - The partial bus sum $s$ is correctly computed from the AIR's interactions $cal(I)_tau$ and $(bold(T), bold(a))$ under the challenge $alpha$.
 
 In the language of relations:
@@ -136,18 +141,18 @@ where $V_"AIR"^((tau))$ is the verifier induced by $cal(R)_"AIR"^((tau))$. The b
 
 === Aggregation Verifier
 
-An _aggregation verifier_ takes the proofs $pi_L, pi_R$ produced by its two children as witness, runs the recursive verifier on each of them, and accumulates the bus partial sums $s_L, s_R$ and the challenge contributions $bold(c)_L, bold(c)_R$ upward. The contribution $bold(c) = bold(c)_L + bold(c)_R$ is exactly the multiset-homomorphism step of the multiset hash $cal(H)$: under the leaf-element interpretation given above, summing the children's $bold(c)$'s computes $cal(H)$ on the union of the two subtrees' multisets. The accumulated $(s, bold(c))$ propagate up the tree until the root.
+An _aggregation verifier_ has a fixed arity of three: it takes the proofs $pi_1, pi_2, pi_3$ produced by its children as witness, runs the recursive verifier on each of them, and accumulates the bus partial sums $s_i$ and the challenge contributions $bold(c)_i$ upward. The contribution $bold(c) = sum_i bold(c)_i$ is exactly the multiset-homomorphism step of the multiset hash $cal(H)$: under the leaf-element interpretation given above, summing the children's $bold(c)$'s computes $cal(H)$ on the union of the subtrees' multisets. The accumulated $(s, bold(c))$ propagate up the tree until the root. When fewer than three proofs are available, the remaining slots are _null children_, marked by the reserved circuit type $tau = 0$: a null child is not verified and contributes the neutral element to every accumulator, i.e. its recursive statement is $(0, 0, 0, bold(0))$.
 
-Each child of an aggregation verifier is itself either a leaf verifier or another aggregation verifier. The aggregation verifier therefore reads each child's circuit type $tau$ and selects the appropriate verifier accordingly: the per-AIR verifier $V_"LEAF"^((tau))$ when $tau in [M]$, or the aggregation verifier $V_"AGG"$ otherwise. We denote this selection by $V_"REC"^((tau))$. The aggregation verifier exposes its own circuit type $tau = M + 1$ in its public statement to mark the resulting proof as "aggregated", so the level above dispatches to $V_"AGG"$ when verifying it.
+Each non-null child of an aggregation verifier is itself either a leaf verifier or another aggregation verifier. The aggregation verifier therefore reads each child's circuit type $tau$ and selects the appropriate verifier accordingly: the per-AIR verifier $V_"LEAF"^((tau))$ when $tau in [M]$, or the aggregation verifier $V_"AGG"$ when $tau = M + 1$. We denote this selection by $V_"REC"^((tau))$, with the convention that $V_"REC"^((0))$ accepts exactly the null statement. The aggregation verifier exposes its own circuit type $tau = M + 1$ in its public statement to mark the resulting proof as "aggregated", so the level above dispatches to $V_"AGG"$ when verifying it.
 
 Dispatching also requires the aggregation verifier to know the verification key of whichever inner verifier it ends up running. The keys $"vk"_("LEAF")^((1)), dots, "vk"_("LEAF")^((M))$ of the per-circuit-type leaf verifiers are fixed at setup time and are hard-coded into the aggregation circuit. The aggregation verifier's _own_ key is exactly the public $"vk"$ introduced above: this is the value that lets the aggregator verify aggregation children. The aggregator additionally binds each of its children to declare the same value of $"vk"$ as itself, so the same value propagates uniformly through the entire tree.
 
 A proof for an aggregation verifier attests that:
-- The two child proofs $pi_L$ and $pi_R$ each verify under the verifier selected by their respective circuit types $tau_L, tau_R in [M+1]$, and under their respective public statements.
-- The partial bus sum $s$ is the sum of the children's partial sums, $s = s_L + s_R$.
-- The challenge contribution $bold(c)$ is the sum of the children's contributions, $bold(c) = bold(c)_L + bold(c)_R$.
-- The leaf-count counter $kappa$ is the sum of the children's counters, $kappa = kappa_L + kappa_R$, that satisfy $kappa_L, kappa_R < 2^B$ for the bound $B$ from @sec:challenge-derivation.
-- Both children declare the same $"vk"$ as the parent.
+- Each child proof $pi_i$ verifies under the verifier selected by its circuit type $tau_i in {0} union [M+1]$, and under its public statement.
+- The partial bus sum $s$ is the sum of the children's partial sums, $s = sum_i s_i$.
+- The challenge contribution $bold(c)$ is the sum of the children's contributions, $bold(c) = sum_i bold(c)_i$.
+- The leaf-count counter $kappa$ is the sum of the children's counters, $kappa = sum_i kappa_i$, and every child counter and every running partial sum $sum_(i' <= i) kappa_(i')$ is less than $2^B$, for the bound $B = 20$ of @sec:challenge-derivation; the checks are $20$-bit decompositions in the circuit.
+- All children declare the same $"vk"$ as the parent.
 - The exposed circuit type is the aggregation marker $tau = M + 1$.
 
 Formally:
@@ -157,24 +162,23 @@ $
       cases(
         delim: #none,
         ,
-        (bold(p), alpha, sigma, "vk")\; ((sigma_L, pi_L), (sigma_R, pi_R)),
+        (bold(p), alpha, sigma, "vk")\; ((sigma_i, pi_i))_(i in [3]),
         ,
       )
       mid(|)
       cases(
         delim: #none,
         gap: #(0pt + 0.4em),
-        V_"REC"^((tau_L))((bold(p), alpha, sigma_L, "vk"), pi_L) = "accept",
-        and V_"REC"^((tau_R))((bold(p), alpha, sigma_R, "vk"), pi_R) = "accept",
+        forall i in [3] : V_"REC"^((tau_i))((bold(p), alpha, sigma_i, "vk"), pi_i) = "accept",
         and quad quad quad quad tau = M + 1,
-        and quad kappa = kappa_L + kappa_R and kappa_L\,kappa_R < 2^B,
-        and quad quad quad quad s = s_L + s_R,
-        and quad quad quad quad bold(c) = bold(c)_L + bold(c)_R,
+        and quad kappa = sum_i kappa_i and forall i : kappa_i < 2^B and sum_(i' <= i) kappa_(i') < 2^B,
+        and quad quad quad quad s = sum_i s_i,
+        and quad quad quad quad bold(c) = sum_i bold(c)_i,
       )
     }
   )
 $
-where $V_"REC"^((tau)) = V_"LEAF"^((tau))$ if $tau in [M]$ and $V_"REC"^((tau)) = V_"AGG"$ if $tau = M + 1$. Each $V_"REC"^((tau))$ is invoked with $"vk"$ in the child's public statement, so by accepting that proof the aggregator implicitly checks that the child declared the same $"vk"$ as itself.
+where $V_"REC"^((tau)) = V_"LEAF"^((tau))$ if $tau in [M]$, $V_"REC"^((tau)) = V_"AGG"$ if $tau = M + 1$, and $V_"REC"^((0))$ accepts only the null statement. Each $V_"REC"^((tau))$ is invoked with $"vk"$ in the child's public statement, so by accepting that proof the aggregator implicitly checks that the child declared the same $"vk"$ as itself.
 
 === Final Verifier
 
@@ -184,8 +188,8 @@ A proof for the Final Verifier attests that:
 - The child's circuit type is $tau = M + 1$, i.e., the child is an aggregation proof.
 - The child aggregation proof $pi$ verifies under the public statement $(bold(p), alpha, sigma, "vk")$, with the child's declared $"vk"$ matching the Final's hard-coded constant.
 - The leaf-count counter $kappa$ is less than $2^B$, confirming that the multiset of commitments aggregated under the child satisfies the cardinality bound required by $cal(H)$ (see @sec:challenge-derivation).
-- Bus balancing holds globally: $s = 0$.
-- The challenge $alpha$ was honestly derived from the full set of commitments: $alpha = "DeriveAlpha"(bold(c))$, where $"DeriveAlpha"$ is the deterministic projection of the accumulated $bold(c)$ into $bb(K)$ described in @sec:challenge-derivation.
+- Bus balancing holds globally: $s + s_"glob" = 0$, where $s_"glob" = s_"glob" (bold(p), alpha)$ is the bus contribution of the _global terms_ of the circuit ---the genesis and terminus anchors of the continuation buses (@sec:continuation-bus), the initialisation of the registers (@sec:registers), and the public-output terms of the Operation Bus (@sec:zisk-statement). These terms belong to no segment: they depend only on the public statement, the proof-level flags and the challenge, so the Final Verifier computes $s_"glob"$ itself.
+- The challenge $alpha$ was honestly derived from the statement and the full set of commitments: $alpha = "DeriveAlpha"(bold(p), bold(c))$, the deterministic projection of @sec:challenge-derivation applied to the accumulated $bold(c)$.
 
 Formally, the Final Verifier attests to the relation:
 $
@@ -203,18 +207,18 @@ $
         gap: #(0pt + 0.4em),
         V_"AGG" ((bold(p), alpha, sigma, "vk"), pi) = "accept",
         quad quad quad quad quad and kappa < 2^B,
-        quad quad quad quad quad and s = 0,
-        quad quad and alpha = "DeriveAlpha"(bold(c)),
+        quad and s + s_"glob" (bold(p), alpha) = 0,
+        quad and alpha = "DeriveAlpha"(bold(p), bold(c)),
       )
     }
   )
 $
 
 #remark[
-  In the degenerate case of an execution that fits in a single segment, the aggregation tree is empty: there is nothing to aggregate. The Final Verifier then takes the leaf verifier's proof directly as its child, dispatching to $V_"LEAF"^((tau))$ in exactly the same way as an aggregation verifier would. The relation $cal(R)_"FINAL"$ above generalises to this case by replacing $V_"AGG"$ with $V_"LEAF"^((tau))$ and accepting any $tau in [M]$; everything else stays the same.
+  Every execution has at least one Main segment and one Mem segment (@sec:chip-inventory), so the tree has at least two leaves and its root is always an aggregation verifier, possibly with null children. The Final Verifier therefore never needs to dispatch over circuit types.
 ]
 
-The two equality checks have direct global meaning. The first, $s = 0$, is the global bus-balancing condition from @def:bus-balancing ---every message sent on every bus across every segment has been received exactly once with matching values. The second, $alpha = "DeriveAlpha"(bold(c))$, is _challenge correctness_: by the multiset homomorphism of $cal(H)$, the value of $bold(c)$ at the top of the tree equals $sum_i h("com"(bold(T)_i, bold(a)_i)) = cal(H)(S)$ over the multiset $S$ of segment trace commitments, so this check confirms that $alpha$ was honestly derived from the full set of commitments and not chosen adversarially.
+The two equality checks have direct global meaning. The first, $s + s_"glob" = 0$, is the global bus-balancing condition from @def:bus-balancing ---every message sent on every bus across every segment and every global term has been received exactly once with matching values. The second, $alpha = "DeriveAlpha"(bold(p), bold(c))$, is _challenge correctness_: by the multiset homomorphism of $cal(H)$, the value of $bold(c)$ at the top of the tree equals $sum_i h("com"(bold(T)_i, bold(a)_i)) = cal(H)(S)$ over the multiset $S$ of segment trace commitments, so this check confirms that $alpha$ was honestly derived from the statement and the full set of commitments and not chosen adversarially.
 
 Both checks reduce to simple arithmetic on values propagated up the tree as publics, with no need to inspect any individual AIR trace. This layered structure achieves a clean separation of responsibilities: AIR leaves prove only local constraint satisfaction; leaf verifiers convert proofs to a recursion-friendly format; aggregation verifiers accumulate both running totals; and the Final Verifier enforces global bus balancing and challenge integrity. Because every node can proceed as soon as its children complete, the entire proving pipeline is fully parallelizable ---no single AIR needs to handle the entire computation, eliminating the bottleneck of a monolithic circuit.
 
@@ -255,7 +259,7 @@ Both checks reduce to simple arithmetic on values propagated up the tree as publ
         (0, 0),
         align(
           center,
-        )[*Final Verifier* #linebreak() #sub[$V(pi) = "accept"$] #linebreak() #sub[$s = 0$] #linebreak() #sub[$alpha = "DeriveAlpha"(bold(c))$]],
+        )[*Final Verifier* #linebreak() #sub[$V(pi) = "accept"$] #linebreak() #sub[$s + s_"glob" = 0$] #linebreak() #sub[$alpha = "DeriveAlpha"(bold(p), bold(c))$]],
         fill: root-fill,
         stroke: 0.7pt + root-stroke,
         width: nw + 1.2cm,
@@ -364,6 +368,6 @@ Both checks reduce to simple arithmetic on values propagated up the tree as publ
     )
   },
   caption: [
-    Example aggregation tree (binary, unbalanced). Dashed arrows carry the program-level challenge $alpha$ down to the leaves. Solid arrows carry inputs and outputs to each level: each node's outgoing label is its output, and the incoming labels at any node are its inputs.
+    Example aggregation tree (unbalanced; drawn with two children per aggregation node for readability, whereas ZisK aggregation nodes have three, unused slots being null children). Dashed arrows carry the program-level challenge $alpha$ down to the leaves. Solid arrows carry inputs and outputs to each level: each node's outgoing label is its output, and the incoming labels at any node are its inputs.
   ],
 ) <fig:aggregation-tree>

@@ -23,7 +23,7 @@
   abstract: [
     We present ZisK, a STARK-based zero-knowledge virtual machine (zkVM) that executes programs compiled from standard instruction set architectures and produces succinct, transparent proofs of their correct execution. ZisK targets the RISC-V ISA, allowing developers to use existing Rust and C toolchains without modification. Moreover, ZisK's modular architecture enables the addition of optimized constraint systems for expensive operations such as elliptic-curve arithmetic and bulk memory access, making it practical to prove complex computations at scale.
 
-    This paper provides a precise specification of the ZisK design: its instruction set architecture, the arithmetization framework, the circuit architecture and chip design, the continuation mechanism, and the recursive aggregation system.
+    This paper provides a precise specification of the ZisK design: its instruction set architecture, the arithmetization framework, the circuit architecture and chip design, the continuation mechanism, the recursive aggregation system, and the proving backend with its parameters.
   ],
   // keywords: (
   //   "zero-knowledge virtual machines",
@@ -149,6 +149,10 @@
 
 #include "contents/recursion.typ"
 
+= Proving Backend <sec:backend>
+
+#include "contents/backend.typ"
+
 #pagebreak()
 
 #heading(outlined: false, numbering: none)[Acknowledgments]
@@ -172,8 +176,13 @@ We extend our gratitude to the Polygon zkEVM and Plonky3 @PLONKY3 teams for thei
 // Set up appendix with custom heading style
 #counter(heading).update(0)
 #set heading(outlined: false, numbering: "A.", supplement: "Appendix")
+#show heading.where(level: 1): set heading(outlined: true)
 #show heading.where(level: 2): set heading(numbering: none)
 
 = Arguments <appendix:arguments>
 
 #include "appendix/arguments.typ"
+
+= Instruction Set <appendix:opcodes>
+
+#include "appendix/instruction-set.typ"
