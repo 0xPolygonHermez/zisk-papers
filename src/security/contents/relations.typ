@@ -26,9 +26,9 @@ makes.
 The recursion is governed by one integer parameter, the _leaf-count exponent_
 $B >= 1$: an aggregation tree may contain at most $2^B - 1$ leaves. We assume throughout that
 $
-  2^(B+1) <= p, quad 2^B < p, quad 2^B <= poly(lambda):
+  3 dot 2^B <= p, quad 2^B < p, quad 2^B <= poly(lambda):
 $
-the first condition guarantees that sums of two range-checked counters never
+the first condition guarantees that sums of three range-checked counters never
 wrap around in $FF$, the second is the cardinality restriction required by the
 multiset hash, and the third makes the number of leaves, and hence the running
 time of the extractor, polynomial.
@@ -68,7 +68,15 @@ $
 where each $cal(C)_tau$ is an AIR of width $W_tau$, depth $D_tau$ and $V_tau$
 values and $cal(I)_tau$ is a finite set of interactions of $cal(C)_tau$. Given a fixed trace height $N_tau$, we write $cal(W)_tau := FF^(N_tau times W_tau) times FF^(V_tau)$ for
 the witness space of type $tau$ and fix the public-statement space
-$cal(P) := FF^k$.
+$
+  cal(P) := cal(P)_"ext" times Phi, quad cal(P)_"ext" := FF^k, quad Phi := FF^(k').
+$
+A public statement $bold(p) = (bold(p)_"ext", phi)$ consists of the
+_external statement_ $bold(p)_"ext"$, the only data an external verifier
+sees, and the _proof values_ $phi$: values chosen by the prover once per
+proof that every node of
+the tree carries but the external verifier does not. Below the Final
+Verifier the two always travel together, and we simply write $bold(p)$.
 
 #definition(title: "Column Classes and Public Bindings")[
   The description of an AIR $cal(C)$ of width $W$ and $V$ values, used at
@@ -79,10 +87,10 @@ $cal(P) := FF^k$.
   + The _cached columns_ $J^"cach"$, whose values are computed once and
     reused across different proofs. Their values are not part of the
     description; instead, a commitment to them (@def:commitment) travels in the public statement at the coordinates designated
-    by a _cached-commitment binding_ $gamma : [m] -> [k]$.
+    by a _cached-commitment binding_ $gamma : [m] -> [k + k']$.
   + The _witness columns_ $J^"wit"$, computed afresh for every proof and
     only known in full to the prover.
-  + A _public binding map_ $beta : "dom"(beta) -> [k]$ from a set
+  + A _public binding map_ $beta : "dom"(beta) -> [k + k']$ from a set
     $"dom"(beta) subset [V]$ to coordinates of the public statement.
   The _prescribed data_ of $cal(C)$ is the family
   $bold(d) = (d_j)_(j in J^"fix")$ of fixed columns $d_j in FF^N$. For a
@@ -179,9 +187,18 @@ an arbitrary fingerprint; ZisK's, LogUp, is described in @sec:instantiation.
   Types and witnesses may repeat, and each entry counts separately; the order
   of the list carries no meaning. The _number of bus terms_ of $L$ is
   $Lambda(L) := sum_(i=1)^(abs(L)) N_(tau_i) dot abs(cal(I)_(tau_i))$, and we set
-  $Lambda_"max" := (2^B - 1) dot max_(tau in [M]) N_tau abs(cal(I)_tau)$, so
-  that $Lambda(L) <= Lambda_"max"$ whenever $abs(L) < 2^B$.
+  $Lambda_"max" := (2^B - 1) dot max_(tau in [M]) N_tau abs(cal(I)_tau) + g$,
+  so that $Lambda(L) + g <= Lambda_"max"$ whenever $abs(L) < 2^B$, where $g$
+  bounds the global messages introduced below.
 ] <def:collection>
+
+Some messages are not emitted by any witness: they belong to the system as
+a whole and are determined by the public statement. In ZisK these _global
+messages_ open and close the continuation chains, initialise the registers
+and inject the public outputs into the buses. We model them as a fixed
+function $cal(G)$ that maps every public statement $bold(p) in cal(P)$ to an
+$FF$-weighted multiset of messages $cal(G)(bold(p))$, with
+$abs(cal(G)(bold(p))) <= g$ for a constant $g$.
 
 #definition(title: "Balance of a witness collection")[
   The _signed multiplicity_ of a typed witness collection $L$ is the
@@ -193,13 +210,15 @@ an arbitrary fingerprint; ZisK's, LogUp, is described in @sec:instantiation.
   $
     cal(M)_L (b, v) = sum_(i=1)^(abs(L)) sum_(iota in cal(I)_(tau_i), b_iota = b) sum_(r=1)^(N_(tau_i)) m_iota (w_i, r) dot bold(1)[bold(e)_iota (w_i, r) = v].
   $
-  The collection is _balanced_, written $Balanced(L)$, if $cal(M)_L = 0$,
-  i.e. $cal(M)_L (b, v) = 0$ for every bus $b in cal(B)$ and every message
-  $v in FF^(ell_b)$. Note that $abs(cal(M)_L) <= Lambda(L)$.
+  The collection is _balanced for_ $bold(p) in cal(P)$, written
+  $Balanced_bold(p) (L)$, if $cal(M)_L + cal(G)(bold(p)) = 0$, i.e.
+  $cal(M)_L (b, v) + cal(G)(bold(p))(b, v) = 0$ for every bus $b in cal(B)$
+  and every message $v in FF^(ell_b)$. Note that
+  $abs(cal(M)_L + cal(G)(bold(p))) <= Lambda(L) + g$.
 ] <def:balanced>
 
 Note that multiplicities are
-field elements: $Balanced(L)$ does not by itself assert that every message is
+field elements: $Balanced_bold(p) (L)$ does not by itself assert that every message is
 sent and received the same number of times as integers, since $p$ copies of a
 message cancel. We return to this point in @rem:integer-balance.
 
@@ -210,12 +229,14 @@ each type $tau in [M]$ the prover produces some number of witnesses in
 $cal(W)_tau$, one per segment of that type, and proves each with an argument
 system for the AIR of the type. Directly above every AIR proof sits a _leaf
 verifier_, a circuit that verifies the AIR proof and re-exposes its statement
-in a common format. Above the leaf verifiers, _aggregation nodes_ verify two
-child proofs each, so the tree is binary; it need not be balanced, because a
-node is proved as soon as its two children are available. At the top, a
-single _Final Verifier_ verifies the root of the aggregation tree and performs
-the global checks; its statement, the public statement $bold(p)$, is the only
-thing an external verifier sees. @fig:aggregation-tree shows an example with
+in a common format. Above the leaf verifiers, _aggregation nodes_ have three
+child slots each. A slot holds either a child proof or a _null child_, a
+placeholder that is not verified and contributes nothing, and at least two
+slots of every aggregation node hold proofs. The tree need not be balanced,
+because a node is proved as soon as enough children are available. At the
+top, a single _Final Verifier_ verifies the root of the aggregation tree and
+performs the global checks; its statement, the external statement
+$bold(p)_"ext"$, is the only thing an external verifier sees. @fig:aggregation-tree shows an example with
 three leaves.
 
 Three quantities travel up the tree and are combined at every aggregation
@@ -228,9 +249,9 @@ The order of operations matters for the bus argument. Bus contributions are
 fingerprints under a key $chi$, and the key must be fixed before any leaf is
 proved yet must not be under the prover's control. ZisK derives it from the
 leaves themselves: the prover commits to every witness, accumulates the typed
-commitments with the multiset hash $cal(H)$, derives $chi$ from the
-accumulated value with $DeriveKey$, and only then proves the leaves with
-$chi$ as a public input. The tree recomputes the accumulation as it
+commitments with the multiset hash $cal(H)$, derives $chi$ from the public
+statement and the accumulated value with $DeriveKey$, and only then proves the
+leaves with $chi$ as a public input. The tree recomputes the accumulation as it
 aggregates, and the Final Verifier checks that the key the leaves used is the
 one derived from what was actually aggregated. Because the shape of the tree
 is not known when the key is derived, the accumulation must not depend on it;
@@ -277,8 +298,8 @@ this is why the accumulators below are commutative monoids.
         align(center)[
           *Final Verifier* #linebreak()
           #sub[$V_"REC"[vk_"AGG"](pi) = 1$] #linebreak()
-          #sub[$sans("Typed")(tau, kappa), quad s = 0$] #linebreak()
-          #sub[$chi = DeriveKey(bold(c))$]
+          #sub[$sans("Typed")(tau, kappa), quad s + cal(F)_chi (cal(G)(bold(p))) = 0$] #linebreak()
+          #sub[$chi = DeriveKey(bold(p), bold(c))$]
         ],
         ..box(root-fill, root-stroke, 3.2cm, 1.25cm),
       ),
@@ -318,8 +339,9 @@ this is why the accumulators below are commutative monoids.
     $sigma = (tau, 1, bold(c), s)$; an aggregation node adds its children's
     accumulators, dispatches on their types and declares type $M + 1$; the
     Final Verifier fixes $vk = vk_"AGG"$, checks the root predicates and
-    exposes only $bold(p)$. The dashed arrows are the public inputs common to
-    every leaf.
+    exposes only $bold(p)_"ext"$. The dashed arrows are the public inputs common to
+    every leaf. Aggregation nodes are drawn with two children; ZisK's have
+    three slots, the unused ones holding null children (@def:r-agg).
   ],
 ) <fig:aggregation-tree>
 
@@ -331,10 +353,9 @@ $vk_Pi$ produced at setup, where $V(vk_Pi, x, pi) in {0, 1}$ and the value $1$
 means that the proof $pi$ is accepted for the statement $x$. We write
 $V_X (x, pi) := V(vk_X, x, pi)$ for the verifier of the system attesting to the
 relation $cal(R)_X$, and keep the explicit form $V(vk, x, pi)$ where the key is
-a variable. The relations below refer to argument systems only through their
-verifiers, so the prover is never named again. The relations of
-@sec:relations-def refer to argument systems only through their verifiers,
-and to the following fixed public maps only through their signatures. Their
+a variable. The relations of @sec:relations-def refer to argument systems
+only through their verifiers, so the prover is never named again, and to the
+following fixed public maps only through their signatures. Their
 security properties are defined where they are used, in @sec:security, and
 ZisK's choices are given in @sec:instantiation. Two of the maps are
 commitments, in the following sense.
@@ -375,8 +396,8 @@ The following interface elements are used throughout:
   is the induced multiset hash on finite multisets $cal(S)$ of typed
   commitments, where $mult_cal(S)(x)$ is the multiplicity of $x$ in $cal(S)$.
   $cal(H)$ is additively homomorphic over multiset union.
-- *Key derivation.* $DeriveKey : cal(G)_(cal(H)) -> cal(X)$, a fixed public
-  function of the accumulated value.
+- *Key derivation.* $DeriveKey : cal(P) times cal(G)_(cal(H)) -> cal(X)$, a
+  fixed public function of the public statement and the accumulated value.
 
 == Accumulators <sec:accumulators>
 
@@ -388,7 +409,7 @@ The following interface elements are used throughout:
   values that the Final Verifier evaluates on the value of the root of the
   aggregation tree. The value of a leaf is its
   contribution, and the value of an aggregation node is the sum of the values
-  of its two children. By associativity and commutativity, the value of any
+  of its non-null children. By associativity and commutativity, the value of any
   node is the sum of the contributions of the leaves below it, whatever the
   shape of the subtree.
 ] <def:accumulator>
@@ -415,9 +436,13 @@ $sigma . bold(c)$ and $sigma . s$ for the components of a recursive statement.
       [$(cal(G)_(cal(H)), +)$],
       [$h(tau, "com")$],
       [---],
-      [$chi = DeriveKey(bold(c))$],
+      [$chi = DeriveKey(bold(p), bold(c))$],
 
-      [bus partial sum $s$], [$(cal(G)_(cal(F)), +)$], [$cal(F)_chi ("Msg"_tau (w))$], [---], [$s = 0$],
+      [bus partial sum $s$],
+      [$(cal(G)_(cal(F)), +)$],
+      [$cal(F)_chi ("Msg"_tau (w))$],
+      [---],
+      [$s + cal(F)_chi (cal(G)(bold(p))) = 0$],
     )
   },
   caption: [The three accumulators of the recursion.],
@@ -425,21 +450,25 @@ $sigma . bold(c)$ and $sigma . s$ for the components of a recursive statement.
 ) <tbl:accumulators>
 
 The counter is added in $FF$. Its child check is the typing predicate of
-@def:dispatch, which every aggregation node applies to both children and the
-Final Verifier applies to the root; it places every counter in $[1, 2^B)$,
-and $2^(B+1) <= p$ then rules out wrap-around, so the field sums are integer
+@def:dispatch, which every aggregation node applies to each non-null child
+and the Final Verifier applies to the root; it places every counter in $[1, 2^B)$,
+and $3 dot 2^B <= p$ then rules out wrap-around, so the field sums are integer
 sums and no node has $2^B$ or more leaves below it. The other two
 accumulators are checked only at the root. The value of the
 challenge accumulator at a node is $cal(H)$ of the multiset of typed
 commitments below it, by the homomorphism of $cal(H)$; the value of the bus
 partial sum is $cal(F)_chi$ of the summed message multisets below it, by the
 additivity of $cal(F)$, so at the root it equals $cal(F)_chi (cal(M)_L)$ for
-the collection $L$ of all leaves.
+the collection $L$ of all leaves. The Final Verifier adds the contribution
+$cal(F)_chi (cal(G)(bold(p)))$ of the global messages, which it computes
+itself from the public statement and the key, so its root check
+$s + cal(F)_chi (cal(G)(bold(p))) = 0$ is a fingerprint test on
+$cal(M)_L + cal(G)(bold(p))$.
 
 An update rule that is not associative and commutative would make the root
 value depend on the shape of the tree, which is not known when the key is
 derived (@sec:tree); a hash-tree accumulation
-$bold(c) = H(bold(c)_L, bold(c)_R)$, for instance, would force the prover to
+$bold(c) = H(bold(c)_1, bold(c)_2, bold(c)_3)$, for instance, would force the prover to
 fix the tree before deriving $chi$. Writing every update as the monoid sum
 therefore loses no generality.
 
@@ -525,7 +554,8 @@ hard-codes $vk_"AIR"^((tau))$.
 An aggregation node must verify children of every kind, leaf verifiers of any
 type and other aggregation nodes. It hard-codes the $M$ leaf-verifier keys and
 selects among them by the child's type; for an aggregation child it uses a
-key that it does not hard-code but reads from its own statement.
+key that it does not hard-code but reads from its own statement. The reserved
+type $0$ marks a null child.
 
 #definition(title: "Recursive Dispatch")[
   #set math.cases(gap: 1em)
@@ -536,7 +566,8 @@ key that it does not hard-code but reads from its own statement.
       V(vk, x, pi) & "if" tau = M + 1\,,
     )
   $
-  and $V_"REC"^((tau))[vk]$ rejects everything if $tau in.not [M + 1]$.
+  and $V_"REC"^((tau))[vk]$ rejects everything if $tau in.not [M + 1]$; in
+  particular a null child ($tau = 0$) never passes the dispatched verifier.
   The _typing predicate_ on a type and a counter is
   $
     sans("Typed")(tau, kappa) := (tau in [M] and kappa = 1) or (tau = M + 1 and 2 <= kappa < 2^B).
@@ -548,39 +579,43 @@ typing predicate is what makes the counter meaningful (@sec:accumulators).
 
 #definition(title: "Aggregation relation")[
   Write $x_X := (bold(p), chi, sigma_X, vk)$ for the statement of the child
-  $X in {L, R}$ and $sigma_X = (tau_X, kappa_X, bold(c)_X, s_X)$ for its
-  recursive statement. Then
+  in slot $X in [3]$, $sigma_X = (tau_X, kappa_X, bold(c)_X, s_X)$ for its
+  recursive statement, and $N := {X in [3] : tau_X != 0}$ for the set of
+  non-null slots. Then
   $
     cal(R)_"AGG" = lr(
       {
         cases(
           delim: #none,
           ,
-          (bold(p), chi\, sigma\, vk)\; ((sigma_L, pi_L), (sigma_R, pi_R)),
+          (bold(p), chi\, sigma\, vk)\; ((sigma_X, pi_X))_(X in [3]),
           ,
         )
         mid(|)
         cases(
           delim: #none,
           gap: #(0pt + 0.4em),
-          sigma = (M + 1, kappa, bold(c), s),
-          and quad sans("Typed")(tau_X, kappa_X) "for" X in {L, R},
-          and quad V_"REC"^((tau_X))[vk](x_X, pi_X) = 1 "for" X in {L, R},
-          and quad kappa = kappa_L + kappa_R "and" bold(c) = bold(c)_L + bold(c)_R "and" s = s_L + s_R
+          sigma = (M + 1, kappa, bold(c), s) "and" abs(N) >= 2,
+          and quad sans("Typed")(tau_X, kappa_X) "for" X in N,
+          and quad V_"REC"^((tau_X))[vk](x_X, pi_X) = 1 "for" X in N,
+          and quad kappa = sum_(X in N) kappa_X "and" bold(c) = sum_(X in N) bold(c)_X "and" s = sum_(X in N) s_X
         )
       }
     )
   $
+  Null slots carry no constraint: their proofs are not verified and their
+  recursive statements do not enter the sums.
 ] <def:r-agg>
 
 Two invariants of this relation are used repeatedly. First, the
-_propagation invariant_: both children are verified on statements that carry
-the parent's own $(bold(p), chi, vk)$, so every node of a valid tree carries
-the root's public statement, fingerprint key and verification key; in particular an
-aggregation child is verified under $V(vk, dot, dot)$ for the very $vk$ the
-parent declares. Second, the _counter invariant_: $sans("Typed")$ places both
-children's counters in $[1, 2^B)$, and $2^(B+1) <= p$ makes
-$kappa = kappa_L + kappa_R$ an identity of integers, so every child has
+_propagation invariant_: every non-null child is verified on a statement that
+carries the parent's own $(bold(p), chi, vk)$, so every node of a valid tree
+carries the root's public statement, fingerprint key and verification key; in
+particular an aggregation child is verified under $V(vk, dot, dot)$ for the
+very $vk$ the parent declares. Second, the _counter invariant_: $sans("Typed")$
+places the counters of the non-null children in $[1, 2^B)$, there are at
+least two of them, and $3 dot 2^B <= p$ makes $kappa = sum_(X in N) kappa_X$
+an identity of integers; hence every non-null child has
 $kappa_X <= kappa - 1$.
 
 Let $Pi_"AGG"$ be an argument system for $cal(R)_"AGG"$, with verifier
@@ -591,14 +626,15 @@ at setup, and the Final relation below fixes $vk := vk_"AGG"$, at which point
 $V_"REC"^((M+1))[vk_"AGG"] = V_"AGG"$.
 
 #definition(title: "Final relation")[
-  Fix the aggregation key $vk_"AGG"$ as a parameter. Then
+  Fix the aggregation key $vk_"AGG"$ as a parameter. Then, with
+  $bold(p) := (bold(p)_"ext", phi)$,
   $
     cal(R)_"FINAL" = lr(
       {
         cases(
           delim: #none,
           ,
-          bold(p)\; (chi, sigma, pi),
+          bold(p)_"ext"\; (phi, chi, sigma, pi),
           ,
         )
         mid(|)
@@ -607,16 +643,18 @@ $V_"REC"^((M+1))[vk_"AGG"] = V_"AGG"$.
           gap: #(0pt + 0.4em),
           sigma = (tau, kappa, bold(c), s) "and" sans("Typed")(tau, kappa),
           and quad V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) = 1,
-          and quad s = 0,
-          and quad chi = DeriveKey(bold(c))
+          and quad s + cal(F)_chi (cal(G)(bold(p))) = 0,
+          and quad chi = DeriveKey(bold(p), bold(c))
         )
       }
     )
   $
 ] <def:r-final>
 
-Only the public statement $bold(p)$ survives at the root: the fingerprint key,
-the recursive statement and the child proof are witnesses. Dispatching on
+Only the external statement $bold(p)_"ext"$ survives at the root: the proof
+values, the fingerprint key, the recursive statement and the child proof are
+witnesses. The typing predicate excludes a null child at the root, which would
+otherwise leave $bold(c)$ and $s$ unconstrained. Dispatching on
 $tau$ lets the Final Verifier accept a leaf-verifier proof directly when the
 execution fits in a single AIR instance.
 
@@ -682,19 +720,22 @@ only strengthens the statements of @sec:security, since knowledge soundness
 for a sub-relation implies knowledge soundness for the relation.
 
 *Multiset hash.* The accumulator group is $cal(G)_(cal(H)) = ZZ_p^n$ with
-$n = 372$, and $h$ and $cal(H)$ are LtHash @ZISK:LTHASH @AC:CDDGS03: $h$
-hashes the typed commitment with the underlying hash function and expands the
-digest into a pseudorandom vector of $ZZ_p^n$, and $cal(H)$ adds these vectors
+$n = 368$, and $h$ and $cal(H)$ are LtHash @ZISK:LTHASH @AC:CDDGS03: $h$
+absorbs the typed commitment into a sponge of the underlying hash function
+and expands it, by $22$ further permutations, into a pseudorandom vector of
+$ZZ_p^n$ (the $23$ states of width $16$). The type enters $h$ as the root of
+the type's fixed columns, which identifies the type provided that no two types
+have the same fixed columns, and $cal(H)$ adds these vectors
 with multiplicity. Its collision resistance on multisets of
 cardinality below $2^B$ rests on the hardness of the short integer solution
 problem @STOC:Ajtai96; the analysis assumes the stronger preimage awareness
 (@def:cr), which is the second idealization of @rem:idealized. The cardinality
 bound is what the leaf counter enforces.
 
-*Key derivation.* $DeriveKey$ hashes the
-accumulated vector with the underlying hash function and reads the digest as
-$alpha in KK$; the second component $gamma$ is a
-further hash of $alpha$. The analysis treats the pair as a single
+*Key derivation.* $DeriveKey$ hashes the public statement $bold(p)$ ---the
+external statement and the proof values--- and the accumulated vector with the
+underlying hash function into a _global challenge_ in $KK$, from which a fresh
+sponge squeezes the pair $(alpha, gamma)$. The analysis treats the pair as a single
 random-oracle output (@def:rom) and suppresses the $(Q + 1) slash abs(KK)$
 term for a derived $alpha$ colliding with a previously queried input.
 
@@ -703,14 +744,11 @@ function, so it is straight-line extractable in the random-oracle model
 (@def:ext-com).
 
 *Cached-column commitment.* $Commit_"cach"$ is likewise a Merkle tree over
-the underlying hash function. The program ROM is the cached column group of the ROM AIR type,
-and its root is one of the program's public inputs, so a proof is bound to a
-program through $bold(p)$. The analysis requires the leaf commitment
-$"com" = Commit(bold(T), bold(a))$ to bind the cached columns as well, since
-the challenge accumulator hashes $"com"$ and not $bold(p)$: if the leaf
-commitment covered the witness columns only, a prover could choose the ROM
-after seeing the key $chi$, and the fingerprint argument of
-@prop:bus-soundness would not apply. Either $"com"$ includes the cached
-commitment, or the latter must enter the challenge contribution by other
-means; this is a circuit requirement to be checked (@sec:discussion).
+the underlying hash function. The program ROM is the cached column group of
+the ROM AIR type, and its root is one of the program's public inputs, so a
+proof is bound to a program through $bold(p)$. The leaf commitment
+$"com"$ covers the witness columns and the AIR values of the first stage, not
+the cached columns; this is sound because $DeriveKey$ absorbs $bold(p)$, and
+with it the cached-column commitment, so the cached columns are fixed before
+the key $chi$ is derived, exactly as the committed witnesses are.
 

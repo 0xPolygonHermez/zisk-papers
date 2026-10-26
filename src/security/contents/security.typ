@@ -6,10 +6,12 @@
 == Overview
 
 We prove that the ZisK aggregation tree is _correct-witness extractable_: any
-adversary that produces an accepting Final proof for a public statement
-$bold(p)$ can be used to extract, in a straight-line fashion, a typed witness
-collection $L$ such that every witness satisfies its AIR and is consistent
-with $bold(p)$, and every bus balances across the whole collection. The proof
+adversary that produces an accepting Final proof for an external statement
+$bold(p)_"ext"$ can be used to extract, in a straight-line fashion, proof
+values $phi$ and a typed witness collection $L$ such that every witness
+satisfies its AIR and is consistent with $bold(p) = (bold(p)_"ext", phi)$, and
+every bus balances across the whole collection together with the global
+messages of $bold(p)$. The proof
 descends the aggregation tree of @sec:relations layer by layer, reducing
 everything to the knowledge soundness of the four kinds of argument systems
 ($Pi_"AIR"^((tau))$, $Pi_"LEAF"^((tau))$, $Pi_"AGG"$ and $Pi_"FINAL"$), the
@@ -66,9 +68,12 @@ the departure is flagged at the point where it matters.
   execution of the committed program, including the memory argument and
   continuation stitching), the knowledge soundness of the individual STARK
   arguments (a property of the backend, quantified by their own analysis),
-  completeness, zero knowledge, and any wrapper or compression layers placed
-  above the Final Verifier, each of which adds one more lemma of the kind
-  proved for the leaf-verifier layer.
+  completeness, zero knowledge, and the compression layers: the compressor
+  nodes that ZisK places between some AIR arguments and their leaf verifiers,
+  and any wrapper placed above the Final Verifier. Each such layer verifies a
+  single proof and re-exposes its statement, so it adds one more lemma of the
+  kind proved for the leaf-verifier layer, and one more knowledge-soundness
+  term per node to the bound of @thm:main.
 ]
 
 == Definitions <sec:definitions>
@@ -227,15 +232,17 @@ statistical, and it is exactly what the extractor of @def:cr rules out.
 ] <def:zisk>
 
 #definition(title: "Bounded global satisfiability")[
-  The _target relation_ $cal(R)_Zisk$ has public statements
-  $bold(p) in cal(P)$ and typed witness collections $L$ as witnesses:
+  The _target relation_ $cal(R)_Zisk$ has external statements
+  $bold(p)_"ext" in cal(P)_"ext"$ as statements, and pairs of proof values
+  $phi in Phi$ and typed witness collections $L$ as witnesses: with
+  $bold(p) := (bold(p)_"ext", phi)$,
   $
-    (bold(p); L) in cal(R)_Zisk
+    (bold(p)_"ext"; (phi, L)) in cal(R)_Zisk
     <=>
     cases(
       1 <= abs(L) < 2^B\,,
       Local_(tau_i)(bold(p), w_i) "for every" i in [abs(L)]\,,
-      Balanced(L).
+      Balanced_bold(p) (L).
     )
   $
   The family $frak(A)$, the local predicates and $B$ are implicit in the
@@ -245,7 +252,8 @@ statistical, and it is exactly what the extractor of @def:cr rules out.
 The relation is invariant under permutations of $L$; it requires neither that
 every type occur nor that witnesses be distinct. Its three conjuncts are
 exactly what the recursion adds to the individual AIR proofs: a bound on the
-number of instances, one common public statement, and global bus balancing.
+number of instances, one common public statement, and global bus balancing,
+including the global messages determined by the statement.
 Everything else that a ZisK proof establishes about the guest execution is a
 consequence of $Local$ and $Balanced$ for the specific AIRs of the circuit and
 is outside this section.
@@ -255,7 +263,7 @@ is outside this section.
   argument system $Pi^*$ for $cal(R)_Zisk$ whose proofs are Final
   proofs and whose verifier is
   $
-    V^* (bold(p), pi_"FIN") := V_"FINAL"(bold(p), pi_"FIN").
+    V^* (bold(p)_"ext", pi_"FIN") := V_"FINAL"(bold(p)_"ext", pi_"FIN").
   $
   Its prover is the honest proving pipeline (execute, split, prove every
   instance, aggregate) and plays no role below.#footnote[
@@ -269,7 +277,7 @@ with memory given in full, while its last recursive proof speaks about states
 whose memory has been replaced by a commitment, so its external verifier must
 commit to the two boundary memories before it can run that proof's verifier.
 ZisK needs no such step: the Final relation and $cal(R)_Zisk$ have the same
-statement, the public statement $bold(p)$, so $Pi^*$ and $Pi_"FINAL"$ are the same
+statement, the external statement $bold(p)_"ext"$, so $Pi^*$ and $Pi_"FINAL"$ are the same
 algorithm and differ only in the relation against which each is judged.
 
 #definition(title: "Correct-witness extractability")[
@@ -285,12 +293,14 @@ algorithm and differ only in the relation against which each is judged.
 
 == From the Root Check to Bus Balancing <sec:bus>
 
-The Final Verifier checks a single field equation, $s = 0$, on a value
-accumulated from the leaves under a challenge that the tree itself certifies
-to be derived from the leaves' commitments. By additivity of the fingerprint
-that value is $cal(F)_chi (cal(M)_L)$ for the extracted collection $L$, so
-the check is a fingerprint zero test on the signed multiplicity of $L$,
-whereas the target relation demands $cal(M)_L = 0$. This section bridges the
+The Final Verifier checks a single field equation,
+$s + cal(F)_chi (cal(G)(bold(p))) = 0$, on a value accumulated from the leaves
+under a challenge that the tree itself certifies to be derived from the
+statement and the leaves' commitments. By additivity of the fingerprint the
+left-hand side is $cal(F)_chi (cal(M)_L + cal(G)(bold(p)))$ for the extracted
+collection $L$, so the check is a fingerprint zero test on the signed
+multiplicity of $L$ together with the global messages, whereas the target
+relation demands $cal(M)_L + cal(G)(bold(p)) = 0$. This section bridges the
 gap. We first record that LogUp is a bus fingerprint in the sense of
 @def:fingerprint, then that a zero test at a random challenge certifies
 balance, and finally that the challenge the tree certifies is random enough.
@@ -355,21 +365,21 @@ with $cal(F)^"LogUp"_chi (D) := bot$ if some denominator vanishes.
 
 #lemma(title: "Zero test")[
   Let $cal(F)$ be a statistically sound bus fingerprint with key space
-  $cal(X)$ that admits every nonzero multiset, let $L$ be a typed witness
-  collection with $not Balanced(L)$, and let $chi$ be uniform in $cal(X)$. Then
+  $cal(X)$ that admits every nonzero multiset, let $bold(p) in cal(P)$, let $L$
+  be a typed witness collection with $not Balanced_bold(p) (L)$, and let $chi$
+  be uniform in $cal(X)$. Then
   $
-    Pr_chi [ sum_(i=1)^(abs(L)) BusCont_chi (cal(I)_(tau_i), w_i) = 0 ]
-    <= epsilon_(cal(F))(Lambda(L)).
+    Pr_chi [ sum_(i=1)^(abs(L)) BusCont_chi (cal(I)_(tau_i), w_i) + cal(F)_chi (cal(G)(bold(p))) = 0 ]
+    <= epsilon_(cal(F))(Lambda(L) + g).
   $
 ] <lem:zero-test>
 
 #proof[
-  If the sum is $0$, every summand $cal(F)_chi ("Msg"_(tau_i)(w_i))$ is
-  defined, so by additivity the sum equals
-  $cal(F)_chi (sum_i "Msg"_(tau_i)(w_i)) = cal(F)_chi (cal(M)_L)$. Since $L$ is
-  unbalanced, $cal(M)_L != 0$, and $abs(cal(M)_L) <= Lambda(L)$
-  (@def:balanced), so the soundness of $cal(F)$ bounds the probability by
-  $epsilon_(cal(F))(Lambda(L))$.
+  If the sum is $0$, every summand is defined, so by additivity the sum
+  equals $cal(F)_chi (cal(M)_L + cal(G)(bold(p)))$. Since $L$ is unbalanced
+  for $bold(p)$, $cal(M)_L + cal(G)(bold(p)) != 0$, and its support has at
+  most $Lambda(L) + g$ elements (@def:balanced), so the soundness of $cal(F)$
+  bounds the probability by $epsilon_(cal(F))(Lambda(L) + g)$.
 ]
 
 The zero test is exactly where the field-valued definition of $Balanced$
@@ -380,21 +390,23 @@ an extracted collection, and bound it.
 #definition(title: "Bus-argument soundness game")[
   For an adversary $cal(A)$ with access to the random oracles, the experiment
   $Exp("bus", cal(A))(lambda)$ proceeds as follows.
-  + *Adversary.* $cal(A)(1^lambda)$ outputs a typed witness collection
+  + *Adversary.* $cal(A)(1^lambda)$ outputs a public statement
+    $bold(p) in cal(P)$, a typed witness collection
     $L = ((tau_i, w_i))_(i in [abs(L)])$ and commitments $("com"_i)_(i in [abs(L)])$.
   + *Derivation.* Set $bold(c) := sum_(i=1)^(abs(L)) h(tau_i, "com"_i) in ZZ_p^n$
-    and $chi := DeriveKey(bold(c))$.
+    and $chi := DeriveKey(bold(p), bold(c))$.
   + *Winning condition.* Return $1$ if and only if $1 <= abs(L) < 2^B$;
     $Commit(w_i) = "com"_i$ for every $i$;
-    $sum_(i=1)^(abs(L)) BusCont_chi (cal(I)_(tau_i), w_i) = 0$; and
-    $not Balanced(L)$.
+    $sum_(i=1)^(abs(L)) BusCont_chi (cal(I)_(tau_i), w_i) + cal(F)_chi (cal(G)(bold(p))) = 0$; and
+    $not Balanced_bold(p) (L)$.
   We write $Adv("bus")(cal(A)) := Pr[Exp("bus", cal(A))(lambda) = 1]$.
 ] <def:bus-game>
 
 Substituting $s_i := BusCont_chi (cal(I)_(tau_i), w_i)$ and
 $bold(c)_i := h(tau_i, "com"_i)$ shows that the winning condition is
-precisely "the root checks $s = 0$ and $chi = DeriveKey(bold(c))$ pass on
-values honestly computed from $L$, yet $L$ is unbalanced". This is the form in
+precisely "the root checks $s + cal(F)_chi (cal(G)(bold(p))) = 0$ and
+$chi = DeriveKey(bold(p), bold(c))$ pass on values honestly computed from $L$,
+yet $L$ is unbalanced for $bold(p)$". This is the form in
 which the game is invoked in the proof of @thm:main.
 
 #proposition(title: "Bus soundness")[
@@ -412,15 +424,15 @@ which the game is invoked in the proof of @thm:main.
 ] <prop:bus-soundness>
 
 #proof[
-  Let $(L, ("com"_i)_i)$ be $cal(A)$'s output and $bold(c)$, $chi$ as in the
+  Let $(bold(p), L, ("com"_i)_i)$ be $cal(A)$'s output and $bold(c)$, $chi$ as in the
   game, and let $cal(S) := {(tau_i, "com"_i)}_i$ be the multiset of typed
   commitments of the output, so that $bold(c) = cal(H)(cal(S))$. Number the
   $DeriveKey$ queries in the order they are made, counting only the first
   query at each point (a repeated query returns the answer already given),
-  and let $t^* in [Q + 1]$ be the index of the query at $bold(c)$, with
-  $t^* := Q + 1$ if $cal(A)$ never queried $bold(c)$; in the latter case the
+  and let $t^* in [Q + 1]$ be the index of the query at $(bold(p), bold(c))$, with
+  $t^* := Q + 1$ if $cal(A)$ never queried it; in the latter case the
   game's own derivation plays the role of a final, fresh query. For
-  $t in [Q + 1]$ write $bold(c)_t$ for the $t$-th query point, $chi_t$ for its
+  $t in [Q + 1]$ write $(bold(p)_t, bold(c)_t)$ for the $t$-th query point, $chi_t$ for its
   answer and $cal(T)_(<t)$ for the transcript of all oracle queries and answers
   made before it. We define bad events, bound each by a reduction to one of
   the assumptions or by @lem:zero-test, and show that off all of them the
@@ -446,12 +458,12 @@ which the game is invoked in the proof of @thm:main.
     $L^*_t := ((tau, cal(E)_Com (cal(T)_(<t), "com")))_((tau, "com") in cal(S)_t)$
     in a canonical order, discarding the collection if some extraction
     returns $bot$; otherwise $L^*_t := bot$. The event $E_chi^((t))$ is that
-    $L^*_t != bot$, $abs(L^*_t) < 2^B$, $not Balanced(L^*_t)$ and
-    $sum_i BusCont_(chi_t)(cal(I)_(tau_i), w_i) = 0$ over the entries of
-    $L^*_t$. The candidate is a function of $cal(T)_(<t)$ alone, whereas
+    $L^*_t != bot$, $abs(L^*_t) < 2^B$, $not Balanced_(bold(p)_t)(L^*_t)$ and
+    $sum_i BusCont_(chi_t)(cal(I)_(tau_i), w_i) + cal(F)_(chi_t)(cal(G)(bold(p)_t)) = 0$
+    over the entries of $L^*_t$. The candidate is a function of $cal(T)_(<t)$ alone, whereas
     $chi_t$ is uniform in $KK^2$ and independent of $cal(T)_(<t)$ because $t$
     is the first query at its point; since $abs(L^*_t) < 2^B$ implies
-    $Lambda(L^*_t) <= Lambda_"max"$, @lem:zero-test gives
+    $Lambda(L^*_t) + g <= Lambda_"max"$, @lem:zero-test gives
     $Pr[E_chi^((t))] <= epsilon_(cal(F))(Lambda_"max")$.
 
   _Step A: off all events, the adversary does not win._ Suppose $cal(A)$
@@ -460,8 +472,9 @@ which the game is invoked in the proof of @thm:main.
   Off $E_"ext"$, $cal(E)_Com (cal(T)_(<t^*), "com"_i) = w_i$ for every $i$, so
   $L^*_(t^*)$ is a reordering of $L$; every quantity in the winning condition
   is invariant under reordering. The winning condition then says
-  $not Balanced(L^*_(t^*))$ and $sum_i BusCont_(chi_(t^*))(cal(I)_(tau_i), w_i) = 0$
-  with $chi = chi_(t^*)$, which is $E_chi^((t^*))$: a contradiction.
+  $not Balanced_bold(p) (L^*_(t^*))$ and
+  $sum_i BusCont_(chi_(t^*))(cal(I)_(tau_i), w_i) + cal(F)_(chi_(t^*))(cal(G)(bold(p))) = 0$
+  with $chi = chi_(t^*)$ and $bold(p) = bold(p)_(t^*)$, which is $E_chi^((t^*))$: a contradiction.
 
   _Conclusion._ By Step A a win implies one of the bad events, and a union
   bound over $E_"pa"$, $E_"ext"$ and $E_chi^((1)), dots, E_chi^((Q+1))$
@@ -497,7 +510,7 @@ which the game is invoked in the proof of @thm:main.
 ] <rem:forking>
 
 #remark(numbered: true, title: "Field versus integer balance")[
-  @prop:bus-soundness delivers $Balanced(L)$ with multiplicities in $FF$. To
+  @prop:bus-soundness delivers $Balanced_bold(p) (L)$ with multiplicities in $FF$. To
   conclude that every message is sent and received the same number of times
   as integers one needs, in addition, that every multiplicity column of every
   AIR is range-checked to $[0, m_"max"]$ (or to a symmetric interval with a
@@ -531,15 +544,16 @@ deterministic.
   For an extractor $cal(E)_"FIN"$ and a PPT adversary $cal(A)$, the
   experiment $Exp("fin", (cal(E)_"FIN", cal(A)))(lambda)$ is:
   #game(
-    [$cal(A)(1^lambda)$ outputs a public statement $bold(p) in cal(P)$ and a
+    [$cal(A)(1^lambda)$ outputs an external statement $bold(p)_"ext" in cal(P)_"ext"$ and a
       proof $pi_"FIN"$.],
-    [If $V_"FINAL"(bold(p), pi_"FIN") != 1$, return $0$.],
-    [Run $(chi, sigma, pi) <- cal(E)_"FIN"(bold(p), pi_"FIN")$, with
+    [If $V_"FINAL"(bold(p)_"ext", pi_"FIN") != 1$, return $0$.],
+    [Run $(phi, chi, sigma, pi) <- cal(E)_"FIN"(bold(p)_"ext", pi_"FIN")$, set
+      $bold(p) := (bold(p)_"ext", phi)$, with
       $sigma = (tau, kappa, bold(c), s)$.],
-    [Return $1$ if and only if $(bold(p); (chi, sigma, pi)) in.not cal(R)_"FINAL"$,
+    [Return $1$ if and only if $(bold(p)_"ext"; (phi, chi, sigma, pi)) in.not cal(R)_"FINAL"$,
       i.e. unless $sans("Typed")(tau, kappa)$,
       $V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) = 1$,
-      $s = 0$ and $chi = DeriveKey(bold(c))$.],
+      $s + cal(F)_chi (cal(G)(bold(p))) = 0$ and $chi = DeriveKey(bold(p), bold(c))$.],
   )
   We write $Adv("fin", cal(E)_"FIN")(cal(A))$ for the probability that the
   experiment $Exp("fin", (cal(E)_"FIN", cal(A)))(lambda)$ returns $1$.
@@ -555,10 +569,10 @@ deterministic.
 ] <lem:fin>
 
 #proof[
-  $cal(D)_"FIN"$ runs $cal(A)(1^lambda)$ and forwards $(bold(p), pi_"FIN")$ to
+  $cal(D)_"FIN"$ runs $cal(A)(1^lambda)$ and forwards $(bold(p)_"ext", pi_"FIN")$ to
   the knowledge-soundness challenger of $Pi_"FINAL"$. The challenger applies
   the same filter and runs the same extractor, and @def:game-fin returns $1$
-  exactly when $pi_"FIN"$ verifies but $(bold(p); (chi, sigma, pi)) in.not cal(R)_"FINAL"$,
+  exactly when $pi_"FIN"$ verifies but $(bold(p)_"ext"; (phi, chi, sigma, pi)) in.not cal(R)_"FINAL"$,
   which is the event that $cal(D)_"FIN"$ wins. Since $Pi^*$ and $Pi_"FINAL"$
   are the same algorithm, this is the base of the composition and no
   additional work is required.
@@ -607,15 +621,16 @@ $kappa - 1$ aggregation nodes.
   bound the probability that extraction violates the winning condition. The
   argument runs in four steps.
 
-  _Step 1: recursion tree and bad events._ $cal(E)_"REC"$ unrolls a binary
-  tree depth-first. A node $v$ is a pair $(x_v, pi_v)$ with
+  _Step 1: recursion tree and bad events._ $cal(E)_"REC"$ unrolls a tree
+  depth-first. A node $v$ is a pair $(x_v, pi_v)$ with
   $x_v = (bold(p), chi, sigma_v, vk_"AGG")$; the root is $cal(A)$'s output. If
   $sigma_v . tau in [M]$, the node is a _leaf_ and the extractor records
   $(sigma_v, pi_v)$. If $sigma_v . tau = M + 1$, the extractor runs
   $cal(E)_(Pi_"AGG")(x_v, pi_v)$ to obtain a candidate witness
-  $((sigma_L, pi_L), (sigma_R, pi_R))$ and recurses into the left child
-  $((bold(p), chi, sigma_L, vk_"AGG"), pi_L)$ and then the right child; if the
-  candidate is not a valid $cal(R)_"AGG"$-witness, the extractor aborts. For
+  $((sigma_X, pi_X))_(X in [3])$ and recurses, in slot order, into every
+  non-null child $((bold(p), chi, sigma_X, vk_"AGG"), pi_X)$; null slots are
+  skipped. If the candidate is not a valid $cal(R)_"AGG"$-witness, the
+  extractor aborts. For
   $t >= 1$ let
   $
     B_t & : quad "the first " cal(E)_(Pi_"AGG") " invocation in unroll order that does not return " \
@@ -626,15 +641,17 @@ $kappa - 1$ aggregation nodes.
   $sans("Typed")(tau, kappa)$ with $tau = M + 1$ and
   $V_"REC"^((M+1))[vk_"AGG"] = V(vk_"AGG", dot, dot)$), a child's by its parent's
   valid witness. Now count. Before the first failure, the $t - 1$ valid
-  aggregation nodes form a binary tree whose frontier consists of $t$ nodes,
-  each not yet expanded; by the counter invariant every frontier node carries
-  an integer counter at least $1$, and the counters of the frontier sum to
-  $kappa$. Hence $t <= kappa$. Moreover, a frontier node of type $M + 1$ has
-  counter at least $2$ by $sans("Typed")$, so if $kappa - 1$ valid nodes exist
-  the frontier has $kappa$ nodes with counter exactly $1$, all of type in
-  $[M]$, and no further invocation exists. Only $B_1, dots, B_(kappa - 1)$ are
-  possible, and off all of them the tree has exactly $kappa - 1$ aggregation
-  nodes and $kappa$ leaves; for $kappa = 1$ the root is a leaf and there is
+  aggregation nodes form a tree in which every node has at least two
+  non-null children, so each expansion replaces one frontier node by at least
+  two and the frontier, the nodes not yet expanded, has at least $t$ nodes. By
+  the counter invariant every frontier node carries an integer counter at
+  least $1$, and the counters of the frontier sum to $kappa$. Hence
+  $t <= kappa$. Moreover, a frontier node of type $M + 1$ has counter at
+  least $2$ by $sans("Typed")$, so if $kappa - 1$ valid nodes exist the
+  frontier has $kappa$ nodes with counter exactly $1$, all of type in $[M]$,
+  and no further invocation exists. Only $B_1, dots, B_(kappa - 1)$ are
+  possible, and off all of them the tree has at most $kappa - 1$ aggregation
+  nodes and exactly $kappa$ leaves; for $kappa = 1$ the root is a leaf and there is
   nothing to extract.
 
   _Step 2: one reduction per invocation._ $cal(D)_"AGG"^((t))$ runs
@@ -659,16 +676,16 @@ $kappa - 1$ aggregation nodes.
     $V_"REC"^((tau_v))[vk_"AGG"](x_v, pi_v) = V_"LEAF"^((tau_v))(x_v, pi_v) = 1$.
     The sums are trivial.
   - _Aggregation nodes._ If $sigma_v . tau = M + 1$, the valid witness
-    returned for $v$ provides typed children with $kappa_L + kappa_R = kappa_v$
-    over the integers and $kappa_X in [1, kappa_v - 1]$, each verifying under
+    returned for $v$ provides at least two typed non-null children whose
+    counters sum to $kappa_v$ over the integers, with $kappa_X in [1, kappa_v - 1]$, each verifying under
     $V_"REC"^((tau_X))[vk_"AGG"]$ on a statement that, by the propagation
     invariant, carries the same $(bold(p), chi, vk_"AGG")$; a child of type
     $M + 1$ is therefore verified by $V(vk_"AGG", dot, dot) = V_"AGG"$ and
     is itself an aggregation node of the tree. The induction hypothesis
-    applies to both children; concatenating their leaf lists gives
-    $kappa_L + kappa_R = kappa_v$ leaves, and
-    $s_v = s_L + s_R$, $bold(c)_v = bold(c)_L + bold(c)_R$ make the sums
-    telescope.
+    applies to every non-null child; concatenating their leaf lists gives
+    $sum_(X in N) kappa_X = kappa_v$ leaves, and
+    $s_v = sum_(X in N) s_X$, $bold(c)_v = sum_(X in N) bold(c)_X$ make the
+    sums telescope.
   Applied to the root, this is exactly the winning condition of
   @def:game-agg.
 
@@ -691,7 +708,12 @@ statement has no witness), a child of type in $[M]$ with a counter other than
 $1$ (outside the support of the leaf relation), and a child type outside
 $[M + 1]$ (for which no verifier is selected). In each case the parent's valid
 witness excludes the child, so the offending proof is charged to the parent's
-invocation.
+invocation. Null children need no such argument: they are never verified and
+enter none of the sums, so they carry nothing to extract. What the counting
+does need is that every aggregation node has at least two non-null children;
+without it a chain of aggregation nodes with a single non-null child each
+would keep the counter constant, and the number of invocations would no
+longer be bounded by $kappa$.
 
 === Leaf-Verifier Layer
 
@@ -809,15 +831,15 @@ extractor a _typed_ collection.
   $epsilon$. We construct $cal(E)_Zisk$ by composing the sub-extractors
   of @lem:fin, @lem:agg, @lem:leaf and @lem:air, each straight-line and each
   applied to the values extracted by the preceding layer. Let
-  $(bold(p), pi_"FIN")$ be $cal(A)$'s output and assume
-  $V_"FINAL"(bold(p), pi_"FIN") = 1$, since otherwise $cal(A)$ does not
+  $(bold(p)_"ext", pi_"FIN")$ be $cal(A)$'s output and assume
+  $V_"FINAL"(bold(p)_"ext", pi_"FIN") = 1$, since otherwise $cal(A)$ does not
   win.
 
-  *Step 1 (Final layer).* Apply $cal(E)_"FIN"$ to $(bold(p), pi_"FIN")$ to
-  obtain $(chi, sigma, pi)$ with $sigma = (tau, kappa, bold(c), s)$ such that
-  $sans("Typed")(tau, kappa)$,
+  *Step 1 (Final layer).* Apply $cal(E)_"FIN"$ to $(bold(p)_"ext", pi_"FIN")$ to
+  obtain $(phi, chi, sigma, pi)$ with $sigma = (tau, kappa, bold(c), s)$ such
+  that, for $bold(p) := (bold(p)_"ext", phi)$, $sans("Typed")(tau, kappa)$,
   $V_"REC"^((tau))[vk_"AGG"]((bold(p), chi, sigma, vk_"AGG"), pi) = 1$,
-  $s = 0$ and $chi = DeriveKey(bold(c))$. This fails with probability at
+  $s + cal(F)_chi (cal(G)(bold(p))) = 0$ and $chi = DeriveKey(bold(p), bold(c))$. This fails with probability at
   most $Adv("ks", Pi_"FINAL")(cal(D)_"FIN")$ by @lem:fin. In particular
   $kappa in [1, 2^B)$, so $kappa <= kappa_"max"$.#footnote[
     This composition is where the first idealization of @rem:idealized is
@@ -831,7 +853,7 @@ extractor a _typed_ collection.
   $((sigma_1, pi_1), dots, (sigma_kappa, pi_kappa))$ with
   $sigma_i = (tau_i, 1, bold(c)_i, s_i)$, $tau_i in [M]$,
   $V_"LEAF"^((tau_i))((bold(p), chi, sigma_i, vk_"AGG"), pi_i) = 1$,
-  $sum_i s_i = s = 0$ and $sum_i bold(c)_i = bold(c)$. This fails with
+  $sum_i s_i = s$ and $sum_i bold(c)_i = bold(c)$. This fails with
   probability at most $(kappa - 1) dot Adv("ks", Pi_"AGG")(cal(D)_"AGG")$ by
   @lem:agg, and the extractor runs in $(kappa - 1) dot Time(cal(A)) + poly(lambda)$.
 
@@ -852,28 +874,28 @@ extractor a _typed_ collection.
   at most $kappa dot max_tau Adv("ks", Pi_"AIR"^((tau)))(cal(D)_"AIR"^((tau)))$
   by @lem:air.
 
-  *Step 5 (Assembly).* Output $L := ((tau_1, w_1), dots, (tau_kappa, w_kappa))$.
+  *Step 5 (Assembly).* Output $phi$ and $L := ((tau_1, w_1), dots, (tau_kappa, w_kappa))$.
   Deterministically, given that Steps 1 to 4 succeeded:
   $abs(L) = kappa in [1, 2^B)$; $Local_(tau_i)(bold(p), w_i)$ for every $i$;
   $bold(c) = sum_i h(tau_i, "com"_i) = sum_i h(tau_i, Commit(w_i))$;
-  $chi = DeriveKey(bold(c))$; and
-  $sum_i BusCont_chi (cal(I)_(tau_i), w_i) = sum_i s_i = s = 0$.
+  $chi = DeriveKey(bold(p), bold(c))$; and
+  $sum_i BusCont_chi (cal(I)_(tau_i), w_i) + cal(F)_chi (cal(G)(bold(p))) = s + cal(F)_chi (cal(G)(bold(p))) = 0$.
 
   *Step 6 (Bus soundness).* Let $cal(A)_"bus"$ be the algorithm that runs
-  $cal(A)$ and Steps 1 to 5 and outputs $(L, ("com"_i)_i)$; it makes the same
+  $cal(A)$ and Steps 1 to 5 and outputs $(bold(p), L, ("com"_i)_i)$; it makes the same
   oracle queries as $cal(A)$ plus those of the extractors. When Steps 1 to 4
   succeed, Step 5 shows that the output satisfies every conjunct of the
-  winning condition of @def:bus-game except possibly $not Balanced(L)$, and the
+  winning condition of @def:bus-game except possibly $not Balanced_bold(p) (L)$, and the
   game's derivation reproduces the extracted $bold(c)$ and $chi$. Hence
   $
-    Pr["Steps 1 to 4 succeed" and not Balanced(L)] & <= Adv("bus")(cal(A)_"bus") \
+    Pr["Steps 1 to 4 succeed" and not Balanced_bold(p) (L)] & <= Adv("bus")(cal(A)_"bus") \
     & <= (Q + 1) dot epsilon_(cal(F))(Lambda_"max") + Adv("pa", cal(H))(cal(D)^"pa") + Adv("ext", Com)(cal(D)^"ext")
   $
   by @prop:bus-soundness, where $cal(D)^"pa"$ and $cal(D)^"ext"$ run
   $cal(A)_"bus"$ once.
 
-  *Conclusion.* If Steps 1 to 4 succeed and $L$ is balanced, then
-  $(bold(p); L) in cal(R)_Zisk$ by Step 5 and @def:r-zisk, so
+  *Conclusion.* If Steps 1 to 4 succeed and $L$ is balanced for $bold(p)$, then
+  $(bold(p)_"ext"; (phi, L)) in cal(R)_Zisk$ by Step 5 and @def:r-zisk, so
   $cal(A)$ does not win. Summing the failure probabilities,
   $
     epsilon <= & Adv("ks", Pi_"FINAL")(cal(D)_"FIN")                                     &  "(Step 1)" \
@@ -940,7 +962,7 @@ the obligations that a full security argument must discharge.
     [defined (@def:fingerprint); proved for LogUp (@lem:logup)],
     [Statistical; requires the challenge pair to be a random-oracle output (@def:rom). The circuit proves a sub-relation of $cal(R)_"AIR"^((tau))$ (@sec:instantiation).],
 
-    [$Balanced(L)$],
+    [$Balanced_bold(p) (L)$],
     [proved (@prop:bus-soundness)],
     [Field-valued; integer balance needs multiplicity range checks (@rem:integer-balance).],
   ),
@@ -957,7 +979,7 @@ obligations for the sections that build on it.
   locally satisfying AIR witnesses for a common public statement. The
   semantic claim of ZisK, that such a collection encodes one execution of the
   committed program from the boot state to a halting state whose public
-  outputs are $bold(p)$, requires the memory argument, the continuation
+  outputs are those of $bold(p)_"ext"$, requires the memory argument, the continuation
   stitching and the per-chip semantics, each with its own relation and
   lemma. These compose with @thm:main by strengthening $Local$ and by
   reading off the meaning of $Balanced$ for the specific buses.
@@ -970,12 +992,27 @@ obligations for the sections that build on it.
   obligation left by this section; the bound that forking gives is valid but
   concretely loose.
 - *Circuit requirements.* The relations of @sec:relations-def require the
-  circuits to enforce the typing predicate on children, to hash the type
-  together with the commitment into the challenge contribution, to expose
-  the trace commitment as a public input of the AIR argument, and to have
-  that commitment bind the cached columns, or else to feed the cached-column
-  commitment into the challenge contribution by other means
-  (@sec:instantiation).
+  circuits to enforce the typing predicate on every non-null child and on the
+  root, to require at least two non-null children at every aggregation node,
+  to hash an identifier of the type together with the commitment into the
+  challenge contribution, to expose the trace commitment as a public input of
+  the AIR argument, and to feed the public statement, which carries the
+  cached-column commitment, into the key derivation (@sec:instantiation).
+  Against the circuits of ZisK v0.16, three of these are not yet met:
+  + The Final Verifier selects its child's verification key with the same
+    dispatch as an aggregation node, including the null type $0$, and a null
+    child disables the verification of the child proof. The values the root
+    checks are then read from an unverified statement, so nothing ties
+    $bold(c)$ and $s$ to any leaf. The root must reject a null child, as
+    $sans("Typed")$ does in @def:r-final.
+  + An aggregation node only range-checks the counters of its children and
+    their partial sums; it does not require at least two non-null children
+    (nor, therefore, $kappa >= 2$ for its own counter). The counting of
+    @lem:agg needs it.
+  + The type enters the challenge contribution as the root of the type's
+    fixed columns, not as the type index. This identifies the type only if
+    no two AIR types have the same fixed columns, which should be checked at
+    setup or replaced by the index itself.
 - *Fixed and cached data.* Fixed columns are prescribed by the AIR
   description, hence by the verification key. Cached columns, for instance
   the program ROM and precomputed operation tables, are bound through the
