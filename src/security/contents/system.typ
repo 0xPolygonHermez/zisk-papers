@@ -1,236 +1,26 @@
 #import "../../lib.typ": (
-  Adv, Balanced, Bind, BusCont, Com, Commit, DeriveKey, Local, Pr, definition, mult, negl, poly, remark, vk,
+  Adv, Balanced, Bind, BusCont, Com, Commit, DeriveKey, Exp, Local, Pr, Time, Zisk, definition, game, lemma, mult, negl,
+  poly, proof, proposition, remark, theorem, todo, vk,
 )
 #import "@preview/fletcher:0.5.8" as fletcher: diagram, edge, node
 
-This section fixes the notation used in the security analysis and restates,
-in the exact form the proofs consume: the arithmetization layer (AIRs, interactions and buses), the
-aggregation tree and the interfaces of its cryptographic components (trace
-commitments, the multiset hash and key derivation), the three accumulators
-the tree carries, and the four relations attested by its nodes. ZisK's
-concrete choices are collected in @sec:instantiation.
+This section describes the system that the rest of the paper analyzes: the
+aggregation tree into which a ZisK proof is organized, the three accumulators
+that its nodes carry, the relation attested by each kind of node, and the
+concrete choices ZisK makes for the components of @sec:preliminaries. Part I
+proves knowledge soundness for the argument systems that attest to these
+relations, Part II shows what an accepting proof of the whole tree implies,
+and Part III gives the result its meaning in terms of program execution.
 
-== Notation and Parameters
-
-Let $FF$ be a prime field of order $p$ and $KK$ an extension field of $FF$. $ZZ_p^n$ denotes the additive
-group of $n$-vectors of integers modulo $p$, the same set as $FF^n$ viewed as
-a $ZZ$-module. For integers $a <= b$, $[a, b]$ and $[a, b)$ are the closed and
-half-open integer intervals and $[b] := [1, b]$. Field elements are identified
-with integers in $[0, p)$ when needed. $lambda$ is the security parameter;
-"PPT" means probabilistic polynomial time in $lambda$, and
-$negl(lambda)$ and $poly(lambda)$ denote negligible and polynomially bounded
-functions. All algorithms have oracle access to the random oracles introduced
-in @sec:components; $Q$ bounds the total number of oracle queries an adversary
-makes.
-
-The recursion is governed by one integer parameter, the _leaf-count exponent_
-$B >= 1$: an aggregation tree may contain at most $2^B - 1$ leaves. We assume throughout that
-$
-  3 dot 2^B <= p, quad 2^B < p, quad 2^B <= poly(lambda):
-$
-the first condition guarantees that sums of three range-checked counters never
-wrap around in $FF$, the second is the cardinality restriction required by the
-multiset hash, and the third makes the number of leaves, and hence the running
-time of the extractor, polynomial.
-
-== Arithmetization <sec:arithmetization>
-
-#definition(title: "AIR and Witness")[
-  An _algebraic intermediate representation_ (AIR) of width $W$, depth $D$ and
-  $V$ values is a finite set of _constraint polynomials_
-  $
-    cal(C) subset FF[X_1^((0)), dots, X_W^((0)), dots, X_1^((D)), dots, X_W^((D)), Y_1, dots, Y_V].
-  $
-  A _witness_ of height $N$ for $cal(C)$ is a pair
-  $w = (bold(T), bold(a))$ with $bold(T) in FF^(N times W)$, the _trace_, and
-  $bold(a) in FF^V$, the _AIR values_. At row $r in [N]$ the variable
-  $X_j^((k))$ takes the value $T_j (r + k)$, with row indices taken modulo
-  $N$, and $Y_j$ takes the value $a_j$. The witness _satisfies_ $cal(C)$ if
-  every constraint polynomial evaluates to zero at every row.
-] <def:air>
-
-#definition(title: "Interaction")[
-  An _interaction_ of an AIR $cal(C)$ on the bus $b in FF$ is a tuple
-  $iota = (b, m_iota, bold(e)_iota)$, where the _multiplicity_ $m_iota$ and
-  the _message_ components $e_(iota, 1), dots, e_(iota, ell_b)$ are
-  polynomials over $FF$ in the variables of $cal(C)$. Given a witness $w$ and a row
-  $r$, we write $m_iota (w, r) in FF$ and $bold(e)_iota (w, r) in FF^(ell_b)$
-  for their evaluations at row $r$. The set of bus identifiers in use is
-  $cal(B)$; every interaction on bus $b$ has the common message length
-  $ell_b$, and $ell := max_(b in cal(B)) ell_b$.
-] <def:interaction>
-
-Throughout, we fix a positive integer $M$ and an indexed family of
-_AIR types_
-$
-  frak(A) = { (cal(C)_tau, cal(I)_tau) }_(tau in [M]),
-$
-where each $cal(C)_tau$ is an AIR of width $W_tau$, depth $D_tau$ and $V_tau$
-values and $cal(I)_tau$ is a finite set of interactions of $cal(C)_tau$. Given a fixed trace height $N_tau$, we write $cal(W)_tau := FF^(N_tau times W_tau) times FF^(V_tau)$ for
-the witness space of type $tau$ and fix the public-statement space
-$
-  cal(P) := cal(P)_"ext" times Phi, quad cal(P)_"ext" := FF^k, quad Phi := FF^(k').
-$
-A public statement $bold(p) = (bold(p)_"ext", phi)$ consists of the
-_external statement_ $bold(p)_"ext"$, the only data an external verifier
-sees, and the _proof values_ $phi$: values chosen by the prover once per
-proof that every node of
-the tree carries but the external verifier does not. Below the Final
-Verifier the two always travel together, and we simply write $bold(p)$.
-
-#definition(title: "Column Classes and Public Bindings")[
-  The description of an AIR $cal(C)$ of width $W$ and $V$ values, used at
-  height $N$, partitions its column indices as
-  $[W] = J^"fix" union.sq J^"cach" union.sq J^"wit"$ and carries:
-  + The _fixed columns_ $J^"fix"$, whose values are prescribed as part of the
-    description of $cal(C)$ and hence known to both the prover and the verifier.
-  + The _cached columns_ $J^"cach"$, whose values are computed once and
-    reused across different proofs. Their values are not part of the
-    description; instead, a commitment to them (@def:commitment) travels in the public statement at the coordinates designated
-    by a _cached-commitment binding_ $gamma : [m] -> [k + k']$.
-  + The _witness columns_ $J^"wit"$, computed afresh for every proof and
-    only known in full to the prover.
-  + A _public binding map_ $beta : "dom"(beta) -> [k + k']$ from a set
-    $"dom"(beta) subset [V]$ to coordinates of the public statement.
-  The _prescribed data_ of $cal(C)$ is the family
-  $bold(d) = (d_j)_(j in J^"fix")$ of fixed columns $d_j in FF^N$. For a
-  trace $bold(T)$ and a set of columns $J$ we write $bold(T)|_J$ for the
-  submatrix of the columns in $J$.
-] <def:columns>
-
-Each AIR type carries this data; we index it by the type, as in
-$J^"fix"_tau$, $bold(d)_tau$ and $beta_tau$.
-
-#definition(title: "Local Satisfaction")[
-  For $tau in [M]$, $bold(p) in cal(P)$ and $w = (bold(T), bold(a)) in cal(W)_tau$,
-  the predicate $Local_tau (bold(p), w)$ holds if and only if
-  + $w$ satisfies $cal(C)_tau$.
-  + $bold(T)$ agrees with the prescribed data on the fixed columns:
-    $T_j (r) = d_(tau, j)(r)$ for every $j in J^"fix"_tau$ and $r in [N_tau]$.
-  + $Bind_tau (bold(p), w)$: $a_j = p_(beta_tau (j))$ for every
-    $j in "dom"(beta_tau)$.
-  + The cached columns open the commitment carried in $bold(p)$:
-    $ Commit_"cach" (bold(T)|_(J^"cach"_tau)) = (p_(gamma_tau (1)), dots, p_(gamma_tau (m))). $
-] <def:local>
-
-Fixed columns are part of the description of $cal(C)_tau$, hence of the
-verification key of type $tau$. Cached columns are not: they are computed
-once per program, committed with $Commit_"cach"$, and the commitment travels
-in the public statement, where the description of $cal(C)_tau$ designates
-its coordinates. The program being executed is therefore bound through
-$bold(p)$ rather than hard-wired into the circuits, as the program code is in
-the step circuit of the reference architecture @EF:VanillaVM: the program ROM
-and the boot
-state live in cached columns of the relevant AIR types, and whoever accepts a
-Final proof for $bold(p)$ must check that the cached commitments carried in
-$bold(p)$ are those of the intended program. Since every node of a valid
-tree carries the same $bold(p)$ (@sec:relations-def), binding of
-$Commit_"cach"$ makes the cached columns of all leaves of one type equal.
-
-#definition(title: "Message multiset of a witness")[
-  Let $cal(V) := {(b, v) : b in cal(B), v in FF^(ell_b)}$ be the set of
-  _bus messages_. An _$FF$-weighted multiset_ of messages is a finitely
-  supported map $D : cal(V) -> FF$; we write $abs(D)$ for the size of its
-  support and add such maps pointwise. For $tau in [M]$ and $w in cal(W)_tau$,
-  the _message multiset_ of $w$ is
-  $
-    "Msg"_tau (w)(b, v) := sum_(iota in cal(I)_tau, b_iota = b) sum_(r=1)^(N_tau) m_iota (w, r) dot bold(1)[bold(e)_iota (w, r) = v].
-  $
-  Its support has at most $N_tau dot abs(cal(I)_tau)$ elements.
-] <def:msg>
-
-A row that sends a message with positive multiplicity and a row of the same
-witness that receives it with negative multiplicity cancel in
-$"Msg"_tau (w)$: the multiset records the net flow of every message out of the
-witness.
-
-#definition(title: "Bus fingerprint")[
-  A _bus fingerprint_ $cal(F)$ consists of a finite _key space_ $cal(X)$, an
-  abelian group $cal(G)_(cal(F))$ of _values_, a class $cal(D)$ of _admissible_
-  nonzero $FF$-weighted multisets of messages, and, for every key
-  $chi in cal(X)$, a map $cal(F)_chi$ from $FF$-weighted multisets of
-  messages to $cal(G)_(cal(F)) union {bot}$, such that
-  + (_additivity_) $cal(F)_chi (0) = 0$, and
-    $cal(F)_chi (D + D') = cal(F)_chi (D) + cal(F)_chi (D')$ whenever the
-    right-hand side is defined;
-  + (_soundness_) for every $Lambda$ and every adversary $cal(A)$ that
-    outputs a multiset before the key is drawn uniformly from $cal(X)$, the
-    _fingerprint advantage_
-    $
-      Adv("fp", (cal(F), Lambda))(cal(A)) := Pr[
-        D <- cal(A); chi <- cal(X) :
-        D in cal(D) and abs(D) <= Lambda and cal(F)_chi (D) = 0
-      ]
-    $
-    is small. The fingerprint is _statistically sound_ with error
-    $epsilon_(cal(F))$ if $Adv("fp", (cal(F), Lambda))(cal(A)) <= epsilon_(cal(F))(Lambda)$
-    for every adversary, with $epsilon_(cal(F))$ non-decreasing, and
-    _computationally sound_ if the advantage is negligible for every PPT
-    adversary.
-  The _bus contribution_ of $w in cal(W)_tau$ under the key $chi$ is
-  $
-    BusCont_chi (cal(I)_tau, w) := cal(F)_chi ("Msg"_tau (w)) in cal(G)_(cal(F)) union {bot}.
-  $
-] <def:fingerprint>
-
-A fingerprint is an additive summary of a multiset that vanishes on an
-admissible nonzero multiset only for few keys, or only for keys no efficient
-adversary can anticipate. The relations of @sec:relations-def are stated for
-an arbitrary fingerprint; ZisK's, LogUp, is described in @sec:instantiation.
-
-
-#definition(title: "Typed witness collection")[
-  A _typed witness collection_ is a finite list
-  $
-    L = ((tau_1, w_1), dots, (tau_(abs(L)), w_(abs(L)))), quad tau_i in [M], quad w_i in cal(W)_(tau_i).
-  $
-  Types and witnesses may repeat, and each entry counts separately; the order
-  of the list carries no meaning. The _number of bus terms_ of $L$ is
-  $Lambda(L) := sum_(i=1)^(abs(L)) N_(tau_i) dot abs(cal(I)_(tau_i))$, and we set
-  $Lambda_"max" := (2^B - 1) dot max_(tau in [M]) N_tau abs(cal(I)_tau) + g$,
-  so that $Lambda(L) + g <= Lambda_"max"$ whenever $abs(L) < 2^B$, where $g$
-  bounds the global messages introduced below.
-] <def:collection>
-
-Some messages are not emitted by any witness: they belong to the system as
-a whole and are determined by the public statement. In ZisK these _global
-messages_ open and close the continuation chains, initialise the registers
-and inject the public outputs into the buses. We model them as a fixed
-function $cal(G)$ that maps every public statement $bold(p) in cal(P)$ to an
-$FF$-weighted multiset of messages $cal(G)(bold(p))$, with
-$abs(cal(G)(bold(p))) <= g$ for a constant $g$.
-
-#definition(title: "Balance of a witness collection")[
-  The _signed multiplicity_ of a typed witness collection $L$ is the
-  $FF$-weighted multiset
-  $
-    cal(M)_L := sum_(i=1)^(abs(L)) "Msg"_(tau_i)(w_i),
-  $
-  that is,
-  $
-    cal(M)_L (b, v) = sum_(i=1)^(abs(L)) sum_(iota in cal(I)_(tau_i), b_iota = b) sum_(r=1)^(N_(tau_i)) m_iota (w_i, r) dot bold(1)[bold(e)_iota (w_i, r) = v].
-  $
-  The collection is _balanced for_ $bold(p) in cal(P)$, written
-  $Balanced_bold(p) (L)$, if $cal(M)_L + cal(G)(bold(p)) = 0$, i.e.
-  $cal(M)_L (b, v) + cal(G)(bold(p))(b, v) = 0$ for every bus $b in cal(B)$
-  and every message $v in FF^(ell_b)$. Note that
-  $abs(cal(M)_L + cal(G)(bold(p))) <= Lambda(L) + g$.
-] <def:balanced>
-
-Note that multiplicities are
-field elements: $Balanced_bold(p) (L)$ does not by itself assert that every message is
-sent and received the same number of times as integers, since $p$ copies of a
-message cancel. We return to this point in @rem:integer-balance.
-
-== The Aggregation Tree <sec:tree>
+== Structure <sec:tree>
 
 A ZisK proof is a tree. Its leaves are the AIR instances of an execution: for
 each type $tau in [M]$ the prover produces some number of witnesses in
 $cal(W)_tau$, one per segment of that type, and proves each with an argument
 system for the AIR of the type. Directly above every AIR proof sits a _leaf
 verifier_, a circuit that verifies the AIR proof and re-exposes its statement
-in a common format. Above the leaf verifiers, _aggregation nodes_ have three
-child slots each. A slot holds either a child proof or a _null child_, a
+in a common format. Above the leaf verifiers, _aggregation nodes_ have $A$
+child slots each, where $A$ is the aggregation arity (in ZisK, $A = 3$). A slot holds either a child proof or a _null child_, a
 placeholder that is not verified and contributes nothing, and at least two
 slots of every aggregation node hold proofs. The tree need not be balanced,
 because a node is proved as soon as enough children are available. At the
@@ -340,64 +130,10 @@ this is why the accumulators below are commutative monoids.
     accumulators, dispatches on their types and declares type $M + 1$; the
     Final Verifier fixes $vk = vk_"AGG"$, checks the root predicates and
     exposes only $bold(p)_"ext"$. The dashed arrows are the public inputs common to
-    every leaf. Aggregation nodes are drawn with two children; ZisK's have
-    three slots, the unused ones holding null children (@def:r-agg).
+    every leaf. Aggregation nodes are drawn with two children; in general they
+    have $A$ slots, the unused ones holding null children.
   ],
 ) <fig:aggregation-tree>
-
-== Interfaces <sec:components>
-
-A _non-interactive argument system_ $Pi$ for a relation $cal(R)$ consists of a
-prover and a deterministic _verifier_ $V$, together with a verification key
-$vk_Pi$ produced at setup, where $V(vk_Pi, x, pi) in {0, 1}$ and the value $1$
-means that the proof $pi$ is accepted for the statement $x$. We write
-$V_X (x, pi) := V(vk_X, x, pi)$ for the verifier of the system attesting to the
-relation $cal(R)_X$, and keep the explicit form $V(vk, x, pi)$ where the key is
-a variable. The relations of @sec:relations-def refer to argument systems
-only through their verifiers, so the prover is never named again, and to the
-following fixed public maps only through their signatures. Their
-security properties are defined where they are used, in @sec:security, and
-ZisK's choices are given in @sec:instantiation. Two of the maps are
-commitments, in the following sense.
-
-#definition(title: "Deterministic Commitment Scheme")[
-  A _deterministic commitment scheme_ $Com$ consists of a set of _messages_,
-  a finite set of _commitments_, and a polynomial-time computable function
-  $Commit$ from the former to the latter. It is _binding_ if for every PPT
-  adversary $cal(A)$
-  $
-    Adv("bind", Com)(cal(A)) := Pr[ (m, m') <- cal(A)(1^lambda) :
-      m != m' and Commit(m) = Commit(m') ] <= negl(lambda).
-  $
-  Since $Commit$ is deterministic, binding is collision resistance of
-  $Commit$. When the messages are vectors or matrices over $FF$, the scheme
-  is a _vector commitment_ if it also offers openings of individual
-  positions.
-] <def:commitment>
-
-The following interface elements are used throughout:
-- *Carriers.* A finite key space $cal(X)$ and an abelian group
-  $cal(G)_(cal(F))$ of fingerprint values (@def:fingerprint), and a finite
-  abelian _accumulator group_ $cal(G)_(cal(H))$.
-- *Trace commitment.* A deterministic commitment scheme $Com$ with message
-  space $union.big_(tau in [M]) cal(W)_tau$ and commitment space ${0, 1}^*$.
-  A commitment $"com" = Commit(bold(T), bold(a))$ covers every column of the
-  trace and every AIR value. The argument system for an AIR type takes the key
-  $chi in cal(X)$ as a public input, so the witness is key-independent.
-- *Cached-column commitment.* A deterministic commitment scheme $Com_"cach"$
-  with message space $union.big_(tau in [M]) FF^(N_tau times abs(J^"cach"_tau))$
-  and commitment space $FF^m$. Its output for the cached columns of a type is
-  not part of a verification key but of the public statement (@def:columns).
-- *Hash-to-group and multiset hash.* $h : [M] times {0,1}^* -> cal(G)_(cal(H))$
-  maps a _typed commitment_ $(tau, "com")$ to a group element, and
-  $
-    cal(H)(cal(S)) := sum_(x in "supp" cal(S)) mult_cal(S)(x) dot h(x) in cal(G)_(cal(H))
-  $
-  is the induced multiset hash on finite multisets $cal(S)$ of typed
-  commitments, where $mult_cal(S)(x)$ is the multiplicity of $x$ in $cal(S)$.
-  $cal(H)$ is additively homomorphic over multiset union.
-- *Key derivation.* $DeriveKey : cal(P) times cal(G)_(cal(H)) -> cal(X)$, a
-  fixed public function of the public statement and the accumulated value.
 
 == Accumulators <sec:accumulators>
 
@@ -449,10 +185,19 @@ $sigma . bold(c)$ and $sigma . s$ for the components of a recursive statement.
   kind: table,
 ) <tbl:accumulators>
 
-The counter is added in $FF$. Its child check is the typing predicate of
-@def:dispatch, which every aggregation node applies to each non-null child
-and the Final Verifier applies to the root; it places every counter in $[1, 2^B)$,
-and $3 dot 2^B <= p$ then rules out wrap-around, so the field sums are integer
+The counter is added in $FF$. Its child check is the following predicate on a
+node's type and counter, which every aggregation node applies to each
+non-null child and the Final Verifier applies to the root.
+
+#definition(title: "Typing Predicate")[
+  For a type $tau$ and a counter $kappa$,
+  $
+    sans("Typed")(tau, kappa) := (tau in [M] and kappa = 1) or (tau = M + 1 and 2 <= kappa < 2^B).
+  $
+] <def:typed>
+
+The typing predicate places every counter in $[1, 2^B)$,
+and $A dot 2^B <= p$ then rules out wrap-around, so the field sums are integer
 sums and no node has $2^B$ or more leaves below it. The other two
 accumulators are checked only at the root. The value of the
 challenge accumulator at a node is $cal(H)$ of the multiset of typed
@@ -483,7 +228,7 @@ recursive statement $sigma$ and a verification key $vk$. We proceed from the
 leaves to the root, naming after each relation the argument system that
 proves it, since the relation above uses its verifier.
 
-#definition(title: "AIR relation")[
+#definition(title: "AIR Relation")[
   For $tau in [M]$,
   $
     cal(R)_"AIR"^((tau)) = lr(
@@ -520,7 +265,7 @@ neither.
 Let $Pi_"AIR"^((tau))$ be an argument system for $cal(R)_"AIR"^((tau))$, one
 per type, with verifier $V_"AIR"^((tau))$ and key $vk_"AIR"^((tau))$.
 
-#definition(title: "Leaf-verifier relation")[
+#definition(title: "Leaf-Verifier Relation")[
   For $tau in [M]$,
   $
     cal(R)_"LEAF"^((tau)) = lr(
@@ -568,19 +313,15 @@ type $0$ marks a null child.
   $
   and $V_"REC"^((tau))[vk]$ rejects everything if $tau in.not [M + 1]$; in
   particular a null child ($tau = 0$) never passes the dispatched verifier.
-  The _typing predicate_ on a type and a counter is
-  $
-    sans("Typed")(tau, kappa) := (tau in [M] and kappa = 1) or (tau = M + 1 and 2 <= kappa < 2^B).
-  $
 ] <def:dispatch>
 
-The dispatch is a function of the key $vk$ carried in the statement, and the
-typing predicate is what makes the counter meaningful (@sec:accumulators).
+The dispatch is a function of the key $vk$ carried in the statement; the
+typing predicate of @def:typed is what makes the counter meaningful.
 
-#definition(title: "Aggregation relation")[
+#definition(title: "Aggregation Relation")[
   Write $x_X := (bold(p), chi, sigma_X, vk)$ for the statement of the child
-  in slot $X in [3]$, $sigma_X = (tau_X, kappa_X, bold(c)_X, s_X)$ for its
-  recursive statement, and $N := {X in [3] : tau_X != 0}$ for the set of
+  in slot $X in [A]$, $sigma_X = (tau_X, kappa_X, bold(c)_X, s_X)$ for its
+  recursive statement, and $N := {X in [A] : tau_X != 0}$ for the set of
   non-null slots. Then
   $
     cal(R)_"AGG" = lr(
@@ -588,7 +329,7 @@ typing predicate is what makes the counter meaningful (@sec:accumulators).
         cases(
           delim: #none,
           ,
-          (bold(p), chi\, sigma\, vk)\; ((sigma_X, pi_X))_(X in [3]),
+          (bold(p), chi\, sigma\, vk)\; ((sigma_X, pi_X))_(X in [A]),
           ,
         )
         mid(|)
@@ -612,9 +353,11 @@ _propagation invariant_: every non-null child is verified on a statement that
 carries the parent's own $(bold(p), chi, vk)$, so every node of a valid tree
 carries the root's public statement, fingerprint key and verification key; in
 particular an aggregation child is verified under $V(vk, dot, dot)$ for the
-very $vk$ the parent declares. Second, the _counter invariant_: $sans("Typed")$
+very $vk$ the parent declares. Since the cached-column commitments travel in
+$bold(p)$ (@def:columns), the binding of $Commit_"cach"$ then makes the cached
+columns of all leaves of one type equal. Second, the _counter invariant_: $sans("Typed")$
 places the counters of the non-null children in $[1, 2^B)$, there are at
-least two of them, and $3 dot 2^B <= p$ makes $kappa = sum_(X in N) kappa_X$
+least two and at most $A$ of them, and $A dot 2^B <= p$ makes $kappa = sum_(X in N) kappa_X$
 an identity of integers; hence every non-null child has
 $kappa_X <= kappa - 1$.
 
@@ -625,16 +368,16 @@ key $vk_"AGG"$ of the argument system for that relation is produced afterwards
 at setup, and the Final relation below fixes $vk := vk_"AGG"$, at which point
 $V_"REC"^((M+1))[vk_"AGG"] = V_"AGG"$.
 
-#definition(title: "Final relation")[
+#definition(title: "Final Relation")[
   Fix the aggregation key $vk_"AGG"$ as a parameter. Then, with
-  $bold(p) := (bold(p)_"ext", phi)$,
+  $bold(p) := (bold(p)_"ext", bold(p)_"pv")$,
   $
     cal(R)_"FINAL" = lr(
       {
         cases(
           delim: #none,
           ,
-          bold(p)_"ext"\; (phi, chi, sigma, pi),
+          bold(p)_"ext"\; (bold(p)_"pv", chi, sigma, pi),
           ,
         )
         mid(|)
@@ -684,7 +427,7 @@ party. The verification keys involved play different roles. @tbl:vk-ledger recor
 
 == ZisK Instantiation <sec:instantiation>
 
-The security analysis of @sec:security is stated for the following choices,
+The security analysis is stated for the following choices,
 which fix the carriers and the maps of @sec:components. Four of them are
 built from one _underlying hash function_, and the analysis depends on that
 function only through the random-oracle model of @def:rom, never through its
@@ -713,11 +456,12 @@ $m_iota (w, r) slash (alpha + hat(e)_gamma (b_iota, bold(e)_iota (w, r)))$ at
 every row through an explicitly constrained inverse, and exposes the final
 value $s$. Grouping the row terms by message shows that the exposed value
 equals $cal(F)^"LogUp"_chi ("Msg"_tau (w))$ whenever every row denominator is
-nonzero. The circuit therefore proves a sub-relation of
-$cal(R)_"AIR"^((tau))$: it additionally rejects when a row of zero
-multiplicity, or a pair of rows that cancel in the multiset, hits a pole. This
-only strengthens the statements of @sec:security, since knowledge soundness
-for a sub-relation implies knowledge soundness for the relation.
+nonzero. At a pole the constraints do not determine $s$: a row of zero
+multiplicity whose denominator vanishes satisfies its fraction constraint for
+every value of the fraction column. The poles of a witness are at most
+$N_tau abs(cal(I)_tau)$ values of $alpha$ for each $gamma$, fixed by the
+witness, and the key is derived after the commitment to the witness; the
+probability of hitting one is charged in @lem:binding.
 
 *Multiset hash.* The accumulator group is $cal(G)_(cal(H)) = ZZ_p^n$ with
 $n = 368$, and $h$ and $cal(H)$ are LtHash @ZISK:LTHASH @AC:CDDGS03: $h$
@@ -745,10 +489,9 @@ function, so it is straight-line extractable in the random-oracle model
 
 *Cached-column commitment.* $Commit_"cach"$ is likewise a Merkle tree over
 the underlying hash function. The program ROM is the cached column group of
-the ROM AIR type, and its root is one of the program's public inputs, so a
+the ROM AIR type, and its root is one of the publics, so a
 proof is bound to a program through $bold(p)$. The leaf commitment
 $"com"$ covers the witness columns and the AIR values of the first stage, not
 the cached columns; this is sound because $DeriveKey$ absorbs $bold(p)$, and
 with it the cached-column commitment, so the cached columns are fixed before
 the key $chi$ is derived, exactly as the committed witnesses are.
-
