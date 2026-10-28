@@ -1,2 +1,5 @@
-# Ignore the cryptobib directory
+# Cryptobib directory
 cryptobib/
+
+# Temporary files
+tmp/

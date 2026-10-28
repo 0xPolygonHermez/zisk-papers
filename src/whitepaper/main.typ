@@ -9,7 +9,11 @@
   bottom: (94pt / 279mm) * 100%,
 )
 
+#let body-font = "New Computer Modern"
+#show math.equation: set text(font: "New Computer Modern Math")
+
 #title-page(
+  font: body-font,
   margin: title-margin,
   title: [ZisK Whitepaper#zisk-version],
   authors: (
@@ -34,6 +38,7 @@
 )
 
 #show: article.with(
+  font: body-font,
   title: "ZisK Whitepaper",
   authors: ("ZisK Core Team",),
   margin: margin,
@@ -63,7 +68,7 @@
     let loc = el.location()
     let sec = counter(heading).at(loc).first()
     let n = counter(figure.where(kind: el.kind)).at(loc).first()
-    link(loc, text(font: "Libertinus Serif", [#el.supplement #numbering("1.1", sec, n)]))
+    link(loc, text(font: body-font, [#el.supplement #numbering("1.1", sec, n)]))
   } else {
     it
   }
@@ -182,6 +187,8 @@ We extend our gratitude to the Polygon zkEVM and Plonky3 @PLONKY3 teams for thei
 = Arguments <appendix:arguments>
 
 #include "appendix/arguments.typ"
+
+#pagebreak()
 
 = Instruction Set <appendix:opcodes>
 

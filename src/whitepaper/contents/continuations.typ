@@ -312,7 +312,7 @@ The genesis anchor of the RAM region is unconditional; those of the ROM data and
         dir: ttb,
         spacing: 3pt,
         align(center, lbl[#msg]),
-        align(center, text(size: 9.5pt)[→]),
+        align(center, text(size: 9.5pt)[$arrow.r$]),
       ),
     )
 

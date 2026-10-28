@@ -1,6 +1,6 @@
 #import "../../lib.typ": (
-  Adv, Balanced, Bind, BusCont, Com, Commit, DeriveKey, Exp, Local, Pr, Time, Zisk, definition, game, lemma, mult, negl,
-  poly, proof, proposition, remark, theorem, todo, vk,
+  Adv, Balanced, Bind, BusCont, Com, Commit, DeriveKey, Exp, Local, Pr, Time, Zisk, definition, fwd, game, lemma, mult,
+  negl, poly, proof, proposition, prover, remark, theorem, todo, verifier, vk,
 )
 
 This section fixes the notation and the definitions shared by the three
@@ -37,90 +37,43 @@ time of the extractor, polynomial.
 
 == Arithmetization <sec:arithmetization>
 
-A ZisK proof covers many _instances_ of a fixed family of AIRs, one instance
-per segment of a chip. Besides its trace, the constraints of an instance read
-_scalar values_: values that are constant over the rows of the trace. They
-differ in who chooses them, who sees them and how many instances share them.
-
-#definition(title: "Scalar Values")[
-  The scalar values of a proof are of five kinds.
-  + The _publics_ $bold(p)_"ext" in cal(P)_"ext" := FF^k$, shared by all
-    instances and seen by the external verifier.
-  + The _proof values_ $bold(p)_"pv" in cal(P)_"pv" := FF^(k')$, chosen by the prover once per
-    proof and shared by all instances, but not seen by the external verifier.
-  + The _AIR values_ $bold(a) in FF^V$ of an instance, chosen by the prover
-    and part of the witness of that instance.
-  + The _airgroup values_ $bold(s) in KK^(V_"grp")$ of an instance, that its
-    proof exposes and that are aggregated, with a fixed operation, over all
-    the instances of a group of AIR types called an _airgroup_.
-  + The _challenges_ $bold(mu) in KK^(V_"ch")$, sampled by the verifier
-    (in the non-interactive protocol, from the Fiat–Shamir transcript).
-  The publics and the proof values form the _public statement_
-  $
-    bold(p) = (bold(p)_"ext", bold(p)_"pv") in cal(P) := cal(P)_"ext" times cal(P)_"pv".
-  $
-  Every circuit that takes part in a proof reads the whole public statement,
-  but the external verifier sees only $bold(p)_"ext"$: the proof values are
-  hidden by the last circuit of the proof (@sec:system).
-  A _global constraint_ is an identity over the aggregated airgroup values,
-  the public statement and the challenges, checked once per proof rather than
-  by any instance.
-] <def:proof-values>
+A ZisK proof covers many _instances_ of a fixed family of chips. The constraints of an instance read two kinds of
+values: the _columns_ of its trace, which take one value per row, and the
+_scalar values_, which are constant over the rows.
 
 #definition(title: "AIR and Witness")[
-  Given integers $W >= 1$ and $D, V, U >= 0$, an _algebraic intermediate
-  representation_ (AIR) is a finite set of _constraint polynomials_
+  Given integers $N >= 1$, $W >= 1$ and $V >= 0$ and a finite set
+  $O subset ZZ$ of _row offsets_, an _algebraic intermediate representation_
+  (AIR) of _height_ $N$ is a finite set of _constraints_
   $
-    cal(C) subset FF[X_j^((i)), Y_l, Z_m : j in [W], i in [0, D], l in [V], m in [U]].
+    cal(C) subset KK[X_j^((o)), Y_l : j in [W], o in O, l in [V]].
   $
-  The variables $X_j^((i))$ refer to the trace, the variables $Y_l$ to the
-  AIR values, and the variables $Z_m$ to the other scalar values of
-  @def:proof-values: the description of the AIR assigns each $Z_m$ one of
-  their kinds. A _witness_ of height $N$ for $cal(C)$ is a pair
-  $w = (bold(T), bold(a))$ with $bold(T) in FF^(N times W)$, the _trace_, and
-  $bold(a) in FF^V$, the _AIR values_. Given values $bold(z) in KK^U$ of the
-  other scalar values, at row $r in [N]$ the variable $X_j^((i))$ takes the
-  value $T_j (r + i)$, with row indices taken modulo $N$, the variable $Y_l$
-  takes the value $a_l$, and the variable $Z_m$ the value $z_m$. The witness
-  _satisfies_ $cal(C)$ under $bold(z)$ if every constraint polynomial
-  evaluates to zero at every row.
+  The variables $X_j^((o))$ refer to the columns and the variables $Y_l$ to
+  the scalar values. A _witness_ for $cal(C)$ is a pair
+  $w = (bold(T), bold(v))$ with $bold(T) in KK^(N times W)$, the _trace_, and
+  $bold(v) in KK^V$, the _values_. At row $r in [N]$ the variable
+  $X_j^((o))$ takes the value $T_j (r + o)$, with row indices taken modulo
+  $N$, and the variable $Y_l$ the value $v_l$. The witness _satisfies_
+  $cal(C)$ if every constraint polynomial evaluates to zero at every row.
 ] <def:air>
 
-The AIRs of the ZisK chips, as modelled in this paper, read only the AIR
-values, the publics and the proof values; their constraints are
-therefore satisfied or not under a public statement $bold(p)$. Airgroup
-values and challenges are read only by the constraints that the proving
-system adds to every AIR to realize its interactions (@sec:stark-bus), and by
-the global constraints.
+Offsets may be negative: $X_j^((o))$ with $o < 0$ reads row $r - abs(o)$.
+Since the rows are taken modulo $N$, the constraints are enforced on a
+cyclic domain, and shifting every constraint by $min O$ rows gives an
+equivalent AIR with offsets in $[0, max O - min O]$; we keep the offsets as
+the AIR is written.
 
-#definition(title: "Interaction")[
-  An _interaction_ of an AIR $cal(C)$ on the bus $b in FF$ is a tuple
-  $iota = (b, m_iota, bold(e)_iota)$, where the _multiplicity_ $m_iota$ and
-  the _message_ components $e_(iota, 1), dots, e_(iota, ell_b)$ are
-  polynomials over $FF$ in the variables of $cal(C)$. Given a witness $w$ and a row
-  $r$, we write $m_iota (w, r) in FF$ and $bold(e)_iota (w, r) in FF^(ell_b)$
-  for their evaluations at row $r$. The set of bus identifiers in use is
-  $cal(B)$; every interaction on bus $b$ has the common message length
-  $ell_b$, and $ell := max_(b in cal(B)) ell_b$.
-] <def:interaction>
-
-Throughout, we fix a positive integer $M$ and an indexed family of
-_AIR types_
-$
-  frak(A) = { (cal(C)_tau, cal(I)_tau) }_(tau in [M]),
-$
-where each $cal(C)_tau$ is an AIR with parameters $W_tau$, $D_tau$, $V_tau$
-and $U_tau$, and $cal(I)_tau$ is a finite set of interactions of
-$cal(C)_tau$. Given a fixed trace height $N_tau$, we write
-$cal(W)_tau := FF^(N_tau times W_tau) times FF^(V_tau)$ for the witness space
-of type $tau$.
+The columns and the values of a witness are of several kinds, which differ in
+who chooses them, who sees them and how many instances share them. The
+description of an AIR partitions both.
 
 #definition(title: "Column Classes")[
-  The description of an AIR $cal(C)$ with $W$ columns, used at height $N$,
+  The description of an AIR $cal(C)$ with $W$ columns and height $N$
   partitions its column indices as
   $[W] = J^"fix" union.sq J^"cach" union.sq J^"wit"$:
   + The _fixed columns_ $J^"fix"$, whose values are prescribed as part of the
-    description of $cal(C)$ and hence known to both the prover and the verifier.
+    description of $cal(C)$ and hence known to both the prover and the
+    verifier.
   + The _cached columns_ $J^"cach"$, whose values are computed once and
     reused across different proofs. Their values are not part of the
     description; instead, a commitment to them (@def:commitment) travels in
@@ -134,14 +87,79 @@ of type $tau$.
   submatrix of the columns in $J$.
 ] <def:columns>
 
-Each AIR type carries this data; we index it by the type, as in
-$J^"fix"_tau$, $bold(d)_tau$ and $gamma_tau$.
+#definition(title: "Value Classes")[
+  The description of an AIR $cal(C)$ with $V$ values partitions its value
+  indices as
+  $[V] = I^"pub" union.sq I^"pv" union.sq I^"air" union.sq I^"grp"$,
+  with $abs(I^"pub") = k$ and $abs(I^"pv") = k'$ for every AIR of a proof.
+  For values $bold(v)$ and a set of indices $I$ we write $bold(v)|_I$ for
+  the subvector of the coordinates in $I$.
+  + The _publics_ $bold(p)_"ext" := bold(v)|_(I^"pub") in cal(P)_"ext" := FF^k$, shared by all
+    instances and seen by the external verifier.
+  + The _proof values_ $bold(p)_"pv" := bold(v)|_(I^"pv") in cal(P)_"pv" := FF^(k')$, chosen by
+    the prover once per proof and shared by all instances, but not seen by
+    the external verifier.
+  + The _AIR values_ $bold(a) := bold(v)|_(I^"air")$ of an instance, chosen
+    by the prover for that instance.
+  + The _airgroup values_ $bold(s) := bold(v)|_(I^"grp")$ of an instance,
+    that its proof exposes and that are aggregated, with a fixed operation,
+    over all the instances of a group of chips called an _airgroup_.
+  The publics and the proof values form the _public statement_
+  $
+    bold(p) = (bold(p)_"ext", bold(p)_"pv") in cal(P) := cal(P)_"ext" times cal(P)_"pv".
+  $
+  Every AIR that takes part in a proof reads the whole public statement,
+  but the external verifier sees only $bold(p)_"ext"$: the proof values are
+  hidden by the root of the aggregation tree (@sec:system).
+  A _global constraint_ is a identity over the aggregated
+  airgroup values and the public statement, , checked once per proof rather than by any instance.
+] <def:proof-values>
+
+The AIRs of the ZisK chips, as modelled in this paper, read only the AIR
+values, the publics and the proof values; their constraints are
+therefore satisfied or not under a public statement $bold(p)$. Airgroup
+values are read only by the constraints that the proving system adds to
+every AIR to realize its interactions, whose coefficients include the challenges of the bus argument (#fwd(<sec:stark-bus>)[Part I]).
+
+#definition(title: "Interaction")[
+  An _interaction_ of an AIR $cal(C)$ on the bus $b in FF$ is a tuple
+  $iota = (b, m_iota, bold(e)_iota)$, where the _multiplicity_ $m_iota$ and
+  the _message_ components $e_(iota, 1), dots, e_(iota, ell_b)$ are
+  polynomials over $FF$ in the variables of $cal(C)$. Given a witness $w$ and a row
+  $r$, we write $m_iota (w, r) in FF$ and $bold(e)_iota (w, r) in FF^(ell_b)$
+  for their evaluations at row $r$. The set of bus identifiers in use is
+  $cal(B)$; every interaction on bus $b$ has the common message length
+  $ell_b$, and $ell := max_(b in cal(B)) ell_b$.
+] <def:interaction>
+
+#definition(title: "Chip")[
+  A _chip_ is a pair $(cal(C), cal(I))$ of an AIR $cal(C)$ and a finite set
+  $cal(I)$ of interactions of $cal(C)$.
+] <def:chips>
+
+A chip is the unit into which ZisK splits the work of the VM: the main loop,
+each memory region, each arithmetic unit and each precompile is a chip.
+Throughout, we fix a positive integer $M$ and an indexed family of chips
+$
+  frak(A) = { (cal(C)_tau, cal(I)_tau) }_(tau in [M]),
+$
+where $tau$ is the _type_ of the chip and $cal(C)_tau$ has height $N_tau$
+and parameters $W_tau$, $O_tau$ and $V_tau$. We write
+$cal(W)_tau := KK^(N_tau times W_tau) times KK^(V_tau)$ for the witness space
+of type $tau$.
+
+Each chip carries its column and value classes and its prescribed data;
+we index them by the type, as in $J^"fix"_tau$, $I^"air"_tau$, $bold(d)_tau$
+and $gamma_tau$.
 
 #definition(title: "Local Satisfaction")[
   For $tau in [M]$, $bold(p) = (bold(p)_"ext", bold(p)_"pv") in cal(P)$ and
-  $w = (bold(T), bold(a)) in cal(W)_tau$, the predicate $Local_tau (bold(p), w)$
+  $w = (bold(T), bold(v)) in cal(W)_tau$, the predicate $Local_tau (bold(p), w)$
   holds if and only if:
   + $w$ satisfies $cal(C)_tau$.
+  + The values carry the public statement:
+    $bold(v)|_(I^"pub"_tau) = bold(p)_"ext"$ and
+    $bold(v)|_(I^"pv"_tau) = bold(p)_"pv"$.
   + $bold(T)$ agrees with the prescribed data on the fixed columns:
     $T_j (r) = d_(tau, j)(r)$ for every $j in J^"fix"_tau$ and $r in [N_tau]$.
   + The cached columns open the commitment carried in $bold(p)_"ext"$:
@@ -149,13 +167,12 @@ $J^"fix"_tau$, $bold(d)_tau$ and $gamma_tau$.
     where $p_i$ is the $i$-th coordinate of $bold(p)_"ext"$.
 ] <def:local>
 
-Fixed columns are part of the description of $cal(C)_tau$, hence of the
-verification key of type $tau$. Cached columns are not: they are computed
+Fixed columns are part of the description of $cal(C)_tau$. Cached columns are not: they are computed
 once per program, committed with $Commit_"cach"$, and the commitment travels
 in the publics, where the description of $cal(C)_tau$ designates its
 coordinates. The program being executed is therefore bound through
-$bold(p)$ rather than hard-wired into the circuits: the program ROM
-and the boot state live in cached columns of the relevant AIR types, and whoever accepts a
+$bold(p)$ rather than hard-wired into the AIRs: the program ROM
+and the boot state live in cached columns of the relevant chips, and whoever accepts a
 Final proof for $bold(p)_"ext"$ must check that the cached commitments
 carried in $bold(p)_"ext"$ are those of the intended program.
 
@@ -178,10 +195,10 @@ witness.
 
 #definition(title: "Bus Fingerprint")[
   A _bus fingerprint_ $cal(F)$ consists of a finite _key space_ $cal(X)$, an
-  abelian group $cal(G)_(cal(F))$ of _values_, a class $cal(D)$ of _admissible_
+  abelian group $G_(cal(F))$ of _values_, a class $cal(D)$ of _admissible_
   nonzero $FF$-weighted multisets of messages, and, for every key
   $chi in cal(X)$, a map $cal(F)_chi$ from $FF$-weighted multisets of
-  messages to $cal(G)_(cal(F)) union {bot}$, such that:
+  messages to $G_(cal(F)) union {bot}$, such that:
   + (_Additivity_) $cal(F)_chi (0) = 0$, and
     $cal(F)_chi (D + D') = cal(F)_chi (D) + cal(F)_chi (D')$ whenever the
     right-hand side is defined;
@@ -201,7 +218,7 @@ witness.
     adversary.
   The _bus contribution_ of $w in cal(W)_tau$ under the key $chi$ is
   $
-    BusCont_chi (cal(I)_tau, w) := cal(F)_chi ("Msg"_tau (w)) in cal(G)_(cal(F)) union {bot}.
+    BusCont_chi (cal(I)_tau, w) := cal(F)_chi ("Msg"_tau (w)) in G_(cal(F)) union {bot}.
   $
 ] <def:fingerprint>
 
@@ -251,16 +268,19 @@ $abs(cal(G)(bold(p))) <= g$ for a constant $g$.
 Note that multiplicities are
 field elements: $Balanced_bold(p) (L)$ does not by itself assert that every message is
 sent and received the same number of times as integers, since $p$ copies of a
-message cancel. We return to this point in @rem:integer-balance.
+message cancel. We return to this point in #fwd(<rem:integer-balance>)[Part II].
 
 == Interfaces <sec:components>
 
-A _non-interactive argument system_ $Pi$ for a relation $cal(R)$ consists of a
-prover and a deterministic _verifier_ $V$, together with a verification key
-$vk_Pi$ produced at setup, where $V(vk_Pi, x, pi) in {0, 1}$ and the value $1$
-means that the proof $pi$ is accepted for the statement $x$. We write
-$V_X (x, pi) := V(vk_X, x, pi)$ for the verifier of the system attesting to the
-relation $cal(R)_X$, and keep the explicit form $V(vk, x, pi)$ where the key is
+A _non-interactive argument system_ $Pi = (prover, verifier)$ for a relation
+$cal(R)$ consists of a _prover_ $prover$, which on input a statement
+$bb(x)$ and a witness $bb(w)$ outputs a proof $pi <- prover(bb(x), bb(w))$,
+and a deterministic _verifier_ $verifier$, together with a verification key
+$vk_Pi$ produced at setup, where $verifier(vk_Pi, bb(x), pi) in {0, 1}$ and
+the value $1$ means that the proof $pi$ is accepted for the statement
+$bb(x)$. We write
+$verifier_X (bb(x), pi) := verifier(vk_X, bb(x), pi)$ for the verifier of the system attesting to the
+relation $cal(R)_X$, and keep the explicit form $verifier(vk, bb(x), pi)$ where the key is
 a variable. The relations of the next section (@sec:relations-def) refer to argument systems
 only through their verifiers, so the prover is never named again, and to the
 following fixed public maps only through their signatures. Their
@@ -285,26 +305,26 @@ commitments, in the following sense.
 
 The following interface elements are used throughout:
 - *Carriers.* A finite key space $cal(X)$ and an abelian group
-  $cal(G)_(cal(F))$ of fingerprint values (@def:fingerprint), and a finite
-  abelian _accumulator group_ $cal(G)_(cal(H))$.
+  $G_(cal(F))$ of fingerprint values (@def:fingerprint), and a finite
+  abelian _accumulator group_ $G_(cal(H))$.
 - *Trace commitment.* A deterministic commitment scheme $Com$ with message
   space $union.big_(tau in [M]) cal(W)_tau$ and commitment space ${0, 1}^*$.
-  A commitment $"com" = Commit(bold(T), bold(a))$ covers every column of the
-  trace and every AIR value. The argument system for an AIR type takes the key
+  A commitment $"com" = Commit(w)$ covers the trace and the AIR values of a
+  witness $w$. The argument system for a chip takes the key
   $chi in cal(X)$ as a public input, so the witness is key-independent.
 - *Cached-column commitment.* A deterministic commitment scheme $Com_"cach"$
-  with message space $union.big_(tau in [M]) FF^(N_tau times abs(J^"cach"_tau))$
+  with message space $union.big_(tau in [M]) KK^(N_tau times abs(J^"cach"_tau))$
   and commitment space $FF^m$. Its output for the cached columns of a type is
   not part of a verification key but of the public statement (@def:columns).
-- *Hash-to-group and multiset hash.* $h : [M] times {0,1}^* -> cal(G)_(cal(H))$
+- *Hash-to-group and multiset hash.* $h : [M] times {0,1}^* -> G_(cal(H))$
   maps a _typed commitment_ $(tau, "com")$ to a group element, and
   $
-    cal(H)(cal(S)) := sum_(x in "supp" cal(S)) mult_cal(S)(x) dot h(x) in cal(G)_(cal(H))
+    cal(H)(cal(S)) := sum_(x in "supp" cal(S)) mult_cal(S)(x) dot h(x) in G_(cal(H))
   $
   is the induced multiset hash on finite multisets $cal(S)$ of typed
   commitments, where $mult_cal(S)(x)$ is the multiplicity of $x$ in $cal(S)$.
   $cal(H)$ is additively homomorphic over multiset union.
-- *Key derivation.* $DeriveKey : cal(P) times cal(G)_(cal(H)) -> cal(X)$, a
+- *Key derivation.* $DeriveKey : cal(P) times G_(cal(H)) -> cal(X)$, a
   fixed public function of the public statement and the accumulated value.
 
 == Security Definitions <sec:definitions>
@@ -314,12 +334,12 @@ The following interface elements are used throughout:
   a relation $cal(R)$ is _knowledge-sound_ if there exists a PPT algorithm
   $cal(E)$, the _extractor_, such that for every PPT adversary $cal(A)$:
   $
-    Adv("ks", Pi)(cal(A)) := Pr[ & (x, pi) <- cal(A)(1^lambda); w <- cal(E)(x, pi) : V(vk_Pi, x, pi) = 1 and (x; w) in.not cal(R) ] <= negl(lambda),
+    Adv("ks", Pi)(cal(A)) := Pr[ & (bb(x), pi) <- cal(A)(1^lambda); bb(w) <- cal(E)(bb(x), pi) : verifier(vk_Pi, bb(x), pi) = 1 and (bb(x); bb(w)) in.not cal(R) ] <= negl(lambda),
   $
   the probability taken over the coins of $cal(A)$ and $cal(E)$ and the
   random oracles, to which all algorithms have access. We assume that the
-  running time of $cal(E)(x, pi)$ is at most $Time(cal(A)(1^lambda)) + poly(lambda)$
-  for every $cal(A)$ and every $(x, pi)$ in the support of $cal(A)$'s output:
+  running time of $cal(E)(bb(x), pi)$ is at most $Time(cal(A)(1^lambda)) + poly(lambda)$
+  for every $cal(A)$ and every $(bb(x), pi)$ in the support of $cal(A)$'s output:
   the extractor incurs an additive polynomial overhead over one evaluation of
   $cal(A)$. We call $Adv("ks", Pi)(cal(A))$ the _knowledge-soundness error_ of
   $cal(A)$ against $Pi$.
@@ -364,7 +384,7 @@ $Adv("bind", Com)(cal(A)) <= 2 dot Adv("ext", Com)(cal(D))$.
   The multiset hash $cal(H)$ is _preimage aware on multisets of cardinality
   below $2^B$_ @EC:DodRisShr09 if there is a PPT algorithm $cal(E)_(cal(H))$
   that, given a transcript $cal(T)$ of random-oracle queries and answers and a
-  value $y in cal(G)_(cal(H))$, outputs a multiset of typed commitments or
+  value $y in G_(cal(H))$, outputs a multiset of typed commitments or
   $bot$, such that for every PPT adversary $cal(A)$ that at some point during
   its execution announces a value $y$ and at the end outputs a multiset
   $cal(S)$,
@@ -378,7 +398,7 @@ $Adv("bind", Com)(cal(A)) <= 2 dot Adv("ext", Com)(cal(D))$.
 ] <def:cr>
 
 The definition mirrors @def:ext-com, with the accumulator in the role of the
-commitment: what is announced is a value of $cal(G)_(cal(H))$, and what is
+commitment: what is announced is a value of $G_(cal(H))$, and what is
 extracted is the small multiset the adversary later opens it to. The
 cardinality restriction is necessary for ZisK's accumulator group: $ZZ_p^n$
 has exponent $p$, so adding $p$ copies of any element to a multiset leaves
@@ -390,7 +410,7 @@ For LtHash, collision resistance on bounded multisets reduces to the
 short-integer-solution problem @STOC:Ajtai96 @ZISK:LTHASH; the reduction
 requires the inner digest of $h$ to be collision resistant on its own, which
 a single field element is not, so we assume the digest has at least
-$2 lambda$ bits (@sec:discussion). Preimage awareness, however, is not known
+$2 lambda$ bits (#fwd(<sec:discussion>)[Part IV]). Preimage awareness, however, is not known
 to follow from any standard assumption for an algebraic accumulator, and
 assuming it is the second idealization of @rem:idealized. It is nevertheless
 the property the analysis needs, and collision resistance alone would not do:
@@ -436,10 +456,10 @@ idealizations, which we make explicit.
   finding them protects the scheme, and recovering a multiset from its
   accumulator is a subset-sum problem, so no straight-line extractor is
   known; only collision resistance follows from standard assumptions.
-  @rem:forking discusses the rigorous alternative.
+  #fwd(<rem:forking>)[Part II] discusses the rigorous alternative.
 
   Third, while the analysis produces explicit advantage bounds and reduction
-  running times (@thm:main), the two idealizations mean that these should be
+  running times (#fwd(<thm:main>)[Part II]), the two idealizations mean that these should be
   read as statements about the reduction structure (the recursion topology is
   sound and the relations compose) rather than as a concrete security level.
 ] <rem:idealized>

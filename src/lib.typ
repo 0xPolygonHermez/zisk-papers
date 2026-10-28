@@ -1,11 +1,3 @@
-#let definition(body, title: none, numbered: true) = figure(
-  body,
-  kind: "theorem",
-  supplement: [Definition],
-  numbering: if numbered { "1" } else { none },
-  caption: if title != none { title } else { none },
-)
-
 #let remark(body, title: none, numbered: false) = figure(
   body,
   kind: "remark",
@@ -14,9 +6,7 @@
   caption: if title != none { title } else { none },
 )
 
-// Theorem-like environments. All share the "theorem" figure kind (and hence
-// one counter and the styling rule of the main file); `title` is rendered in
-// parentheses after the number.
+// Theorem-like environments.
 #let _thm(supplement) = (body, title: none, numbered: true) => figure(
   body,
   kind: "theorem",
@@ -24,6 +14,7 @@
   numbering: if numbered { "1" } else { none },
   caption: if title != none { title } else { none },
 )
+#let definition = _thm([Definition])
 #let theorem = _thm([Theorem])
 #let lemma = _thm([Lemma])
 #let proposition = _thm([Proposition])
@@ -67,9 +58,28 @@
 #let Com = math.sans("Com")
 #let Commit = math.sans("Commit")
 #let vk = math.sans("vk")
+#let prover = math.bold(math.upright("P"))
+#let verifier = math.bold(math.upright("V"))
+
+// Reference to a part of the paper that may not be included yet: shows the
+// reference if the label exists, and the fallback text otherwise.
+#let fwd(target, fallback) = context {
+  if query(target).len() > 0 { ref(target) } else { fallback }
+}
 #let DeriveKey = math.sans("DeriveKey")
 #let BusCont = math.upright("BusCont")
 #let Local = math.upright("Local")
 #let Bind = math.upright("Bind")
 #let Balanced = math.upright("Balanced")
 #let mult = math.upright("mult")
+
+// Placeholder for a section that is planned but not yet written.
+#let todo(body) = block(
+  width: 100%,
+  inset: 7pt,
+  radius: 2pt,
+  fill: luma(238),
+  stroke: 0.4pt + luma(170),
+  breakable: true,
+  text(size: 9pt, [*To do.* ] + body),
+)

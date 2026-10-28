@@ -59,13 +59,13 @@ An instruction executor may delegate part of its computation to other chips via 
         grid(
           columns: (auto, auto, auto),
           align: horizon,
-          chip, h(5pt) + lbl[#via →] + h(5pt), side-chip,
+          chip, h(5pt) + lbl[#via $arrow.r$] + h(5pt), side-chip,
         )
       }
     }
 
     // Downward arrow with bus label, indented to align with chip content
-    let dv(label) = pad(left: 9pt, lbl[↓ #label])
+    let dv(label) = pad(left: 9pt, lbl[$arrow.b$ #label])
 
     grid(
       columns: (auto, auto),
@@ -99,8 +99,8 @@ An instruction executor may delegate part of its computation to other chips via 
           pad(left: 6pt, stack(
             dir: ttb,
             spacing: 4pt,
-            lbl[Mem Bus →] + h(4pt) + tbl[*Memory*],
-            lbl[Table Bus 3→] + h(4pt) + tbl[*Keccak Tables*],
+            lbl[Mem Bus $arrow.r$] + h(4pt) + tbl[*Memory*],
+            lbl[Table Bus 3$arrow.r$] + h(4pt) + tbl[*Keccak Tables*],
           )),
         ),
       ),
@@ -292,7 +292,7 @@ The access path for a memory operation depends on its width and alignment, as sh
         spacing: 10pt,
         box_ex[*Memory User*],
         lbl[(aligned op)],
-        lbl[↓ Mem Bus],
+        lbl[$arrow.b$ Mem Bus],
         box_ex[*Memory*],
       ),
       h(32pt),
@@ -301,7 +301,7 @@ The access path for a memory operation depends on its width and alignment, as sh
         spacing: 10pt,
         box_ex[*Memory User*],
         lbl[(sub-word / unaligned)],
-        lbl[↓ Mem Bus],
+        lbl[$arrow.b$ Mem Bus],
         grid(
           columns: (auto, auto),
           align: (right + horizon, left + horizon),
@@ -309,11 +309,11 @@ The access path for a memory operation depends on its width and alignment, as sh
           pad(left: 6pt, stack(
             dir: ttb,
             spacing: 4pt,
-            lbl[Table Bus →] + h(4pt) + box_tbl[*MemAlign ROM*],
+            lbl[Table Bus $arrow.r$] + h(4pt) + box_tbl[*MemAlign ROM*],
           )),
         ),
         lbl[(aligned ops)],
-        lbl[↓ Mem Bus],
+        lbl[$arrow.b$ Mem Bus],
         box_ex[*Memory*],
       ),
     ))
@@ -398,7 +398,7 @@ $
 $
 where $"flags" = 1 + sum_k 2^k f_k$ packs the fifteen boolean fields $f_k$ of the instruction (source and store kinds, `store_pc`, `set_pc`, `m32`, `is_external_op` and `is_precompiled`). The constant $1$ makes every instruction distinct from the all-zero padding rows of the table.
 
-The Main chip sends one message per row, built from the instruction columns of that row; the Rom chip proves the program as a lookup table, with one row per instruction and a free multiplicity column. The Rom chip's table columns are _cached_ (@sec:arithmetization): they are committed once per program, and their Merkle root is the _program commitment_ $"root"_"ROM"$, a public input of every ZisK proof (@sec:zisk-statement). Balancing of the ROM bus therefore implies that the instruction executed at every Main row is the one stored at its program counter in the committed program.
+The Main chip sends one message per row, built from the instruction columns of that row; the Rom chip proves the program as a lookup table, with one row per instruction and a free multiplicity column. The Rom chip's table columns are _cached_ (@sec:arithmetization): they are committed once per program, and their Merkle root is the _program commitment_ $"root"_"ROM"$, one of the publics of every ZisK proof (@sec:zisk-statement). Balancing of the ROM bus therefore implies that the instruction executed at every Main row is the one stored at its program counter in the committed program.
 
 === Memory Bus <sec:memory-bus>
 

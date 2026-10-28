@@ -99,6 +99,8 @@
 ) = {
   set document(title: title, author: authors)
   set text(size: size, font: font)
+  // List markers available in every text font.
+  set list(marker: ([•], [–], [∗]))
 
   // Monospace for URL links only; internal cross-references keep the text font.
   show link: it => if type(it.dest) == str {

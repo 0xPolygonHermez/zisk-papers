@@ -51,11 +51,11 @@ Correctness of the assumed key $chi$ must be verified ---otherwise a malicious p
 Before describing the recursive verifiers, we make explicit what ZisK as a whole proves. Given a fixed program $P$, ZisK proves that there exists a successful execution of $P$ (@sec:execution_model), on some input and some hint stream, that declares a given list of public outputs. The data exposed to the verifier form the _external statement_ $bold(p)_"ext" in FF^(68)$:
 - the program commitment $"root"_"ROM" in FF^4$, the Merkle root of the Rom chip's cached columns, which hold the program code (@sec:rom-bus);
 - the $32$ public outputs $"out"_0, dots, "out"_(31) in [0, 2^(64))$ of @sec:public-outputs, each as two $32$-bit limbs (@sec:word-encoding), for $64$ field elements.
-Everything else ---the input, the hints, the intermediate states of the execution--- stays inside the prover. A proof additionally carries $8$ _proof values_ $phi in FF^8$: boolean flags, chosen by the prover, that switch on the genesis anchors of the optional AIRs (the ROM data and input data regions and the DMA variants, @sec:continuation-bus). They are not part of the external statement, but every node of the recursion carries them together with it, so we call the pair $bold(p) = (bold(p)_"ext", phi)$ the _public statement_ of the tree, following the security analysis @ZISK:RECURSION.
+Everything else ---the input, the hints, the intermediate states of the execution--- stays inside the prover. A proof additionally carries $8$ _proof values_ $bold(p)_"pv" in FF^8$: boolean flags, chosen by the prover, that switch on the genesis anchors of the optional AIRs (the ROM data and input data regions and the DMA variants, @sec:continuation-bus). They are not part of the external statement, but every node of the recursion carries them together with it, so we call the pair $bold(p) = (bold(p)_"ext", bold(p)_"pv")$ the _public statement_ of the tree, following the security analysis @ZISK:RECURSION.
 
 These publics are bound to the execution by two mechanisms. The program commitment is the root of a commitment that the Rom AIR's proof opens, so every instruction fetched on the ROM Bus belongs to the program committed by $"root"_"ROM"$ (@sec:rom-bus). The public outputs are bound through _global messages_: messages that no AIR emits, but that the system as a whole adds to the buses as a function of $bold(p)$. We write $cal(G)(bold(p))$ for the multiset of global messages of $bold(p)$. It contains
 - the $32$ messages $(mono("pubout"), i, 0, "out"_(i,0), "out"_(i,1), "out"_(i,0), "out"_(i,1))$ received on the Operation Bus for $i in [0, 32)$, where $("out"_(i,0), "out"_(i,1))$ are the limbs of $"out"_i$. The only sender of `pubout` messages is the Main chip, at the `pubout` instructions of the epilogue, so balancing the Operation Bus forces the execution to declare exactly the outputs in $bold(p)_"ext"$;
-- the genesis and terminus anchors of the continuation buses (@sec:continuation-bus), the optional ones gated by $phi$;
+- the genesis and terminus anchors of the continuation buses (@sec:continuation-bus), the optional ones gated by $bold(p)_"pv"$;
 - the initialisation of the registers on the Memory Bus (@sec:registers).
 
 The execution is split into segments and proved piecewise (@def:segmentation): given ZisK's circuit $cal(C) = {(cal(A)_tau, cal(I)_tau)}_(tau=1)^M$ (@tbl:chip-inventory), each segment is a witness for one of the AIRs $cal(A)_tau$. The segments are stitched together by global bus balancing ---which includes the continuation buses of @sec:continuation-bus and the global messages $cal(G)(bold(p))$--- under the key $chi$ derived from the statement and the prover's commitments as described in @sec:challenge-derivation.
@@ -201,14 +201,14 @@ The aggregated challenge contribution $bold(c)$ is exactly the multiset-homomorp
 
 === Final Verifier
 
-The _Final Verifier_ sits above the aggregation tree. It takes the topmost proof of the tree as its single child, verifies it with the same dispatch as an aggregation verifier, and enforces the global checks. It also closes the recursion loop on $"vk"$: it hard-codes the actual verification key $"vk"_"AGG"$ of the aggregation verifier and verifies its child on a statement that carries this constant, which binds the child's declared $"vk"$ to it. After this point the recursive statement, the key and the proof values have served their purpose: they are witnesses of the Final Verifier, and only the external statement $bold(p)_"ext"$ remains visible to an external verifier. With $bold(p) := (bold(p)_"ext", phi)$,
+The _Final Verifier_ sits above the aggregation tree. It takes the topmost proof of the tree as its single child, verifies it with the same dispatch as an aggregation verifier, and enforces the global checks. It also closes the recursion loop on $"vk"$: it hard-codes the actual verification key $"vk"_"AGG"$ of the aggregation verifier and verifies its child on a statement that carries this constant, which binds the child's declared $"vk"$ to it. After this point the recursive statement, the key and the proof values have served their purpose: they are witnesses of the Final Verifier, and only the external statement $bold(p)_"ext"$ remains visible to an external verifier. With $bold(p) := (bold(p)_"ext", bold(p)_"pv")$,
 $
   cal(R)_"FINAL" = lr(
     {
       cases(
         delim: #none,
         ,
-        bold(p)_"ext" \; (phi, chi, sigma, pi),
+        bold(p)_"ext" \; (bold(p)_"pv", chi, sigma, pi),
         ,
       )
       mid(|)
@@ -378,10 +378,10 @@ $
 $
 and the collection is _balanced for_ $bold(p)$, written $Balanced_bold(p) (L)$, if $sum_i "Msg"_(tau_i)(w_i) + cal(G)(bold(p)) = 0$: every message, counting the global messages of @sec:zisk-statement, is sent and received with the same total multiplicity. This is the bus-balancing condition of @def:bus-balancing, extended with the global messages.
 
-#definition(title: "Bounded global satisfiability")[
-  With $bold(p) := (bold(p)_"ext", phi)$, the _target relation_ of ZisK's recursion is
+#definition(title: "Bounded Global Satisfiability")[
+  With $bold(p) := (bold(p)_"ext", bold(p)_"pv")$, the _target relation_ of ZisK's recursion is
   $
-    (bold(p)_"ext"; (phi, L)) in cal(R)_"ZisK"
+    (bold(p)_"ext"; (bold(p)_"pv", L)) in cal(R)_"ZisK"
     <=>
     cases(
       1 <= abs(L) < 2^B\,,
@@ -393,7 +393,7 @@ and the collection is _balanced for_ $bold(p)$, written $Balanced_bold(p) (L)$, 
 
 The relation has the same statement as the Final relation, the external statement $bold(p)_"ext"$, and its three conjuncts are exactly what the recursion adds to the individual AIR proofs: a bound on the number of segments, one common public statement, and global bus balancing. The bus argument enters through the following bound for the LogUp sum of @sec:logup-reduction, which for a multiset $D$ of messages under the key $chi = (alpha, gamma)$ we write $cal(F)_chi (D) := sum_((b, v)) D(b, v) \/ (alpha + hat(e)_gamma (b, v))$, with $hat(e)_gamma$ the compression of @def:compressed-interaction-value.
 
-#lemma(title: [LogUp soundness @ZISK:RECURSION])[
+#lemma(title: [LogUp Soundness @ZISK:RECURSION])[
   Let $D != 0$ be an $FF$-weighted multiset of at most $Lambda$ messages of length at most $ell$. For $chi = (alpha, gamma)$ uniform in $KK^2$,
   $
     Pr_chi [cal(F)_chi (D) = 0] <= frac(ell dot binom(Lambda, 2) + Lambda - 1, abs(KK)).
@@ -402,8 +402,8 @@ The relation has the same statement as the Final relation, the external statemen
 
 The first term bounds the probability that two distinct messages collide under the compression, and the second the number of roots in $alpha$ of the resulting nonzero rational identity. Since a fixed but unbalanced collection would pass the root check $s + s_"glob" = 0$ only if $cal(F)_chi$ vanished on its nonzero signed multiplicity, the lemma is what turns the root check into balance, provided the key is independent of the collection. This independence is what the derivation of $chi$ from the typed commitments (@sec:challenge-derivation) provides.
 
-#theorem(title: [Correct-witness extractability @ZISK:RECURSION])[
-  Model Poseidon2, and with it $h$, $DeriveKey$ and the trace commitment, as a random oracle, and assume that straight-line knowledge extraction composes across the layers of the tree and that the multiset hash $cal(H)$ is preimage aware on multisets of fewer than $2^B$ elements. Then there is an extractor that, from any accepting Final proof for $bold(p)_"ext"$, outputs $(phi, L)$ with $(bold(p)_"ext"; (phi, L)) in cal(R)_"ZisK"$, except with probability at most
+#theorem(title: [Correct-Witness Extractability @ZISK:RECURSION])[
+  Model Poseidon2, and with it $h$, $DeriveKey$ and the trace commitment, as a random oracle, and assume that straight-line knowledge extraction composes across the layers of the tree and that the multiset hash $cal(H)$ is preimage aware on multisets of fewer than $2^B$ elements. Then there is an extractor that, from any accepting Final proof for $bold(p)_"ext"$, outputs $(bold(p)_"pv", L)$ with $(bold(p)_"ext"; (bold(p)_"pv", L)) in cal(R)_"ZisK"$, except with probability at most
   $
     & epsilon_"ks" (Pi_"FINAL") + (kappa_"max" - 1) dot epsilon_"ks" (Pi_"AGG") + kappa_"max" dot max_tau epsilon_"ks" (Pi_"LEAF"^((tau))) + kappa_"max" dot max_tau epsilon_"ks" (Pi_"AIR"^((tau))) \
     & + (Q + 1) dot frac(ell dot binom(Lambda_"max", 2) + Lambda_"max" - 1, abs(KK)) + epsilon_"pa" (cal(H)) + epsilon_"ext" (Commit),
