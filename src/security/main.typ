@@ -135,7 +135,11 @@
 
 // Make top-level outline entries bold
 #show outline.entry.where(level: 1): it => {
-  strong(it)
+  if it.element.supplement == [Part] {
+    block(above: 1.3em, below: .8em, text(size: 1.12em, strong(it)))
+  } else {
+    strong(it)
+  }
 }
 
 // Remove background fill from top-level outline entries
@@ -148,7 +152,8 @@
 // on a new page.
 #let part(label-name, title) = {
   pagebreak(weak: true)
-  [#heading(level: 1, numbering: none, outlined: true, title) #label(label-name)]
+  show heading: it => block(above: 20pt, below: 14pt, text(size: 16pt, weight: "bold", it.body))
+  [#heading(level: 1, numbering: none, outlined: true, supplement: [Part], title) #label(label-name)]
 }
 
 = Introduction <sec:introduction>
@@ -177,12 +182,7 @@
 
 #include "contents/part1/theorem.typ"
 
-// Parts II-IV are not part of this version yet; they are kept here, commented
-// out, to be restored as they are completed.
-/*
 #part("part:recursion", [Part II: Recursion])
-
-= Overview of the Recursion Analysis <sec:recursion-overview>
 
 #include "contents/part2/overview.typ"
 
@@ -198,6 +198,9 @@
 
 #include "contents/part2/theorem.typ"
 
+// Parts III-IV are not part of this version yet; they are kept here, commented
+// out, to be restored as they are completed.
+/*
 #part("part:semantics", [Part III: Semantics])
 
 = The Execution Relation <sec:exec-relation>
