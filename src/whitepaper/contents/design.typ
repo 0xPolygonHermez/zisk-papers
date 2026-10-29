@@ -1,19 +1,19 @@
 #import "../../lib.typ": definition
 
-We describe the circuit architecture that constitutes the ZisK zkVM. The previous sections established the building blocks: the ISA defines what programs can run (@sec:isa), and the arithmetization framework defines how computations are represented as polynomial constraints (@sec:arithmetization). Here we describe how ZisK instantiates that framework into a concrete system.
+We describe the architecture of chips that constitutes the ZisK zkVM. The previous sections established the building blocks: the ISA defines what programs can run (@sec:isa), and the arithmetization framework defines how computations are represented as polynomial constraints (@sec:arithmetization). Here we describe how ZisK instantiates that framework into a concrete system.
 
 #definition(title: "ZisK")[
   Given the ZisK ISA, the _ZisK zkVM_ is the collection of:
   + A host execution environment capable of executing every ZisK instruction.
-  + A circuit $cal(C)$ (as in @sec:arithmetization) that constrains a finite sequence of guest state transitions to be valid with respect to a public commitment to a program ROM and an initial guest state. The circuit exposes the final guest public outputs as a public output.
+  + A family of chips $frak(A)$ (@sec:circuits-and-balancing) that constrains a finite sequence of guest state transitions to be valid with respect to a public commitment to a program ROM and an initial guest state, and exposes the final guest public outputs as public values.
   + Methods to generate the trace matrices from the guest state transitions necessary to generate a proof for $cal(C)$.
 ]
 
-ZisK's circuit supports only a finite sequence of state transitions, whereas program execution is a priori unbounded. Fixing a single large trace height upfront is impractical: the height would have to be chosen conservatively enough to accommodate every possible program, inflating proof costs even for short executions, while still failing for programs that exceed it. _Continuations_ resolve this tension by organizing and partitioning the execution trace into fixed-height segments, each proved independently. We describe how ZisK implements this mechanism in @sec:continuations.
+An AIR instance covers only a finite sequence of state transitions, whereas program execution is a priori unbounded. Fixing a single large trace height upfront is impractical: the height would have to be chosen conservatively enough to accommodate every possible program, inflating proof costs even for short executions, while still failing for programs that exceed it. _Continuations_ resolve this tension by organizing and partitioning the execution trace into fixed-height segments, each proved independently. We describe how ZisK implements this mechanism in @sec:continuations.
 
 == Architecture Overview
 
-The ZisK circuit is organized into _chips_, where each chip encapsulates a single AIR together with the methods to generate its trace matrix. Chips fall into two categories:
+ZisK is organized into _chips_, where each chip encapsulates an AIR, with its interactions, together with the methods to generate its trace matrix. Chips fall into two categories:
 
 - *Instruction executor*: Owns the execution logic for a subset of the ZisK ISA. Each instruction is handled by exactly one chip, though a chip may handle multiple related instructions.
 
@@ -116,9 +116,9 @@ An instruction executor may delegate part of its computation to other chips via 
 
 === Chip Inventory <sec:chip-inventory>
 
-@tbl:chip-inventory instantiates the abstract circuit $cal(C) = {(cal(A)_i, cal(I)_i)}_(i=1)^M$ of @sec:arithmetization for ZisK: it lists every AIR of the circuit together with its trace height $N_i$, its category, and what it proves. There are $M = 35$ AIRs. Several chips are realised by more than one AIR ---the Memory chip by one AIR per address region, the DMA precompile by twelve AIRs specialised by operation--- so the formal objects are the AIRs, and "chip" is a grouping used for exposition. Recall that the opcode handled by each instruction executor is listed in @appendix:opcodes.
+@tbl:chip-inventory lists the family of chips $frak(A) = {(cal(C)_tau, cal(I)_tau)}_(tau in [M])$ of @sec:circuits-and-balancing: every AIR of ZisK together with its trace height $N_i$, its category, and what it proves. There are $M = 35$ AIRs. Several chips are realised by more than one AIR ---the Memory chip by one AIR per address region, the DMA precompile by twelve AIRs specialised by operation--- so the formal objects are the AIRs, and "chip" is a grouping used for exposition. Recall that the opcode handled by each instruction executor is listed in @appendix:opcodes.
 
-The circuit is fixed: every AIR is part of every ZisK proof's setup. What varies between executions is the number of _instances_ of each AIR, i.e. the number of segments into which its trace is split (@sec:continuations). An execution uses $ceil(n_i \/ N_i)$ instances of AIR $i$, where $n_i$ is the number of rows its workload requires, and none at all of an AIR whose operations never occur. Main and Mem are the exception: their continuation chains are anchored unconditionally (@sec:continuation-bus), so every execution instantiates each of them at least once.
+The family is fixed: every AIR is part of every ZisK proof's setup. What varies between executions is the number of _instances_ of each AIR, i.e. the number of segments into which its trace is split (@sec:continuations). An execution uses $ceil(n_i \/ N_i)$ instances of AIR $i$, where $n_i$ is the number of rows its workload requires, and none at all of an AIR whose operations never occur. Main and Mem are the exception: their continuation chains are anchored unconditionally (@sec:continuation-bus), so every execution instantiates each of them at least once.
 
 #figure(
   {
@@ -190,14 +190,14 @@ The circuit is fixed: every AIR is part of every ZisK proof's setup. What varies
       [precompile],
       [the partial head and tail words of a bulk operation],
 
-      [SpecifiedRanges], [20], [table], [every range-check table of the circuit],
+      [SpecifiedRanges], [20], [table], [every range-check table of ZisK],
       [VirtualTable0, VirtualTable1],
       [21],
       [table],
       [the fixed lookup tables of the executors and precompiles (binary, binary extension, arithmetic, Keccak, MemAlign and DMA tables, dual-byte ranges) and the frequent-operation caches of @sec:freq-op-caches, packed into two AIRs],
     )
   },
-  caption: [The $M = 35$ AIRs of the ZisK circuit. Rows that list several AIRs share the trace height shown.],
+  caption: [The $M = 35$ AIRs of ZisK. Rows that list several AIRs share the trace height shown.],
   kind: table,
 ) <tbl:chip-inventory>
 
@@ -231,7 +231,7 @@ For a read $v = v_"prev"$; for a write $v_"prev"$ is a free column. The chain of
 
 ==== Timestamps <sec:timestamps>
 
-The circuit arithmetization does not inherently represent temporal order. On the other hand, the execution of instructions is inherently sequential. To encode it, ZisK discretizes time by attaching a _timestamp_ to every memory access, so that the memory consistency argument can verify that reads always observe the most recent write to each address.
+The arithmetization does not inherently represent temporal order. On the other hand, the execution of instructions is inherently sequential. To encode it, ZisK discretizes time by attaching a _timestamp_ to every memory access, so that the memory consistency argument can verify that reads always observe the most recent write to each address.
 
 Time is organized at two granularities. A _main step_ $t in [0, 2^(36))$ indexes one full instruction execution by the Main. Within the $j$-th Main segment ($j = 0, 1, dots$; @sec:continuations) the row $r in [0, N)$ executes step
 $
@@ -261,7 +261,16 @@ To enforce correctness, all operations of a region are sorted globally by addres
   - _Input data_ (InputData): there are no writes; the value of each address is a prover-supplied constant shared by every access to it, and its four $16$-bit chunks are range-checked. The only exception is the _free-input port_, the first word of the region, whose value may differ at every read: it is the channel through which hints are delivered (@sec:inputs_and_hints).
 - _Region bounds_: the first address of the region's trace is at least the region's base address and the last one at most its end address.
 
-Each address is therefore a contiguous block of rows ordered in time, and the value continuity checks pin the value of every read to the most recent write of the same block. The connection with the requesters is a _permutation_ argument on the Memory Bus (@appendix:arguments): the multiset of operations proved by the Memory AIRs must equal the multiset of operations submitted by the rest of the chips. The trace of each region may span several segments; consecutive segments are chained by a continuation bus (@sec:continuation-bus) so that the sorted order, and with it the checks above, holds across segment boundaries.
+Each address is therefore a contiguous block of rows, ordered in time in the RAM region, and the value continuity checks pin the value of every read to the most recent write of the same block. Formally, an _access_ is a tuple $("wr", "addr", t_"mem", v)$ of a write flag, a word address, a memory step and a value $v in [0, 2^(64))$, and the rows of a region form a log in the following sense.
+
+#definition(title: "Access Log")[
+  A _log_ of a region is a finite sequence of accesses at word addresses of the region, each marked _submitted_ or not, whose addresses do not decrease. For every access $("wr", "addr", t_"mem", v)$, with predecessor $("wr"', "addr"', t'_"mem", v')$ (none for the first access), the address is _new_ if there is no predecessor or $"addr" > "addr"'$, and:
+  + _RAM._ If the address is new, a read returns $v = 0$. Otherwise $t_"mem" > t'_"mem"$ for a write and $t_"mem" >= t'_"mem"$ for a read, and a read returns $v = v'$. Every write is submitted.
+  + _ROM data._ If the address is new, the access is a write if it is submitted and has $v = 0$ otherwise. Otherwise it is a read and returns $v = v'$. Memory steps are not constrained.
+  + _Input data._ Every access is a read. If the address is not new and is not the free-input port, it returns $v = v'$. Memory steps are not constrained.
+] <def:access-log>
+
+The Memory AIRs of a region hold one log of the region across all their segments, which are chained by a continuation bus (@sec:continuation-bus) so that the sorted order, and with it the checks above, holds across segment boundaries; the first address of the log is at least the base address of the region and the last one at most its end address. The submitted accesses are the aligned operations that the Memory AIRs prove on the Memory Bus, and the connection with the requesters is a _permutation_ argument (@appendix:arguments): the multiset of operations proved by the Memory AIRs must equal the multiset of operations submitted by the rest of the chips. The consequence that matters, _memory consistency_ ---every read of an execution returns the value of the last write before it at its address, or the initial value of the region--- follows from the log together with this permutation; the security analysis @ZISK:RECURSION proves it as the offline memory check.
 
 ==== Memory Access Paths
 
@@ -434,7 +443,7 @@ The remaining buses connect executor and precompile chips to fixed tables, which
       [Keccak-f table], [the bit-sliced Keccak-f round functions], [Keccakf],
       [DMA tables], [DMA micro-program, partial-word patterns and byte comparisons], [DMA chips],
       [Dual range tables], [pairs of values in $[0, 2^7)$, resp. $[0, 2^8)$], [MemAlign, DMA chips],
-      [Range checks], [one bus per range $[x, y]$ used in the circuit], [all chips],
+      [Range checks], [one bus per range $[x, y]$ used by some chip], [all chips],
     )
   },
   caption: [Table buses of ZisK. The frequent-operation caches of @sec:freq-op-caches are also fixed tables, but they receive on the Operation Bus instead of a bus of their own.],
@@ -442,3 +451,14 @@ The remaining buses connect executor and precompile chips to fixed tables, which
 ) <tbl:table-buses>
 
 Finally, a few buses are internal to a single chip: the DMA chips use a permutation bus to hand a bulk operation from the front-end AIR to its head-and-tail AIR, and Blake2br uses a permutation bus to apply its message permutation. Neither carries messages from outside the chip.
+
+=== Meaning of the Buses <sec:bus-meaning>
+
+Balancing a bus states only that its messages are sent and received with equal total multiplicities. What a message _means_ is a contract between the chips on the bus. A chip _proves_ a message when it adds it to the bus as a provider ---the receiving side of a lookup, or the side of a permutation that holds the data--- and _assumes_ it when it relies on it, as the Main chip relies on the results of the operations it delegates. Every chip that proves a message on a bus must establish the contract of that bus by its own constraints, and every chip that assumes a message may take the contract for granted: balancing pairs every assumed message with a proved one. The contracts of ZisK are the following.
+
+- *Operation Bus.* A message $("op", a_0, a_1, b_0, b_1, c_0, c_1, "flag", t, x, "extra")$ states that, for $a = a_0 + 2^(32) a_1$, $b = b_0 + 2^(32) b_1$ and $c = c_0 + 2^(32) c_1$, $(c, "flag") = "op"(a, b)$ as specified in @appendix:opcodes, and that $c_0, c_1 in [0, 2^(32))$ whenever $a_0, a_1, b_0, b_1 in [0, 2^(32))$ (@sec:word-encoding). For a precompile it states moreover that the chip makes on the Memory Bus, at the memory steps $1 + 4 t + 2$ and $1 + 4 t + 3$, exactly the reads and writes of the operation's memory effect with extended argument $x$. For `pubout` the contract is instead that $b$ is the public output of index $a$: its only prover is the global message of the public statement (@sec:zisk-statement).
+- *ROM Bus.* A message $("pc", dots, "flags")$ states that the instruction of the committed program at address $"pc"$ has the fields of the message.
+- *Table buses.* A message is a row of its table; on a range bus, the value lies in the range.
+- *Memory Bus and continuation buses.* These carry no contract. Their meaning comes from counting: balancing states that the multiset of messages assumed equals the multiset of messages proved, and the access log (@def:access-log) and the boundary equations (@sec:continuation-bus) turn this equality into memory consistency and into the chaining of segments.
+
+The contracts are relied on without cycles, at the level of operations. The Main chip assumes operation results and ROM entries. On the Operation Bus, two chips also assume operations, of kinds they do not prove: Arith assumes the comparisons it delegates to Binary, and the DMA front-ends assume the internal operations of the DMA workers; the chips that prove these internal operations assume no operation. The operation and precompile chips further assume table rows and memory accesses, and the tables, the Rom chip and the global messages assume nothing. Since no proof of a message relies, even indirectly, on a message of its own kind, balancing transfers every contract from the chips that prove it to the chips that assume it.

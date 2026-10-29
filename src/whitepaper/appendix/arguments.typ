@@ -2,7 +2,7 @@
 
 This appendix gives the formal statements of the argument types used in ZisK's arithmetization framework. All are realised through the same bus-balancing primitive of @sec:circuits-and-balancing ---one or more sender interactions with positive multiplicity, one or more receiver interactions with negative multiplicity, on a shared bus--- but they differ in the semantic relationship they enforce on the messages.
 
-Throughout this appendix we fix a circuit $cal(C) = {(cal(A)_i, cal(I)_i)}_(i=1)^M$ with witnesses ${(bold(T)_i, bold(a)_i)}_(i=1)^M$, and we write $m(r), bold(e)(r) in FF^ell$ for the row-$r$ evaluation of an interaction $(b, m, bold(e))$ under its witness.
+Throughout this appendix we fix the chips $(cal(C)_i, cal(I)_i)$, $i in [M]$, of ZisK, with witnesses ${(bold(T)_i, bold(a)_i)}_(i=1)^M$, and we write $m(r), bold(e)(r) in FF^ell$ for the row-$r$ evaluation of an interaction $(b, m, bold(e))$ under its witness.
 
 == Permutation Argument
 
@@ -40,14 +40,14 @@ A _range check argument_ enforces that an expression takes values in a bounded i
   $
 ]
 
-In practice ZisK shares each range-check table across the entire circuit: a single $[x, y]$ table absorbs queries from every AIR that needs that range, so the marginal cost of a range check is one row of querying plus one row of multiplicity bookkeeping in the shared table.
+In practice ZisK shares each range-check table across all the chips: a single $[x, y]$ table absorbs queries from every AIR that needs that range, so the marginal cost of a range check is one row of querying plus one row of multiplicity bookkeeping in the shared table.
 
 == Copy Argument
 
 A _copy argument_ asserts that a designated set of cells in a single AIR's trace hold equal values. It is the wiring primitive used inside an AIR to relate values that must coincide but live in different rows or columns ---for instance, feeding the output of one row back as the input of a later row, or forcing two columns to agree on a shared intermediate value.
 
 #definition(numbered: false, title: "Copy Argument")[
-  Let $cal(A)$ be an AIR with witness $(bold(T), bold(a))$, and let $C = { (r_1, j_1), dots, (r_q, j_q) }$ be a finite set of _cell coordinates_ in $bold(T)$, each $(r, j)$ identifying the cell at row $r$ of column $j$. Let ${C_1, dots, C_t}$ be a partition of $C$ into _equivalence classes_. A _copy argument_ for $(C, {C_ell})$ enforces:
+  Let $cal(C)$ be an AIR with witness $(bold(T), bold(a))$, and let $C = { (r_1, j_1), dots, (r_q, j_q) }$ be a finite set of _cell coordinates_ in $bold(T)$, each $(r, j)$ identifying the cell at row $r$ of column $j$. Let ${C_1, dots, C_t}$ be a partition of $C$ into _equivalence classes_. A _copy argument_ for $(C, {C_ell})$ enforces:
   $
     forall ell in [t], forall (r, j), (r', j') in C_ell : T_(j,r) = T_(j',r').
   $

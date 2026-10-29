@@ -105,14 +105,14 @@ The prover then partitions each chip's trace independently into consecutive segm
   ],
 ) <fig:padding>
 
-We now make the segmentation precise. Fix an execution $S_0, dots, S_T$ of a program (@sec:execution_model). Every step $t$ contributes a deterministic sequence of rows to some of the AIRs of the circuit (@tbl:chip-inventory): one row to Main, one row to the chip in charge of its opcode if the operation is delegated, as many rows as the operation needs to a precompile, and one row per memory access to the Memory AIR of the accessed region (possibly through MemAlign). For each AIR $cal(A)_i$, the concatenation of these rows over all steps, sorted by address and memory step for the Memory AIRs, is the _global trace_ $bold(T)_i^"glob"$ of $cal(A)_i$.
+We now make the segmentation precise. Fix an execution $S_0, dots, S_T$ of a program (@sec:execution_model). Every step $t$ contributes a deterministic sequence of rows to some of the AIRs of ZisK (@tbl:chip-inventory): one row to Main, one row to the chip in charge of its opcode if the operation is delegated, as many rows as the operation needs to a precompile, and one row per memory access to the Memory AIR of the accessed region (possibly through MemAlign). For each AIR $cal(C)_i$, the concatenation of these rows over all steps, sorted by address and memory step for the Memory AIRs, is the _global trace_ $bold(T)_i^"glob"$ of $cal(C)_i$.
 
 #definition(title: "Segmentation")[
-  Let $N_i$ be the trace height of AIR $cal(A)_i$. The _segmentation_ of an execution splits every global trace into consecutive slices of $N_i$ rows,
+  Let $N_i$ be the trace height of AIR $cal(C)_i$. The _segmentation_ of an execution splits every global trace into consecutive slices of $N_i$ rows,
   $
     bold(T)_i^"glob" = bold(T)_(i, 0) || bold(T)_(i, 1) || dots || bold(T)_(i, m_i - 1), quad m_i = ceil(abs(bold(T)_i^"glob") \/ N_i),
   $
-  where only the last slice is padded to $N_i$ rows ($m_i = 0$ if $bold(T)_i^"glob"$ is empty). A _segment_ is one such slice $bold(T)_(i, j)$, together with its AIR values $bold(a)_(i, j)$; it is a witness for $cal(A)_i$ (@sec:arithmetization), proved on its own. Its AIR values include the segment index $j$, a flag indicating whether $j = m_i - 1$, and the _boundary payloads_ $B^"in"_(i, j)$ and $B^"out"_(i, j)$ that summarise the state of the chip at the start and at the end of the segment (@sec:continuation-bus).
+  where only the last slice is padded to $N_i$ rows ($m_i = 0$ if $bold(T)_i^"glob"$ is empty). A _segment_ is one such slice $bold(T)_(i, j)$, together with its AIR values $bold(a)_(i, j)$; it is a witness for $cal(C)_i$ (@sec:arithmetization), proved on its own. Its AIR values include the segment index $j$, a flag indicating whether $j = m_i - 1$, and the _boundary payloads_ $B^"in"_(i, j)$ and $B^"out"_(i, j)$ that summarise the state of the chip at the start and at the end of the segment (@sec:continuation-bus).
 ] <def:segmentation>
 
 For the Main chip, segment $j$ covers exactly the steps $t in [j N, (j + 1) N)$, with $N = N_"Main"$: as recalled in @sec:timestamps, the AIR reconstructs the step of each row from the segment index $j$, so the assignment of steps to Main segments is enforced by the constraints. For every other chip, the partition is by row count and does not align with step boundaries. This is why cross-segment consistency in ZisK is not an equality of whole VM states between consecutive segments, as in the standard approach, but decomposes into per-chip boundary payloads (@sec:continuation-bus).
