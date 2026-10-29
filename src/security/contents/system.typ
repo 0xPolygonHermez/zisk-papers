@@ -17,9 +17,9 @@ and Part III gives the result its meaning in terms of program execution.
 A ZisK proof is a tree. Its leaves are the AIR instances of an execution: for
 each type $tau in [M]$ the prover produces some number of witnesses in
 $cal(W)_tau$, one per segment of that type, and proves each with an argument
-system for the AIR of the type. Directly above every AIR proof sits a _leaf
-verifier_, which verifies the AIR proof and re-exposes its statement
-in a common format. Above the leaf verifiers, _aggregation nodes_ have $A$
+system for the AIR of the type. Above every AIR proof sits a _leaf
+verifier_, which verifies the AIR proof, possibly through a compressor
+(below), and re-exposes its statement in a common format. Above the leaf verifiers, _aggregation nodes_ have $A$
 child slots each, where $A$ is the aggregation arity. A slot holds either a child proof or a _null child_, a
 placeholder that is not verified and contributes nothing, and at least two
 slots of every aggregation node hold proofs. The tree need not be balanced,
@@ -31,6 +31,14 @@ three leaves. The leaf verifiers, the aggregation nodes and the Final
 Verifier are the _recursive verifiers_: each is itself an AIR, whose
 constraints encode a verifier, and is proved with the same argument system as
 the chips (#fwd(<sec:stark>)[Part I]).
+
+ZisK may also insert a _compressor_ above an AIR proof: a recursive verifier
+that verifies that proof and re-exposes its statement unchanged, so that the
+statement is re-proved at a different rate or with a smaller verifier
+(@def:r-comp); ZisK does so for the AIR proofs of some chips, between them
+and their leaf verifiers. A compressor changes no statement, so the analysis treats a compressed proof as a proof
+of the argument it compresses, at the cost of one more term in the
+knowledge-soundness error (#fwd(<lem:compressor>)[Part I]).
 
 Three quantities travel up the tree and are combined at every aggregation
 node: the number of leaves, an accumulation of the leaves' commitments, and an
@@ -63,30 +71,37 @@ this is why the accumulators below are commutative monoids.
     let agg-stroke = rgb("a84444")
     let root-fill = rgb("c8e6e0")
     let root-stroke = rgb("2e7d6e")
+    let comp-fill = rgb("ece4f7")
+    let comp-stroke = rgb("6b4fa0")
+    let comp-dash = (dash: "dashed", paint: comp-stroke, thickness: 0.5pt)
+    let arr-dash = (dash: "dashed", paint: luma(80), thickness: 0.5pt)
     let arr = 0.5pt + luma(80)
-    let dash = (dash: "dashed", paint: luma(130), thickness: 0.4pt)
 
     let box(f, s, w, h) = (fill: f, stroke: 0.5pt + s, width: w, height: h, inset: 3pt, corner-radius: 2pt)
     let agg-body = align(center)[
-      *Aggregation node* #linebreak()
+      *Aggregation Node* #linebreak()
       #sub[$verifier_"REC"[vk](pi_L), verifier_"REC"[vk](pi_R) = 1$] #linebreak()
       #sub[$sans("Typed")(tau_L, kappa_L), quad sans("Typed")(tau_R, kappa_R)$] #linebreak()
       #sub[$kappa = kappa_L + kappa_R, quad s = s_L + s_R$] #linebreak()
       #sub[$bold(c) = bold(c)_L + bold(c)_R$]
     ]
     let lv-body = align(center)[
-      *Leaf verifier* $tau$ #linebreak()
-      #sub[$verifier_"AIR"^((tau))(pi_"AIR") = 1$] #linebreak()
+      *Leaf Verifier* $tau$ #linebreak()
+      #sub[$verifier_"SEG"^((tau))(pi) = 1$] #linebreak()
       #sub[$kappa = 1, quad bold(c) = h(tau, "com")$]
     ]
-    let air-body = align(center)[*AIR instance* #linebreak() #sub[type $tau$, witness $w$]]
+    let comp-body = align(center)[
+      *Compressor* #linebreak()
+      #sub[$verifier_"AIR"^((tau))(pi_"AIR") = 1$]
+    ]
+    let air-body = align(center)[*AIR Instance* #linebreak() #sub[type $tau$, witness $w$]]
 
     diagram(
       spacing: (0.7cm, 1.15cm),
       label-sep: 2pt,
 
       // External verifier
-      node((0, -0.75), align(center)[*External verifier*], stroke: 0.5pt + luma(120), inset: 3pt, corner-radius: 2pt),
+      node((0, -0.75), align(center)[*External Verifier*], stroke: 0.5pt + luma(120), inset: 3pt, corner-radius: 2pt),
       edge((0, 0), (0, -0.75), lbl[$bold(p)_"ext"\, pi_"FINAL"$], "->", stroke: arr, label-side: right),
 
       // Final Verifier
@@ -107,20 +122,44 @@ this is why the accumulators below are commutative monoids.
       node((-1.5, 3), lv-body, ..box(lv-fill, lv-stroke, 2.5cm, 1.0cm)),
       node((-0.5, 3), lv-body, ..box(lv-fill, lv-stroke, 2.5cm, 1.0cm)),
       node((1, 3), lv-body, ..box(lv-fill, lv-stroke, 2.5cm, 1.0cm)),
+      // Optional compressors
+      ..(-1.5, -0.5, 1).map(x => node(
+        (x, 4),
+        comp-body,
+        fill: comp-fill,
+        stroke: comp-dash,
+        width: 2.2cm,
+        height: 0.7cm,
+        inset: 3pt,
+        corner-radius: 2pt,
+      )),
       // AIR instances
-      node((-1.5, 4), air-body, ..box(leaf-fill, leaf-stroke, 2.2cm, 0.7cm)),
-      node((-0.5, 4), air-body, ..box(leaf-fill, leaf-stroke, 2.2cm, 0.7cm)),
-      node((1, 4), air-body, ..box(leaf-fill, leaf-stroke, 2.2cm, 0.7cm)),
+      node((-1.5, 5), air-body, ..box(leaf-fill, leaf-stroke, 2.2cm, 0.7cm)),
+      node((-0.5, 5), air-body, ..box(leaf-fill, leaf-stroke, 2.2cm, 0.7cm)),
+      node((1, 5), air-body, ..box(leaf-fill, leaf-stroke, 2.2cm, 0.7cm)),
 
       // Public statement and key enter every AIR instance
-      edge((-1.5, 4.5), (-1.5, 4), lbl[$(bold(p), chi)$], "->", stroke: dash, label-side: right),
-      edge((-0.5, 4.5), (-0.5, 4), lbl[$(bold(p), chi)$], "->", stroke: dash, label-side: right),
-      edge((1, 4.5), (1, 4), lbl[$(bold(p), chi)$], "->", stroke: dash, label-side: right),
+      edge((-1.5, 5.5), (-1.5, 5), lbl[$(bold(p), chi)$], "->", stroke: arr, label-side: right),
+      edge((-0.5, 5.5), (-0.5, 5), lbl[$(bold(p), chi)$], "->", stroke: arr, label-side: right),
+      edge((1, 5.5), (1, 5), lbl[$(bold(p), chi)$], "->", stroke: arr, label-side: right),
 
       // Statements and proofs flowing upward
-      edge((-1.5, 4), (-1.5, 3), lbl[$(bold(p), chi, s, "com")\, pi_"AIR"$], "->", stroke: arr, label-side: right),
-      edge((-0.5, 4), (-0.5, 3), lbl[$(bold(p), chi, s, "com")\, pi_"AIR"$], "->", stroke: arr, label-side: right),
-      edge((1, 4), (1, 3), lbl[$(bold(p), chi, s, "com")\, pi_"AIR"$], "->", stroke: arr, label-side: right),
+      ..(-1.5, -0.5, 1).map(x => edge(
+        (x, 5),
+        (x, 4),
+        lbl[$(bold(p), chi, s, "com")\, pi_"AIR"$],
+        "->",
+        stroke: arr-dash,
+        label-side: right,
+      )),
+      ..(-1.5, -0.5, 1).map(x => edge(
+        (x, 4),
+        (x, 3),
+        lbl[$(bold(p), chi, s, "com")\, pi$],
+        "->",
+        stroke: arr,
+        label-side: right,
+      )),
       edge((-1.5, 3), (-1, 2), lbl[$(bold(p), chi, sigma_L, vk)\, pi_L$], "->", stroke: arr, label-side: left),
       edge((-0.5, 3), (-1, 2), lbl[$(bold(p), chi, sigma_R, vk)\, pi_R$], "->", stroke: arr, label-side: right),
       edge((-1, 2), (0, 1), lbl[$(bold(p), chi, sigma_L, vk)\, pi_L$], "->", stroke: arr, label-side: left),
@@ -136,9 +175,13 @@ this is why the accumulators below are commutative monoids.
     $sigma = (tau, 1, bold(c), s)$; an aggregation node adds its children's
     accumulators, dispatches on their types and declares type $M + 1$; the
     Final Verifier fixes $vk = vk_"AGG"$, checks the root predicates and
-    exposes only $bold(p)_"ext"$. The dashed arrows are the public inputs common to
-    every leaf. Aggregation nodes are drawn with two children; in general they
-    have $A$ slots, the unused ones holding null children.
+    exposes only $bold(p)_"ext"$. The pair $(bold(p), chi)$ is the public
+    input of every AIR instance. The AIR proofs of some types are compressed: an
+    optional compressor (dashed, purple) verifies the proof and re-exposes the
+    same statement, and the leaf verifier checks the compressor's proof
+    instead. Aggregation
+    nodes are drawn with two children; in general they have $A$ slots, the
+    unused ones holding null children.
   ],
 ) <fig:aggregation-tree>
 
@@ -272,6 +315,38 @@ neither.
 Let $Pi_"AIR"^((tau))$ be an argument system for $cal(R)_"AIR"^((tau))$, one
 per type, with verifier $verifier_"AIR"^((tau))$ and key $vk_"AIR"^((tau))$.
 
+A compressor (@sec:tree) re-proves the statement of another argument.
+
+#definition(title: "Compressor Relation")[
+  For an argument $Pi_X$ with verifier $verifier_X$ and key $vk_X$,
+  $
+    cal(R)_"COMP"^((X)) := { (bb(x); pi) mid(|) verifier_X (vk_X, bb(x), pi) = 1 }.
+  $
+] <def:r-comp>
+
+Let $Pi_"COMP"^((X))$ be an argument system for $cal(R)_"COMP"^((X))$; a
+proof of $Pi_"COMP"^((X))$ for $bb(x)$ stands in for a proof of $Pi_X$ for
+$bb(x)$. The setup fixes the set $T_"COMP" subset.eq [M]$ of the types whose
+AIR proofs are compressed, and for $tau in T_"COMP"$ we write
+$Pi_"COMP"^((tau))$, with verifier $verifier_"COMP"^((tau))$ and key
+$vk_"COMP"^((tau))$, for the compressor of $Pi_"AIR"^((tau))$, which
+hard-codes $vk_"AIR"^((tau))$. A leaf verifier
+checks whichever of the two proofs its type produces.
+
+#definition(title: "Segment Verifier")[
+  For $tau in [M]$, the _segment verifier_ of type $tau$ and its key are
+  $
+    (verifier_"SEG"^((tau)), vk_"SEG"^((tau))) := cases(
+      gap: #(0pt + 0.6em),
+      (verifier_"COMP"^((tau)), vk_"COMP"^((tau))) & "if" tau in T_"COMP"\,,
+      (verifier_"AIR"^((tau)), vk_"AIR"^((tau))) & "otherwise"\,,
+    )
+  $
+  and we write $verifier_"SEG"^((tau))(bb(x), pi)$ for
+  $verifier_"SEG"^((tau))(vk_"SEG"^((tau)), bb(x), pi)$. In both cases its
+  statements are those of $cal(R)_"AIR"^((tau))$.
+] <def:seg>
+
 #definition(title: "Leaf-Verifier Relation")[
   For $tau in [M]$,
   $
@@ -280,7 +355,7 @@ per type, with verifier $verifier_"AIR"^((tau))$ and key $vk_"AIR"^((tau))$.
         cases(
           delim: #none,
           ,
-          (bold(p), chi\, sigma\, vk)\; ("com", pi_"AIR"),
+          (bold(p), chi\, sigma\, vk)\; ("com", pi),
           ,
         )
         mid(|)
@@ -288,7 +363,7 @@ per type, with verifier $verifier_"AIR"^((tau))$ and key $vk_"AIR"^((tau))$.
           delim: #none,
           gap: #(0pt + 0.4em),
           sigma = (tau, 1, bold(c), s),
-          and quad verifier_"AIR"^((tau))((bold(p), chi, s, "com"), pi_"AIR") = 1,
+          and quad verifier_"SEG"^((tau))((bold(p), chi, s, "com"), pi) = 1,
           and quad bold(c) = h(tau, "com")
         )
       }
@@ -301,7 +376,7 @@ In the terms of @sec:accumulators, a leaf verifier of type $tau$ contributes
 $1$, $h(tau, "com")$ and the bus contribution $s$ certified by the AIR proof.
 Let $Pi_"LEAF"^((tau))$ be an argument system for $cal(R)_"LEAF"^((tau))$,
 with verifier $verifier_"LEAF"^((tau))$ and key $vk_"LEAF"^((tau))$; it
-hard-codes $vk_"AIR"^((tau))$.
+hard-codes $vk_"SEG"^((tau))$.
 
 An aggregation node must verify children of every kind, leaf verifiers of any
 type and other aggregation nodes. It hard-codes the $M$ leaf-verifier keys and
@@ -413,16 +488,17 @@ $verifier_"FINAL"$ and key $vk_"FINAL"$; this is the verifier run by the externa
 party. The verification keys involved play different roles. @tbl:vk-ledger records them.
 
 #figure(
-  table(
+  block(breakable: false, table(
     stroke: 0.3pt,
     columns: (18%, 47%, 35%),
     align: (left, left, left),
     table.header([*Key*], [*Selected by*], [*Hard-coded in*]),
-    [$vk_"AIR"^((tau))$], [the type $tau$ of the leaf verifier], [$Pi_"LEAF"^((tau))$],
+    [$vk_"AIR"^((tau))$], [the type $tau$ of the compressor], [$Pi_"COMP"^((tau))$, for $tau in T_"COMP"$],
+    [$vk_"SEG"^((tau))$], [the type $tau$ of the leaf verifier], [$Pi_"LEAF"^((tau))$],
     [$vk_"LEAF"^((tau))$], [the child type $tau_X in [M]$ read from the child statement], [$Pi_"AGG"$ (all $M$ keys)],
     [$vk_"AGG"$], [the child type $tau_X = M + 1$; the key itself arrives as the public $vk$], [$Pi_"FINAL"$ only],
     [$vk_"FINAL"$], [---], [the external verifier],
-  ),
+  )),
   caption: [
     Verification-key ledger. The type $tau$ selects which hard-coded
     key an aggregation node uses for a child; the propagated public $vk$ is

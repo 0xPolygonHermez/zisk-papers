@@ -163,9 +163,6 @@
 
 #include "contents/system.typ"
 
-// Parts I-IV are not part of this version yet; they are kept here, commented
-// out, to be restored as they are completed.
-/*
 #part("part:proving-system", [Part I: The Proving System])
 
 = The ZisK Proving Protocol <sec:stark>
@@ -180,6 +177,9 @@
 
 #include "contents/part1/theorem.typ"
 
+// Parts II-IV are not part of this version yet; they are kept here, commented
+// out, to be restored as they are completed.
+/*
 #part("part:recursion", [Part II: Recursion])
 
 = Overview of the Recursion Analysis <sec:recursion-overview>

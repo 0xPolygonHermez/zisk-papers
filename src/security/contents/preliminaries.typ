@@ -10,9 +10,7 @@ multiset hash and key derivation) and the security notions they are required
 to satisfy. ZisK's
 concrete choices are collected in @sec:instantiation.
 
-== Notation and Parameters
-
-Let $FF$ be a prime field of order $p$ and $KK$ an extension field of $FF$. $ZZ_p^n$ denotes the additive
+*Notation and Parameters*. Let $FF$ be a prime field of order $p$ and $KK$ an extension field of $FF$. $ZZ_p^n$ denotes the additive
 group of $n$-vectors of integers modulo $p$, the same set as $FF^n$ viewed as
 a $ZZ$-module. For integers $a <= b$, $[a, b]$ and $[a, b)$ are the closed and
 half-open integer intervals and $[b] := [1, b]$. Field elements are identified
@@ -46,12 +44,12 @@ _scalar values_, which are constant over the rows.
   $O subset ZZ$ of _row offsets_, an _algebraic intermediate representation_
   (AIR) of _height_ $N$ is a finite set of _constraints_
   $
-    cal(C) subset KK[X_j^((o)), Y_l : j in [W], o in O, l in [V]].
+    cal(C) subset FF[X_j^((o)), Y_l : j in [W], o in O, l in [V]].
   $
   The variables $X_j^((o))$ refer to the columns and the variables $Y_l$ to
   the scalar values. A _witness_ for $cal(C)$ is a pair
-  $w = (bold(T), bold(v))$ with $bold(T) in KK^(N times W)$, the _trace_, and
-  $bold(v) in KK^V$, the _values_. At row $r in [N]$ the variable
+  $w = (bold(T), bold(v))$ with $bold(T) in FF^(N times W)$, the _trace_, and
+  $bold(v) in FF^V$, the _values_. At row $r in [N]$ the variable
   $X_j^((o))$ takes the value $T_j (r + o)$, with row indices taken modulo
   $N$, and the variable $Y_l$ the value $v_l$. The witness _satisfies_
   $cal(C)$ if every constraint polynomial evaluates to zero at every row.
@@ -60,8 +58,7 @@ _scalar values_, which are constant over the rows.
 Offsets may be negative: $X_j^((o))$ with $o < 0$ reads row $r - abs(o)$.
 Since the rows are taken modulo $N$, the constraints are enforced on a
 cyclic domain, and shifting every constraint by $min O$ rows gives an
-equivalent AIR with offsets in $[0, max O - min O]$; we keep the offsets as
-the AIR is written.
+equivalent AIR with offsets in $[0, max O - min O]$.
 
 The columns and the values of a witness are of several kinds, which differ in
 who chooses them, who sees them and how many instances share them. The
@@ -90,7 +87,7 @@ description of an AIR partitions both.
 #definition(title: "Value Classes")[
   The description of an AIR $cal(C)$ with $V$ values partitions its value
   indices as
-  $[V] = I^"pub" union.sq I^"pv" union.sq I^"air" union.sq I^"grp"$,
+  $[V] = I^"pub" union.sq I^"pv" union.sq I^"air"$,
   with $abs(I^"pub") = k$ and $abs(I^"pv") = k'$ for every AIR of a proof.
   For values $bold(v)$ and a set of indices $I$ we write $bold(v)|_I$ for
   the subvector of the coordinates in $I$.
@@ -101,9 +98,6 @@ description of an AIR partitions both.
     the external verifier.
   + The _AIR values_ $bold(a) := bold(v)|_(I^"air")$ of an instance, chosen
     by the prover for that instance.
-  + The _airgroup values_ $bold(s) := bold(v)|_(I^"grp")$ of an instance,
-    that its proof exposes and that are aggregated, with a fixed operation,
-    over all the instances of a group of chips called an _airgroup_.
   The publics and the proof values form the _public statement_
   $
     bold(p) = (bold(p)_"ext", bold(p)_"pv") in cal(P) := cal(P)_"ext" times cal(P)_"pv".
@@ -111,15 +105,24 @@ description of an AIR partitions both.
   Every AIR that takes part in a proof reads the whole public statement,
   but the external verifier sees only $bold(p)_"ext"$: the proof values are
   hidden by the root of the aggregation tree (@sec:system).
-  A _global constraint_ is a identity over the aggregated
-  airgroup values and the public statement, , checked once per proof rather than by any instance.
 ] <def:proof-values>
 
-The AIRs of the ZisK chips, as modelled in this paper, read only the AIR
-values, the publics and the proof values; their constraints are
-therefore satisfied or not under a public statement $bold(p)$. Airgroup
-values are read only by the constraints that the proving system adds to
-every AIR to realize its interactions, whose coefficients include the challenges of the bus argument (#fwd(<sec:stark-bus>)[Part I]).
+The constraints of an AIR therefore read, besides its trace, only its own
+AIR values and the public statement: they are satisfied or not under a
+public statement $bold(p)$. They are also _local_: a constraint relates a
+few rows of a single trace, those within its window of offsets $O$. Many of
+the facts that a zkVM must establish are not of this kind. When the main
+loop delegates an addition to an arithmetic unit, the result it uses must
+be the one that the unit computed; and a load must return the value of the
+last store to the same address, which may have been executed in another
+segment and recorded by another AIR. ZisK expresses such relations with
+_buses_. Every row of an AIR may put messages, tuples of field elements, on
+a bus, each with a _multiplicity_: positive when the row sends the message
+and negative when it receives it. The relation holds when, on every bus, the
+multiplicities of each message add up to zero over all the AIR instances of
+a proof, that is, when the bus is _balanced_ (@def:balanced). An
+_interaction_ declares, for one AIR, the message that each of its rows puts
+on a bus and with which multiplicity.
 
 #definition(title: "Interaction")[
   An _interaction_ of an AIR $cal(C)$ on the bus $b in FF$ is a tuple
@@ -145,7 +148,7 @@ $
 $
 where $tau$ is the _type_ of the chip and $cal(C)_tau$ has height $N_tau$
 and parameters $W_tau$, $O_tau$ and $V_tau$. We write
-$cal(W)_tau := KK^(N_tau times W_tau) times KK^(V_tau)$ for the witness space
+$cal(W)_tau := FF^(N_tau times W_tau) times FF^(V_tau)$ for the witness space
 of type $tau$.
 
 Each chip carries its column and value classes and its prescribed data;
@@ -313,7 +316,7 @@ The following interface elements are used throughout:
   witness $w$. The argument system for a chip takes the key
   $chi in cal(X)$ as a public input, so the witness is key-independent.
 - *Cached-column commitment.* A deterministic commitment scheme $Com_"cach"$
-  with message space $union.big_(tau in [M]) KK^(N_tau times abs(J^"cach"_tau))$
+  with message space $union.big_(tau in [M]) FF^(N_tau times abs(J^"cach"_tau))$
   and commitment space $FF^m$. Its output for the cached columns of a type is
   not part of a verification key but of the public statement (@def:columns).
 - *Hash-to-group and multiset hash.* $h : [M] times {0,1}^* -> G_(cal(H))$
