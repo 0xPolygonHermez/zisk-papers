@@ -2,7 +2,7 @@
   Adv, Balanced, Bind, BusCont, Com, Commit, DeriveKey, Exp, Local, Pr, Time, Zisk, definition, fwd, game, lemma, mult,
   negl, poly, proof, proposition, prover, remark, theorem, todo, verifier, vk,
 )
-#import "@preview/fletcher:0.5.8" as fletcher: diagram, edge, node
+#import "../../shared/aggregation-tree.typ": aggregation-tree
 
 This section describes the system that the rest of the paper analyzes: the
 aggregation tree into which a ZisK proof is organized, the three accumulators
@@ -59,114 +59,7 @@ is not known when the key is derived, the accumulation must not depend on it;
 this is why the accumulators below are commutative monoids.
 
 #figure(
-  {
-    set text(size: 7pt)
-    let sub(body) = text(size: 6pt, body)
-    let lbl(body) = text(size: 6pt, body)
-    let leaf-fill = rgb("dde8fb")
-    let leaf-stroke = rgb("4a6fa5")
-    let lv-fill = rgb("fbe4c2")
-    let lv-stroke = rgb("a86e2c")
-    let agg-fill = rgb("fbd5d5")
-    let agg-stroke = rgb("a84444")
-    let root-fill = rgb("c8e6e0")
-    let root-stroke = rgb("2e7d6e")
-    let comp-fill = rgb("ece4f7")
-    let comp-stroke = rgb("6b4fa0")
-    let comp-dash = (dash: "dashed", paint: comp-stroke, thickness: 0.5pt)
-    let arr-dash = (dash: "dashed", paint: luma(80), thickness: 0.5pt)
-    let arr = 0.5pt + luma(80)
-
-    let box(f, s, w, h) = (fill: f, stroke: 0.5pt + s, width: w, height: h, inset: 3pt, corner-radius: 2pt)
-    let agg-body = align(center)[
-      *Aggregation Node* #linebreak()
-      #sub[$verifier_"REC"[vk](pi_L), verifier_"REC"[vk](pi_R) = 1$] #linebreak()
-      #sub[$sans("Typed")(tau_L, kappa_L), quad sans("Typed")(tau_R, kappa_R)$] #linebreak()
-      #sub[$kappa = kappa_L + kappa_R, quad s = s_L + s_R$] #linebreak()
-      #sub[$bold(c) = bold(c)_L + bold(c)_R$]
-    ]
-    let lv-body = align(center)[
-      *Leaf Verifier* $tau$ #linebreak()
-      #sub[$verifier_"SEG"^((tau))(pi) = 1$] #linebreak()
-      #sub[$kappa = 1, quad bold(c) = h(tau, "com")$]
-    ]
-    let comp-body = align(center)[
-      *Compressor* #linebreak()
-      #sub[$verifier_"AIR"^((tau))(pi_"AIR") = 1$]
-    ]
-    let air-body = align(center)[*AIR Instance* #linebreak() #sub[type $tau$, witness $w$]]
-
-    diagram(
-      spacing: (0.7cm, 1.15cm),
-      label-sep: 2pt,
-
-      // External verifier
-      node((0, -0.75), align(center)[*External Verifier*], stroke: 0.5pt + luma(120), inset: 3pt, corner-radius: 2pt),
-      edge((0, 0), (0, -0.75), lbl[$bold(p)_"ext"\, pi_"FINAL"$], "->", stroke: arr, label-side: right),
-
-      // Final Verifier
-      node(
-        (0, 0),
-        align(center)[
-          *Final Verifier* #linebreak()
-          #sub[$verifier_"REC"[vk_"AGG"](pi) = 1$] #linebreak()
-          #sub[$sans("Typed")(tau, kappa), quad s + cal(F)_chi (cal(G)(bold(p))) = 0$] #linebreak()
-          #sub[$chi = DeriveKey(bold(p), bold(c))$]
-        ],
-        ..box(root-fill, root-stroke, 3.2cm, 1.25cm),
-      ),
-      // Aggregation nodes
-      node((0, 1), agg-body, ..box(agg-fill, agg-stroke, 3.4cm, 1.5cm)),
-      node((-1, 2), agg-body, ..box(agg-fill, agg-stroke, 3.4cm, 1.5cm)),
-      // Leaf verifiers
-      node((-1.5, 3), lv-body, ..box(lv-fill, lv-stroke, 2.5cm, 1.0cm)),
-      node((-0.5, 3), lv-body, ..box(lv-fill, lv-stroke, 2.5cm, 1.0cm)),
-      node((1, 3), lv-body, ..box(lv-fill, lv-stroke, 2.5cm, 1.0cm)),
-      // Optional compressors
-      ..(-1.5, -0.5, 1).map(x => node(
-        (x, 4),
-        comp-body,
-        fill: comp-fill,
-        stroke: comp-dash,
-        width: 2.2cm,
-        height: 0.7cm,
-        inset: 3pt,
-        corner-radius: 2pt,
-      )),
-      // AIR instances
-      node((-1.5, 5), air-body, ..box(leaf-fill, leaf-stroke, 2.2cm, 0.7cm)),
-      node((-0.5, 5), air-body, ..box(leaf-fill, leaf-stroke, 2.2cm, 0.7cm)),
-      node((1, 5), air-body, ..box(leaf-fill, leaf-stroke, 2.2cm, 0.7cm)),
-
-      // Public statement and key enter every AIR instance
-      edge((-1.5, 5.5), (-1.5, 5), lbl[$(bold(p), chi)$], "->", stroke: arr, label-side: right),
-      edge((-0.5, 5.5), (-0.5, 5), lbl[$(bold(p), chi)$], "->", stroke: arr, label-side: right),
-      edge((1, 5.5), (1, 5), lbl[$(bold(p), chi)$], "->", stroke: arr, label-side: right),
-
-      // Statements and proofs flowing upward
-      ..(-1.5, -0.5, 1).map(x => edge(
-        (x, 5),
-        (x, 4),
-        lbl[$(bold(p), chi, s, "com")\, pi_"AIR"$],
-        "->",
-        stroke: arr-dash,
-        label-side: right,
-      )),
-      ..(-1.5, -0.5, 1).map(x => edge(
-        (x, 4),
-        (x, 3),
-        lbl[$(bold(p), chi, s, "com")\, pi$],
-        "->",
-        stroke: arr,
-        label-side: right,
-      )),
-      edge((-1.5, 3), (-1, 2), lbl[$(bold(p), chi, sigma_L, vk)\, pi_L$], "->", stroke: arr, label-side: left),
-      edge((-0.5, 3), (-1, 2), lbl[$(bold(p), chi, sigma_R, vk)\, pi_R$], "->", stroke: arr, label-side: right),
-      edge((-1, 2), (0, 1), lbl[$(bold(p), chi, sigma_L, vk)\, pi_L$], "->", stroke: arr, label-side: left),
-      edge((1, 3), (0, 1), lbl[$(bold(p), chi, sigma_R, vk)\, pi_R$], "->", stroke: arr, label-side: right),
-      edge((0, 1), (0, 0), lbl[$(bold(p), chi, sigma, vk)\, pi$], "->", stroke: arr, label-side: right),
-    )
-  },
+  aggregation-tree(),
   caption: [
     An aggregation tree with three AIR instances. Each arrow carries the
     statement and the proof a node produces, which the node above takes as
@@ -508,6 +401,13 @@ party. The verification keys involved play different roles. @tbl:vk-ledger recor
   kind: table,
 ) <tbl:vk-ledger>
 
+An execution with $L$ leaves has between $ceil((L - 1) \/ (A - 1))$ and $L - 1$
+aggregation nodes, since each has between two and $A$ non-null children; with
+a single leaf it has none, and the Final Verifier verifies the leaf verifier
+directly. The whitepaper lists every proof-system call of a ZisK proof, with
+the number of its instances, the AIRs of $T_"COMP"$ and the parameters of every
+argument @ZISK:WHITEPAPER.
+
 == ZisK Instantiation <sec:instantiation>
 
 The security analysis is stated for the following choices,
@@ -521,6 +421,21 @@ SHA-2 @FIPS180-4 is an equally valid instantiation, and switching among them
 changes none of the statements below. The only requirements are those the
 analysis names where it uses them: collision resistance of the digest, with
 at least $2 lambda$ bits (#fwd(<sec:discussion>)[Part IV]), and the random-oracle idealization.
+
+*Public statement.* In ZisK, $k = 68$ and $k' = 8$ @ZISK:WHITEPAPER. The external statement $bold(p)_"ext"$ consists of the program
+commitment $"root"_"ROM"$, the root of the Rom chip's cached columns, at the
+$m = 4$ coordinates that $gamma$ designates (@def:columns), and of the $32$
+public outputs, each as two $32$-bit limbs; the proof values $bold(p)_"pv"$ are
+boolean flags that switch on the genesis anchors of the optional chips. The
+program commitment is bound by @def:local and by $DeriveKey$, which absorbs
+it; the public outputs are bound by the global messages $cal(G)(bold(p))$,
+which only a `pubout` of the Main chip balances. The input, the hints and the
+intermediate states of the execution are not part of $bold(p)$. The external
+verifier also holds a context that is not part of $bold(p)$, the key
+$vk_"FINAL"$, which fixes the fixed columns of every chip and every key
+hard-coded in the recursive verifiers (@tbl:vk-ledger). To check a claim
+about a given program, it compares $"root"_"ROM"$ with the commitment of
+that program.
 
 *Bus fingerprint.* The key space is $cal(X) = KK^2$, a key being a _challenge
 pair_ $chi = (alpha, gamma)$, and the values lie in $G_(cal(F)) = KK$.
@@ -556,8 +471,10 @@ have the same fixed columns, and $cal(H)$ adds these vectors
 with multiplicity. Its collision resistance on multisets of
 cardinality below $2^B$ rests on the hardness of the short integer solution
 problem @STOC:Ajtai96; the analysis assumes the stronger preimage awareness
-(@def:cr), which is the second idealization of @rem:idealized. The cardinality
-bound is what the leaf counter enforces.
+(@def:cr), which is the second idealization of @rem:idealized. ZisK takes
+$B = 20$ @ZISK:WHITEPAPER, so that a proof has fewer than $2^(20)$ leaves; the cardinality
+bound is what the leaf counter enforces, and $A dot 2^B <= p$ holds with
+room to spare.
 
 *Key derivation.* $DeriveKey$ hashes the public statement $bold(p)$ ---the
 external statement and the proof values--- and the accumulated vector with the
@@ -578,3 +495,11 @@ $"com"$ covers the witness columns and the AIR values of the first stage, not
 the cached columns; this is sound because $DeriveKey$ absorbs $bold(p)$, and
 with it the cached-column commitment, so the cached columns are fixed before
 the key $chi$ is derived, exactly as the committed witnesses are.
+
+*Frequent-operation caches.* The caches of precomputed operations
+@ZISK:WHITEPAPER are tables that prove, on the
+operation bus, every operation they list. Their columns are fixed, generated
+at setup independently of the program, so they are bound by the
+verification key like every fixed column (@tbl:vk-ledger). That every row of the table is a correct operation is a
+property of the setup, which this analysis takes as an obligation
+(#fwd(<sec:discussion>)[Part IV]).
