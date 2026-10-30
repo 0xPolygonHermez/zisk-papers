@@ -416,7 +416,7 @@ collision resistance on such multisets, since two distinct small multisets
 with the same hash would both have to equal the extractor's output.
 
 For LtHash, collision resistance on bounded multisets reduces to the
-short-integer-solution problem @STOC:Ajtai96 @ZISK:LTHASH; the reduction
+short-integer-solution problem @STOC:Ajtai96 @EPRINT:LKMW19 @ZISK:LTHASH; the reduction
 requires the inner digest of $h$ to be collision resistant on its own, which
 a single field element is not, so we assume the digest has at least
 $2 lambda$ bits (#fwd(<sec:discussion>)[Part IV]). Preimage awareness, however, is not known

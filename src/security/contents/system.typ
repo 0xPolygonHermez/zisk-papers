@@ -465,7 +465,7 @@ witness, and the key is derived after the commitment to the witness; the
 probability of hitting one is charged in #fwd(<lem:binding>)[the binding lemma of Part I].
 
 *Multiset hash.* The accumulator group is $G_(cal(H)) = ZZ_p^n$ with
-$n = 368$, and $h$ and $cal(H)$ are LtHash @ZISK:LTHASH @AC:CDDGS03: $h$
+$n = 368$, and $h$ and $cal(H)$ are LtHash @EC:BelMic97 @AC:CDDGS03 @ZISK:LTHASH: $h$
 absorbs the typed commitment into a sponge of the underlying hash function
 and expands it, by $22$ further permutations, into a pseudorandom vector of
 $ZZ_p^n$ (the $23$ states of width $16$). The type enters $h$ as the root of
