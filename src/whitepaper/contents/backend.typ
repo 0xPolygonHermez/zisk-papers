@@ -1,4 +1,4 @@
-#import "../../lib.typ": remark, verifier, vk
+#import "../../shared/lib.typ": remark, verifier, vk
 
 The arithmetization framework of @sec:arithmetization is backend-independent by design, and the preceding sections have used the backend only through the abstract interface $verifier(vk, x, pi)$. This section fixes the backend that ZisK actually uses ---the commitment scheme, the low-degree test, the transcript and all their parameters--- and maps every AIR of the recursion tree to the name under which it is registered in the Ethereum Foundation's `soundcalc` tool @SOUNDCALC, so that the soundness of each proof can be evaluated independently. The parameters below are those of the official ZisK setup.
 

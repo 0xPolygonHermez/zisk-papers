@@ -1,4 +1,4 @@
-#import "../../lib.typ": definition, remark
+#import "../../shared/lib.typ": definition, remark
 
 The ZisK instruction set architecture (ZisK ISA) specifies the computational model that ZisK proves correct: the execution model, the memory layout, the instruction format, and the full set of operations. Because the ZisK ISA is a _virtual_ ISA --- not targeting any physical hardware --- its design can prioritize properties that simplify zero-knowledge proof generation rather than properties that suit a particular microarchitecture.
 

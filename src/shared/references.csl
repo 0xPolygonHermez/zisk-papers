@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<style xmlns="http://purl.org/net/xbiblio/csl" class="in-text" version="1.0" demote-non-dropping-particle="sort-only">
+  <!-- Alphabetic labels, in the manner of BibTeX's alpha style: the list is
+       sorted by label, and works sharing a label get a letter (Ben+18a). -->
+  <info>
+    <title>ZisK papers (alphabetic)</title>
+    <id>zisk-alpha</id>
+    <updated>2026-10-30T00:00:00+00:00</updated>
+  </info>
+  <macro name="authors">
+    <names variable="author">
+      <name and="text" delimiter=", " delimiter-precedes-last="contextual"/>
+      <substitute>
+        <names variable="editor"/>
+      </substitute>
+    </names>
+  </macro>
+  <macro name="editors">
+    <names variable="editor">
+      <name and="text" delimiter=", " delimiter-precedes-last="contextual"/>
+      <label form="long" prefix=", "/>
+    </names>
+  </macro>
+  <macro name="date">
+    <date variable="issued">
+      <date-part name="month" form="long" suffix=" "/>
+      <date-part name="year"/>
+    </date>
+  </macro>
+  <macro name="access">
+    <choose>
+      <if variable="DOI">
+        <text variable="DOI" prefix="doi:"/>
+      </if>
+      <else-if variable="URL">
+        <text variable="URL" prefix="URL: "/>
+      </else-if>
+    </choose>
+  </macro>
+  <citation disambiguate-add-year-suffix="true">
+    <layout prefix="[" suffix="]" delimiter=", ">
+      <group>
+        <text variable="citation-label"/>
+        <text variable="year-suffix"/>
+      </group>
+    </layout>
+  </citation>
+  <bibliography>
+    <sort>
+      <key variable="citation-label"/>
+      <key variable="year-suffix"/>
+    </sort>
+    <layout suffix=".">
+      <text variable="citation-label" prefix="["/>
+      <text variable="year-suffix"/>
+      <text value="] "/>
+      <group delimiter=". ">
+        <text macro="authors"/>
+        <text variable="title"/>
+        <choose>
+          <if type="paper-conference chapter" match="any">
+            <group delimiter=". ">
+              <group delimiter=", ">
+                <group delimiter=" ">
+                  <text term="in" text-case="capitalize-first"/>
+                  <group delimiter=", ">
+                    <text macro="editors"/>
+                    <text variable="container-title" font-style="italic"/>
+                  </group>
+                </group>
+                <group delimiter=" ">
+                  <text variable="volume" prefix="volume "/>
+                  <text variable="collection-title" prefix="of " font-style="italic"/>
+                </group>
+                <text variable="page" prefix="pages "/>
+              </group>
+              <group delimiter=", ">
+                <text variable="publisher"/>
+                <text macro="date"/>
+              </group>
+            </group>
+          </if>
+          <else-if type="article-journal">
+            <group delimiter=", ">
+              <text variable="container-title" font-style="italic"/>
+              <choose>
+                <if variable="volume">
+                  <group>
+                    <text variable="volume"/>
+                    <text variable="issue" prefix="(" suffix=")"/>
+                    <text variable="page" prefix=":"/>
+                  </group>
+                </if>
+                <else>
+                  <text variable="page" prefix="pages "/>
+                </else>
+              </choose>
+              <text macro="date"/>
+            </group>
+          </else-if>
+          <else-if type="report">
+            <group delimiter=", ">
+              <group delimiter=" ">
+                <text variable="genre" text-case="capitalize-first"/>
+                <text variable="number"/>
+              </group>
+              <text variable="publisher"/>
+              <text macro="date"/>
+            </group>
+          </else-if>
+          <else>
+            <group delimiter=", ">
+              <text variable="container-title" font-style="italic"/>
+              <text variable="publisher"/>
+              <text variable="genre"/>
+              <text variable="note"/>
+              <text macro="date"/>
+            </group>
+          </else>
+        </choose>
+        <text macro="access"/>
+      </group>
+    </layout>
+  </bibliography>
+</style>

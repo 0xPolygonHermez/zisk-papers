@@ -1,4 +1,4 @@
-#import "../../../lib.typ": (
+#import "../../../shared/lib.typ": (
   Adv, Balanced, Bind, BusCont, Com, Commit, DeriveKey, Exp, Local, Pr, Time, Zisk, definition, fwd, game, lemma, mult,
   negl, poly, proof, proposition, remark, theorem, todo, vk,
 )

@@ -1,4 +1,4 @@
-#import "../../lib.typ": definition
+#import "../../shared/lib.typ": definition
 
 We describe the architecture of chips that constitutes the ZisK zkVM. The previous sections established the building blocks: the ISA defines what programs can run (@sec:isa), and the arithmetization framework defines how computations are represented as polynomial constraints (@sec:arithmetization). Here we describe how ZisK instantiates that framework into a concrete system.
 

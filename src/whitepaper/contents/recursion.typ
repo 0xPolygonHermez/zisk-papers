@@ -1,4 +1,4 @@
-#import "../../lib.typ": Balanced, BusCont, Commit, DeriveKey, Local, definition, lemma, remark, theorem, verifier, vk
+#import "../../shared/lib.typ": Balanced, BusCont, Commit, DeriveKey, Local, definition, lemma, remark, theorem, verifier, vk
 #import "../../shared/aggregation-tree.typ": aggregation-tree
 
 ZisK uses proof recursion to combine the independent per-segment proofs produced by trace splitting into a single, globally consistent argument. This section introduces proof recursion in general, identifies the two specific problems it resolves in ZisK, and details the aggregation structure.

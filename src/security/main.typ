@@ -1,22 +1,8 @@
-#import "../style.typ": article, title-page, zisk-version
-#import "../lib.typ": Com, remark
+#import "../shared/style.typ": paper, part, references
+#import "../shared/lib.typ": Com, remark
 
-// Page geometry
-#let margin = 1in
-#let title-margin = (
-  top: (116pt / 279mm) * 100%,
-  left: (126pt / 216mm) * 100%,
-  right: (128pt / 216mm) * 100%,
-  bottom: (94pt / 279mm) * 100%,
-)
-
-#let body-font = "New Computer Modern"
-#show math.equation: set text(font: "New Computer Modern Math")
-
-#title-page(
-  margin: title-margin,
-  font: body-font,
-  title: [Security of ZisK#zisk-version],
+#show: paper.with(
+  title: "Security of ZisK",
   authors: (
     (
       name: "Héctor Masip-Ardevol",
@@ -44,118 +30,7 @@
     explicit error bound. The idealizations made, the assumptions inherited
     from the primitives and the obligations left open are recorded in a ledger.
   ],
-  // keywords: (
-  //   "zero-knowledge virtual machines",
-  //   "recursive proof composition",
-  //   "knowledge soundness",
-  //   "lookup arguments",
-  // ),
 )
-
-#show: article.with(
-  font: body-font,
-  title: "Security of ZisK",
-  authors: ("Héctor Masip-Ardevol",),
-  margin: margin,
-  // The bibliography is placed by hand below, before the appendix.
-  bibliography: none,
-)
-
-// Set bibliography style to alphanumeric
-#set cite(style: "alphanumeric")
-
-// Theorem-like environments (definitions, lemmas, propositions, theorems)
-// share one counter, which the AMS template resets at every top-level
-// heading. They are therefore displayed and referenced as "Definition 2.3".
-// Remarks have their own counter, reset in the same way.
-#let sec-numbering(n) = numbering("1.1", counter(heading).get().first(), n)
-
-// The remark counter restarts at every top-level heading, like the theorem
-// counter (which `article` resets).
-#show heading.where(level: 1): it => {
-  counter(figure.where(kind: "remark")).update(0)
-  it
-}
-
-#show ref: it => {
-  let el = it.element
-  if el != none and el.func() == figure and (el.kind == "theorem" or el.kind == "remark") {
-    let loc = el.location()
-    let sec = counter(heading).at(loc).first()
-    let n = counter(figure.where(kind: el.kind)).at(loc).first()
-    link(loc, text(font: body-font, [#el.supplement #numbering("1.1", sec, n)]))
-  } else {
-    it
-  }
-}
-
-// Long games and proofs must be allowed to break across pages.
-#show figure.where(kind: "theorem"): set block(breakable: true)
-#show figure.where(kind: "remark"): set block(breakable: true)
-#show figure.where(kind: table): set block(breakable: true)
-
-// Theorem-like environments: bold head, upright body for definitions, italic
-// body for theorems, lemmas, propositions and corollaries.
-#let italic-envs = ([Theorem], [Lemma], [Proposition], [Corollary])
-#show figure.where(kind: "theorem"): it => block(width: 100%, spacing: 11.5pt, breakable: true, {
-  strong({
-    it.supplement
-    if it.numbering != none {
-      [ ]
-      it.counter.display(sec-numbering)
-    }
-    if it.caption != none {
-      [ (]
-      it.caption.body
-      [)]
-    }
-    [.]
-  })
-  [ ]
-  if it.supplement in italic-envs { emph(it.body) } else { it.body }
-})
-
-// Italic styling for remarks (including title)
-#show figure.where(kind: "remark"): it => block(width: 100%, spacing: 11.5pt, breakable: true, align(left, emph({
-  strong({
-    it.supplement
-    if it.numbering != none {
-      [ ]
-      it.counter.display(sec-numbering)
-    }
-    if it.caption != none {
-      [ (]
-      it.caption.body
-      [)]
-    }
-    [.]
-  })
-  [ ]
-  it.body
-})))
-
-// Make top-level outline entries bold
-#show outline.entry.where(level: 1): it => {
-  if it.element.supplement == [Part] {
-    block(above: 1.3em, below: .8em, text(size: 1.12em, strong(it)))
-  } else {
-    strong(it)
-  }
-}
-
-// Remove background fill from top-level outline entries
-#show outline.entry.where(level: 1): set outline.entry(fill: none)
-
-#outline(depth: 2)
-#pagebreak()
-
-// A part groups several sections: an unnumbered, outlined heading that starts
-// on a new page.
-#let part(label-name, title) = {
-  pagebreak(weak: true)
-  show heading: it => block(above: 20pt, below: 14pt, text(size: 16pt, weight: "bold", it.body))
-  [#heading(level: 1, numbering: none, outlined: true, supplement: [Part], title) #label(label-name)]
-}
 
 = Introduction <sec:introduction>
 
@@ -271,39 +146,6 @@ elements.
 
 #include "contents/part4/ledger.typ"
 
-
 #pagebreak()
 
-#set std.bibliography(title: [References])
-#show std.bibliography: set text(8.50012pt)
-#show std.bibliography: set block(above: 11pt)
-#show std.bibliography: pad.with(x: 0.5pt)
-#bibliography(("refs.bib", "../whitepaper/refs.bib"))
-
-// The appendices are not part of this version yet.
-/*
-#pagebreak()
-
-#heading(outlined: true, numbering: none)[Appendix]
-
-#counter(heading).update(0)
-#set heading(outlined: false, numbering: "A.", supplement: "Appendix")
-#show heading.where(level: 1): set heading(outlined: true)
-#show heading.where(level: 2): set heading(numbering: none)
-
-= Parameters <app:parameters>
-
-#include "appendix/parameters.typ"
-
-= Constraint Audits <app:audits>
-
-#include "appendix/audits.typ"
-
-= Deferred Proofs <app:proofs>
-
-#include "appendix/proofs.typ"
-
-= Notation <app:notation>
-
-#include "appendix/notation.typ"
-*/
+#references()

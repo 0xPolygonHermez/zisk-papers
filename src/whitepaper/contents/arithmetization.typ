@@ -1,4 +1,4 @@
-#import "../../lib.typ": definition, verifier, vk
+#import "../../shared/lib.typ": definition, verifier, vk
 
 A proving system is naturally divided into two layers. The _frontend_ takes a program and produces a structured mathematical representation --- typically a system of polynomial constraints --- that captures exactly what it means for the computation to be correct. The _backend_ then takes that representation and produces a cryptographic proof of its satisfiability. Concretely, the backend performs a one-time _setup_ that yields a pair $(sans("pk"), vk)$: a _proving key_ used to generate proofs of the frontend's constraint system, and a _verification key_ that summarises the constraint system in a form the verifier can check against. Verification of a proof $pi$ against a public statement $x$ is then the deterministic procedure $verifier(vk, x, pi) in {"accept", "reject"}$. The two layers are decoupled by design: a single frontend can target different backends, and improvements to either do not require redesigning the other.
 

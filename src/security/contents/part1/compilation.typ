@@ -1,4 +1,4 @@
-#import "../../../lib.typ": (
+#import "../../../shared/lib.typ": (
   Adv, Balanced, Bind, BusCont, Com, Commit, DeriveKey, Exp, Local, Pr, Time, Zisk, corollary, definition, fwd, game,
   lemma, mult, negl, poly, proof, proposition, prover, remark, theorem, todo, verifier, vk,
 )
@@ -78,8 +78,8 @@ $4 a$, which compresses $a$ digests at once.
   root. With $L = 0$ this is the usual Merkle tree.
 ] <def:merkle>
 
-The arity and the verification level are parameters of each AIR
-(#fwd(<app:parameters>)[Appendix]). Nothing below
+The arity and the verification level are parameters of each AIR; ZisK uses
+arity $a = 4$ and, for most AIRs, a level with $4$ or $16$ nodes. Nothing below
 depends on the values of $a$ and $L$, and we drop the subscript $a$
 when it is clear from the context. A group of polynomials
 $f_1, dots, f_c$ is _committed on $D$_ by committing to the matrix whose row

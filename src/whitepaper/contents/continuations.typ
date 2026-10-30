@@ -1,4 +1,4 @@
-#import "../../lib.typ": definition
+#import "../../shared/lib.typ": definition
 
 A single chip proof covers a trace of fixed height $N$. Real programs run for an a priori unbounded number of steps, so a single proof cannot certify an arbitrary execution. _Continuations_ are the mechanism by which a zkVM extends beyond this bound: the execution is divided into _segments_, each covered by an independent proof, and the proofs are linked into a single argument for the full run.
 
