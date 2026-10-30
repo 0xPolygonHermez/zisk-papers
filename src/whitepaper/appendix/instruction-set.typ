@@ -61,29 +61,29 @@ We write $a_(32) = a mod 2^(32)$ for the low word of $a$; $"sext"_k (x)$ for the
 / `fcall` (`0xf7`): $c = b$. Requests the host computation identified by $a$ on the parameters passed so far; its result becomes the hint stream.
 / `fcall_get` (`0xf8`): $c = b$, where $b$ is the value read from the free-input port, i.e. the next word of the hint stream.
 
-The three hint opcodes only affect the host state, and Main proves them as `copyb` (@sec:isa).
+The three hint opcodes only affect the host state, and Main proves them as `copyb` (@sec:phantom).
 
 == Precompile Opcodes
 
-For every precompile, $b$ is the address $P$ of an 8-byte-aligned parameter block and $a = 0$; $c = 0$ and $"flag" = 0$ unless stated otherwise. All multi-word values are sequences of 64-bit words in little-endian order (least significant word first) and every pointer in a parameter block is 8-byte aligned. The memory effect of each opcode is described below; $"mem"[x, x + n)$ denotes the $n$ bytes at address $x$, and $P_i := "mem"[P + 8 i]_8$ the $i$-th word of the parameter block.
+For every precompile, $b$ is the address $q$ of an 8-byte-aligned parameter block and $a = 0$; $c = 0$ and $"flag" = 0$ unless stated otherwise. All multi-word values are sequences of 64-bit words in little-endian order (least significant word first) and every pointer in a parameter block is 8-byte aligned. The memory effect of each opcode is described below; $"mem"[x, x + n)$ denotes the $n$ bytes at address $x$, and $q_i := "mem"[q + 8 i]_8$ the $i$-th word of the parameter block.
 
-/ `keccak` (`0xf1`, Keccakf): $"mem"[P, P + 200)$ is replaced by its image under the Keccak-f[1600] permutation.
-/ `sha256` (`0xf9`, Sha256f): the 256-bit state at $P_0$ is replaced by its SHA-256 compression with the 512-bit block at $P_1$.
-/ `poseidon2` (`0xe1`, Poseidon2): the 16 words at $P$, read as Goldilocks elements, are replaced by their image under the Poseidon2 permutation of width 16.
-/ `blake2` (`0xea`, Blake2br): one BLAKE2b round, with round index $P_0$, on the 16-word state at $P_1$ and the 16-word message block at $P_2$; the state is updated in place.
-/ `add256` (`0xf0`, Add256): with operands at $P_0$, $P_1$, a carry in $P_2 in {0, 1}$ and result pointer $P_3$, writes $(x + y + P_2) mod 2^(256)$ at $P_3$ and returns the carry out in $c in {0, 1}$.
-/ `arith256` (`0xf2`, ArithEq): with 256-bit operands $x, y, z$ at $P_0, P_1, P_2$, writes the low and high 256-bit halves of $x dot y + z$ at $P_3$ and $P_4$.
-/ `arith256_mod` (`0xf3`, ArithEq): with 256-bit operands $x, y, z, m$ at $P_0, dots, P_3$, writes $(x dot y + z) mod m$ at $P_4$.
+/ `keccak` (`0xf1`, Keccakf): $"mem"[q, q + 200)$ is replaced by its image under the Keccak-f[1600] permutation.
+/ `sha256` (`0xf9`, Sha256f): the 256-bit state at $q_0$ is replaced by its SHA-256 compression with the 512-bit block at $q_1$.
+/ `poseidon2` (`0xe1`, Poseidon2): the 16 words at $q$, read as Goldilocks elements, are replaced by their image under the Poseidon2 permutation of width 16.
+/ `blake2` (`0xea`, Blake2br): one BLAKE2b round, with round index $q_0$, on the 16-word state at $q_1$ and the 16-word message block at $q_2$; the state is updated in place.
+/ `add256` (`0xf0`, Add256): with operands at $q_0$, $q_1$, a carry in $q_2 in {0, 1}$ and result pointer $q_3$, writes $(x + y + q_2) mod 2^(256)$ at $q_3$ and returns the carry out in $c in {0, 1}$.
+/ `arith256` (`0xf2`, ArithEq): with 256-bit operands $x, y, z$ at $q_0, q_1, q_2$, writes the low and high 256-bit halves of $x dot y + z$ at $q_3$ and $q_4$.
+/ `arith256_mod` (`0xf3`, ArithEq): with 256-bit operands $x, y, z, m$ at $q_0, dots, q_3$, writes $(x dot y + z) mod m$ at $q_4$.
 / `arith384_mod` (`0xe2`, ArithEq384): as `arith256_mod`, with 384-bit operands.
-/ `secp256k1_add` (`0xf4`), `secp256r1_add` (`0xe8`), `bn254_curve_add` (`0xfa`) (ArithEq): with affine points $p_1, p_2$ at $P_0, P_1$, replaces $p_1$ by $p_1 + p_2$ on the named curve, computed with the chord formula.
-/ `secp256k1_dbl` (`0xf5`), `secp256r1_dbl` (`0xe9`), `bn254_curve_dbl` (`0xfb`) (ArithEq): the affine point $p$ at $P$ itself is replaced by $2 p$, computed with the tangent formula.
-/ `bn254_complex_add` (`0xfc`), `bn254_complex_sub` (`0xfd`), `bn254_complex_mul` (`0xfe`) (ArithEq): with elements $f_1, f_2$ of the quadratic extension of the BN254 base field at $P_0, P_1$, replaces $f_1$ by $f_1 + f_2$, $f_1 - f_2$, resp. $f_1 dot f_2$.
+/ `secp256k1_add` (`0xf4`), `secp256r1_add` (`0xe8`), `bn254_curve_add` (`0xfa`) (ArithEq): with affine points $p_1, p_2$ at $q_0, q_1$, replaces $p_1$ by $p_1 + p_2$ on the named curve, computed with the chord formula.
+/ `secp256k1_dbl` (`0xf5`), `secp256r1_dbl` (`0xe9`), `bn254_curve_dbl` (`0xfb`) (ArithEq): the affine point $p$ at $q$ itself is replaced by $2 p$, computed with the tangent formula.
+/ `bn254_complex_add` (`0xfc`), `bn254_complex_sub` (`0xfd`), `bn254_complex_mul` (`0xfe`) (ArithEq): with elements $f_1, f_2$ of the quadratic extension of the BN254 base field at $q_0, q_1$, replaces $f_1$ by $f_1 + f_2$, $f_1 - f_2$, resp. $f_1 dot f_2$.
 / `bls12_381_curve_add` (`0xe3`), `bls12_381_curve_dbl` (`0xe4`) (ArithEq384): as the 256-bit curve operations, on BLS12-381 with 384-bit coordinates.
 / `bls12_381_complex_add` (`0xe5`), `bls12_381_complex_sub` (`0xe6`), `bls12_381_complex_mul` (`0xe7`) (ArithEq384): as the BN254 extension-field operations, over the BLS12-381 base field.
 
 == DMA Opcodes (DMA chips)
 
-Unlike the other precompiles, the DMA opcodes take $a$ and $b$ as plain values. The byte count $n$ is the word at the fixed system address `0xA000_0F00` for `dma_memcpy` and `dma_memcmp`, and the extended argument of the instruction (its `j1` field) for the `x` variants. $"flag" = 0$ always.
+Unlike the other precompiles, the DMA opcodes take $a$ and $b$ as plain values. The byte count $n$ is the word at the fixed system address `0xA000_0F00` for `dma_memcpy` and `dma_memcmp`, and the extended argument of the instruction (its `j1` field) for `dma_xmemcpy` and `dma_xmemcmp`; `dma_xmemset` takes the count in $b$ and the fill byte in the extended argument. $"flag" = 0$ always.
 
 / `dma_memcpy` (`0xd0`), `dma_xmemcpy` (`0xd6`): $"mem"[a, a + n) <- "mem"[b, b + n)$, with the semantics of a copy through a temporary buffer when the ranges overlap; $c = a$.
 / `dma_memcmp` (`0xd1`), `dma_xmemcmp` (`0xd7`): $c$ = the difference $"mem"(a + k) - "mem"(b + k)$, as a signed 64-bit value, at the first offset $k < n$ where the two ranges differ, and $c = 0$ if they are equal; memory is unchanged.
