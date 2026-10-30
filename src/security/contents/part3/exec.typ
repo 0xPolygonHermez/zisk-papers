@@ -98,7 +98,7 @@ We identify every element of $FF$ with its representative in $[0, p)$.
 ]
 
 The lemma is what lets the analysis read words off messages: the operands and
-results of the operation bus, the values of the memory bus and the outputs in
+results of the Operation Bus, the values of the Memory Bus and the outputs in
 $bold(p)_"ext"$ are words exactly when their limbs are well formed. A pair that is
 not well formed is not the split of its word, and two pairs may differ in
 $FF^2$ while having the same $"word"$, so every pair that the reconstruction
@@ -110,7 +110,7 @@ ZisK establishes the range of a limb where the value is _produced_, and chips
 that only move a value do not check it again. In the terms of @sec:per-bus, the producers are:
 - _The program._ The immediates of an instruction are fields of the
   committed program, in $[0, 2^(32))$ by the instruction format.
-- _The operation bus._ The contract of every operation states that the limbs
+- _The Operation Bus._ The contract of every operation states that the limbs
   of its result are well formed whenever those of its operands are
   (@def:zisk-channels); for a precompile, the words that it writes to memory
   are well formed by the contract of its memory effect.

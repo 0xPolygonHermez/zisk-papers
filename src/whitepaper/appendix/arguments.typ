@@ -1,6 +1,6 @@
 #import "../../shared/lib.typ": definition
 
-This appendix gives the formal statements of the argument types used in ZisK's arithmetization framework. All are realized through the same bus-balancing primitive of @sec:interactions ---one or more sender interactions with positive multiplicity, one or more receiver interactions with negative multiplicity, on a shared bus--- but they differ in the semantic relationship they enforce on the messages.
+This appendix gives the formal statements of the argument types used in ZisK's arithmetization framework. All are realized through the same bus-balancing primitive of @sec:interactions ---one or more interactions that prove messages, with positive multiplicity, and one or more that assume them, with negative multiplicity, on a shared bus--- but they differ in the semantic relationship they enforce on the messages.
 
 Throughout this appendix we fix the chips $(cal(C)_i, cal(I)_i)$, $i in [M]$, of ZisK, with witnesses ${(bold(T)_i, bold(a)_i)}_(i=1)^M$, and we write $m(r) in FF$ and $bold(e)(r) in FF^ell$ for the row-$r$ evaluation of an interaction $(b, m, bold(e))$ under its witness. For readability, each statement assumes a single instance per AIR and that the two interactions it names are the only ones on their bus; in ZisK the same statements hold for the sums over all instances, the global messages counting as further interactions.
 
@@ -11,7 +11,7 @@ A _permutation argument_ enforces that two AIRs observe the same multiset of mes
 #definition(numbered: false, title: "Permutation Argument")[
   Let $iota_1 = (b, m_1, bold(e)_1) in cal(I)_(i_1)$ and $iota_2 = (b, -m_2, bold(e)_2) in cal(I)_(i_2)$ be a sender/receiver pair of interactions of common length $ell$ on a shared bus $b$, with boolean multiplicities $m_1, m_2 in {0, 1}$. The pair $(iota_1, iota_2)$ realizes a _permutation argument_ in the sense that the joint contribution of $iota_1$ and $iota_2$ to bus $b$ vanishes if and only if
   $
-    {bold(e)_1 (r) : r in [N_(i_1)], m_1 (r) = 1} = {bold(e)_2 (r) : r in [N_(i_2)], m_2 (r) = 1}
+    {bold(e)_1 (r) : r in [0, N_(i_1)), m_1 (r) = 1} = {bold(e)_2 (r) : r in [0, N_(i_2)), m_2 (r) = 1}
   $
   as multisets.
 ]
@@ -21,9 +21,9 @@ A _permutation argument_ enforces that two AIRs observe the same multiset of mes
 A _lookup argument_ enforces that every message sent on the bus by a "query" AIR also appears as a row of a "table" AIR, with the table free to receive each query any number of times.
 
 #definition(numbered: false, title: "Lookup Argument")[
-  Let $iota_q = (b, m_q, bold(e)_q) in cal(I)_(i_q)$ be a _query_ interaction with boolean multiplicity $m_q in {0, 1}$, and $iota_t = (b, -m_t, bold(e)_t) in cal(I)_(i_t)$ a _table_ interaction, and assume fewer than $p$ queries. Both interactions have common length $ell$. The pair $(iota_q, iota_t)$ realizes a _lookup argument_ in the sense that, if their joint contribution to bus $b$ vanishes, then
+  Let $iota_q = (b, -m_q, bold(e)_q) in cal(I)_(i_q)$ be a _query_ interaction with boolean multiplicity $m_q in {0, 1}$, and $iota_t = (b, m_t, bold(e)_t) in cal(I)_(i_t)$ a _table_ interaction, and assume fewer than $p$ queries. Both interactions have common length $ell$. The pair $(iota_q, iota_t)$ realizes a _lookup argument_ in the sense that, if their joint contribution to bus $b$ vanishes, then
   $
-    forall r in [N_(i_q)] " with " m_q (r) = 1 : exists r' in [N_(i_t)] " s.t. " bold(e)_q (r) = bold(e)_t (r');
+    forall r in [0, N_(i_q)) " with " m_q (r) = 1 : exists r' in [0, N_(i_t)) " s.t. " bold(e)_q (r) = bold(e)_t (r');
   $
   conversely, if every query lies in the table, the contribution vanishes for the multiplicities $m_t (r)$ that count the queries landing on each row $r$ of the table.
 ]
@@ -35,9 +35,9 @@ Lookup arguments underpin most of ZisK's table-driven constraints: instruction d
 A _range check argument_ enforces that an expression takes values in a bounded interval. It is a specialization of the lookup argument against a fixed interval table, but it is exposed as a first-class primitive because its receiving side is a shared system table rather than an AIR-specific one.
 
 #definition(numbered: false, title: "Range Check Argument")[
-  Fix integers $x <= y$ and let $b$ be the bus designated for the range check on $[x, y]$. Let $iota = (b, m, e) in cal(I)_i$ be an interaction of length $ell = 1$ with boolean multiplicity $m in {0, 1}$, paired with a receiver interaction $iota_t = (b, -m_t, e_t)$ on a dedicated table AIR whose trace materializes the set ${x, x+1, dots, y}$, with fewer than $p$ queries. The pair $(iota, iota_t)$ realizes a _range check argument_ on $[x, y]$ in the sense that, if their joint contribution to bus $b$ vanishes, then
+  Fix integers $x <= y$ and let $b$ be the bus designated for the range check on $[x, y]$. Let $iota = (b, -m, e) in cal(I)_i$ be an interaction of length $ell = 1$ with boolean multiplicity $m in {0, 1}$, paired with an interaction $iota_t = (b, m_t, e_t)$ on a dedicated table AIR whose trace materializes the set ${x, x+1, dots, y}$, with fewer than $p$ queries. The pair $(iota, iota_t)$ realizes a _range check argument_ on $[x, y]$ in the sense that, if their joint contribution to bus $b$ vanishes, then
   $
-    forall r in [N_i] " with " m (r) = 1 : e (r) in [x, y];
+    forall r in [0, N_i) " with " m (r) = 1 : e (r) in [x, y];
   $
   conversely, if every queried value lies in $[x, y]$, the contribution vanishes for the multiplicities $m_t (r)$ that count the queries landing on each value.
 ]

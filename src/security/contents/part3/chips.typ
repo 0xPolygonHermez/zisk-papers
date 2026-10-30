@@ -28,7 +28,7 @@ $"root"_"ROM"$ is.
 
 == The Rom and the Fixed Tables
 
-The Rom chip has a single interaction: it proves, on the ROM bus, every row of
+The Rom chip has a single interaction: it proves, on the ROM Bus, every row of
 its table columns with a free multiplicity. Its table columns are cached
 (@def:columns), so by $Local$ they open the commitment $"root"_"ROM"$ carried
 in the public statement.
@@ -37,7 +37,7 @@ in the public statement.
   Let the Rom witnesses of $L$ have the same cached columns, and let $P_L$ be
   the program whose messages are their rows other than the all-zero padding
   rows. Then $"RomRoot"(P_L) =
-  "root"_"ROM"$, and every push on the ROM bus is a message of $P_L$. These
+  "root"_"ROM"$, and every push on the ROM Bus is a message of $P_L$. These
   pushes are unconditional.
 ] <lem:rom>
 
@@ -59,7 +59,7 @@ message of $P_L$.
 The other chips that prove from fixed columns have the same shape: the range
 tables, the tables of the binary, binary extension, arithmetic, MemAlign and
 DMA chips, the Keccak-f table, and the frequent-operation caches, which prove
-on the operation bus. Each proves, with a free multiplicity, a row of its
+on the Operation Bus. Each proves, with a free multiplicity, a row of its
 fixed columns.
 
 #lemma(title: "Fixed Tables")[
@@ -82,7 +82,7 @@ the setup, which this analysis takes as obligations (@tbl:obligations).
 == BinaryAdd
 
 The BinaryAdd chip proves the $64$-bit addition $mono("add")$ on the
-operation bus, one operation per row. A row holds the limbs $a_0, a_1, b_0,
+Operation Bus, one operation per row. A row holds the limbs $a_0, a_1, b_0,
 b_1$ of the operands, four $16$-bit chunks $gamma_0, dots, gamma_3$ of the
 result and two carries $kappa_0, kappa_1$, with the constraints
 $
@@ -142,7 +142,7 @@ $"set_pc"$, and $"pc"_r + "j2"$ otherwise.
     $"pc"_r$, and $"pc"_r$ is an address of $P_L$.
   + _Operands._ $a_r$ is $c^"prev"_r$ if its source is $mono("C")$, the
     immediate of the instruction if it is $mono("IMM")$, and otherwise the
-    value of the access that the row pulls on the memory bus: the load of the
+    value of the access that the row pulls on the Memory Bus: the load of the
     word at address $"a_off"$ ($mono("MEM")$), at memory step $1 + 4 t$, or,
     for register $"a_off"$ ($mono("REG")$), the access at that memory step
     that the row pushes after pulling the previous access to the register. Likewise $b_r$, at memory step
@@ -155,7 +155,7 @@ $"set_pc"$, and $"pc"_r + "j2"$ otherwise.
     result and the flag of the row are those of the operation on $a_r$ and
     $b_r$, the result is well formed, and, for a precompile, its memory effect
     at step $t$ is the one its prover makes.
-  + _Store._ If the instruction stores, the row pulls on the memory bus, at
+  + _Store._ If the instruction stores, the row pulls on the Memory Bus, at
     memory step $1 + 4 t + 2$, the store of $"pc"_r + "j2"$ if
     $"store_pc"$ and of $c_r$ otherwise, at the address or register of its
     destination.
@@ -184,7 +184,7 @@ role of the row before its first row.
   contracts. Then the sequence of its rows, preceded by $B^"in"$, satisfies
   the conditions of a log of the region, with the first
   address of the first segment new; its addresses lie between the base and
-  the end of the region; the accesses it proves on the memory bus are those of
+  the end of the region; the accesses it proves on the Memory Bus are those of
   its selected rows, as aligned $8$-byte operations; and it pushes on the
   continuation bus its last row as the payload of the next segment, unless it
   is the last segment.
@@ -197,7 +197,7 @@ role of the row before its first row.
 The soundness of the other chips is stated as an obligation, in the same form:
 every push meets the contract of its channel, relying on the table and range
 channels and, where stated, on operation channels; and every interaction of
-the chip on the memory bus has multiplicity $0$, $1$ or $-1$. @tbl:obligations
+the chip on the Memory Bus has multiplicity $0$, $1$ or $-1$. @tbl:obligations
 lists them.
 
 #figure(

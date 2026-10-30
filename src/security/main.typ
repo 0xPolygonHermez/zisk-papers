@@ -12,7 +12,7 @@
   ),
   // Fixed on purpose: the build script pins SOURCE_DATE_EPOCH for
   // reproducible PDFs, so `datetime.today()` would not give the real date.
-  date: [September 14, 2026],
+  date: [October 30, 2026],
   abstract: [
     This document analyzes the security of ZisK's proof system, from the
     proof of a single chip to the statement about program execution that a

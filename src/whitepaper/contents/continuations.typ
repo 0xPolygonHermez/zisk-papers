@@ -14,7 +14,7 @@ Rather than developing new cryptographic infrastructure and tying the solution t
 
 == ZisK's Approach: Trace Splitting
 
-ZisK decouples segmentation from execution and lets chips operate on demand. The program runs to completion in the host execution environment in a single pass, producing the full execution trace. Each chip records only the rows for instructions it handles: the Memory chip records only memory accesses, Keccak only hash operations, and so on. Chips that are rarely invoked produce short traces; chips that are heavily used produce long ones.
+ZisK decouples segmentation from execution and lets chips operate on demand. The program runs to completion in the host execution environment in a single pass, producing the full execution trace. Each chip records only the rows for instructions it handles: the Memory chip records only memory accesses, Keccakf only Keccak-f permutations, and so on. Chips that are rarely invoked produce short traces; chips that are heavily used produce long ones.
 
 The prover then partitions each chip's trace independently into consecutive segments of that chip's fixed height $N_i$. Padding is limited to the final segment of each chip, where the last partial slice is padded to $N_i$ rows; all earlier segments are filled to capacity. This stands in contrast to the standard approach, where every chip is padded to its height in every execution segment regardless of how many operations it actually performed. @fig:padding illustrates this layout.
 
@@ -51,15 +51,6 @@ The prover then partitions each chip's trace independently into consecutive segm
     let Hp = 33pt
     let Np = 4
 
-    let li(c, body) = box(fill: c, width: 10pt, height: 10pt, stroke: 0.3pt) + h(3pt) + body
-
-    let legend = grid(
-      columns: (auto, auto, auto, auto, auto),
-      align: left + horizon,
-      column-gutter: 8pt,
-      li(ca)[Main], li(cm)[Memory], li(ck)[ALU], li(cp)[Poseidon], li(pad)[Padding],
-    )
-
     // Small chip label above its segments
     let chip_group(label, segs) = stack(dir: ttb, spacing: 3pt, strong(text(size: 7pt, label)), segs)
 
@@ -68,7 +59,7 @@ The prover then partitions each chip's trace independently into consecutive segm
       dir: ltr,
       spacing: 0pt,
       align(right + horizon, std.pad(right: 6pt, strong(text(size: 7.5pt)[Main chip]))),
-      // 3 full (6/6) + 1 partial (2/6)
+      // 5 full (6/6) + 1 partial (2/6)
       stack(
         dir: ltr,
         spacing: sp,
@@ -81,24 +72,24 @@ The prover then partitions each chip's trace independently into consecutive segm
       ),
     )
 
-    // Second horizontal: Memory, Keccak, Poseidon stacked side by side
+    // Second horizontal: Memory, Binary and Poseidon2 side by side
     let other_chips = stack(
       dir: ltr,
       spacing: 10pt,
-      // Memory: 1 full (5/5) + 1 partial (1/5)
+      // Memory: 2 full (5/5) + 1 partial (4/5)
       chip_group("Memory", stack(dir: ltr, spacing: sp, seg(cm, 5, Hme, Nme), seg(cm, 5, Hme, Nme), seg(
         cm,
         4,
         Hme,
         Nme,
       ))),
-      // Keccak: 1 partial (2/3)
-      chip_group("ALU", stack(dir: ltr, spacing: sp, seg(ck, 3, Hk, Nk), seg(ck, 3, Hk, Nk), seg(ck, 1, Hk, Nk))),
-      // Poseidon: 1 partial (2/4)
-      chip_group("Poseidon", seg(cp, 2, Hp, Np)),
+      // Binary: 2 full (3/3) + 1 partial (1/3)
+      chip_group("Binary", stack(dir: ltr, spacing: sp, seg(ck, 3, Hk, Nk), seg(ck, 3, Hk, Nk), seg(ck, 1, Hk, Nk))),
+      // Poseidon2: 1 partial (2/4)
+      chip_group("Poseidon2", seg(cp, 2, Hp, Np)),
     )
 
-    stack(dir: ttb, spacing: 10pt, main_row, other_chips) //, legend)
+    stack(dir: ttb, spacing: 10pt, main_row, other_chips)
   },
   caption: [
     Padding layout for ZisK's trace-splitting approach. Chips define their own segment height $N_i$. Colored rows hold actual computation; gray rows are padding. Only the final segment of each chip requires padding.

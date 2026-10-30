@@ -21,7 +21,7 @@ buses that only count, the messages proved are the messages assumed.
   of a bus, a multiplicity $mu in FF$ and a message $v$, that contains
   $(b_iota, m_iota (w_i, r), bold(e)_iota (w_i, r))$ for every entry
   $(tau_i, w_i)$ of $L$, every interaction $iota in cal(I)_(tau_i)$ and every
-  row $r in [N_(tau_i)]$, and $(b, cal(G)(bold(p))(b, v), v)$ for every global
+  row $r in [0, N_(tau_i))$, and $(b, cal(G)(bold(p))(b, v), v)$ for every global
   message $(b, v)$ in the support of $cal(G)(bold(p))$. An interaction is a
   _pull_ if $mu = -1$, and a _push_ if $mu in.not {0, -1}$.
 ] <def:interactions-of>
@@ -68,7 +68,7 @@ the first.
 
 A contract is attached to messages rather than to buses, because some chips of
 ZisK both prove and assume messages on the same bus, of different kinds: Arith
-proves multiplications and assumes comparisons, both on the operation bus. A
+proves multiplications and assumes comparisons, both on the Operation Bus. A
 bus is therefore split into _channels_ by a key read from the message, such as
 the opcode of an operation.
 
@@ -159,7 +159,7 @@ the word encoding of @sec:encoding.
     $(c, "flag") = "op"(a, b)$, for the words $a$, $b$ and $c$ of the limbs
     (@def:words); for a precompile, it states moreover that the memory effect
     of the operation, at step $t$ and with extended argument $x$, is the one
-    its prover makes on the memory bus, with well-formed limbs. For `pubout`,
+    its prover makes on the Memory Bus, with well-formed limbs. For `pubout`,
     the predicate states that $a < 32$, that $b = "out"_a$, the public output
     of index $a$ in $bold(p)_"ext"$, and that $(c, "flag") = (b, 0)$.
   + _ROM bus._ One channel, whose predicate states that the instruction of the

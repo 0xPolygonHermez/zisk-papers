@@ -70,7 +70,7 @@ This host/guest separation is central to ZisK's trust model. The guest program r
 
 Neither inputs nor hints are part of what the verifier sees: from the proof's point of view both are prover-chosen, and ZisK treats them as unconstrained. A guest that wants its result to be bound to its input must do so itself, for instance by exposing a hash of the input as a public output. The only data the verifier sees about an execution are the program commitment and the public outputs (@sec:zisk-statement).
 
-The key property of this model is that _everything the guest touches is constrained by the VM's arithmetization_. Memory accesses are constrained by the memory argument; program code is validated by the ROM bus on every fetch; and public outputs become explicit proof data. The host state, by contrast, lies outside the proof.
+The key property of this model is that _everything the guest touches is constrained by the VM's arithmetization_. Memory accesses are constrained by the memory argument; program code is validated by the ROM Bus on every fetch; and public outputs become explicit proof data. The host state, by contrast, lies outside the proof.
 
 == State <sec:state>
 

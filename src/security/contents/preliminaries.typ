@@ -48,7 +48,7 @@ _scalar values_, which are constant over the rows.
   The variables $X_j^((o))$ refer to the columns and the variables $Y_l$ to
   the scalar values. A _witness_ for $cal(C)$ is a pair
   $w = (bold(T), bold(v))$ with $bold(T) in FF^(N times W)$, the _trace_, and
-  $bold(v) in FF^V$, the _values_. At row $r in [N]$ the variable
+  $bold(v) in FF^V$, the _values_. At row $r in [0, N)$ the variable
   $X_j^((o))$ takes the value $T_j (r + o)$, with row indices taken modulo
   $N$, and the variable $Y_l$ the value $v_l$. The witness _satisfies_
   $cal(C)$ if every constraint polynomial evaluates to zero at every row.
@@ -116,8 +116,8 @@ be the one that the unit computed; and a load must return the value of the
 last store to the same address, which may have been executed in another
 segment and recorded by another AIR. ZisK expresses such relations with
 _buses_. Every row of an AIR may put messages, tuples of field elements, on
-a bus, each with a _multiplicity_: positive when the row sends the message
-and negative when it receives it. The relation holds when, on every bus, the
+a bus, each with a _multiplicity_: positive when the row proves the message
+and negative when it assumes it (#fwd(<sec:per-bus>)[Part III]). The relation holds when, on every bus, the
 multiplicities of each message add up to zero over all the AIR instances of
 a proof, that is, when the bus is _balanced_ (@def:balanced). An
 _interaction_ declares, for one AIR, the message that each of its rows puts
@@ -163,7 +163,7 @@ and $psi_tau$.
     $bold(v)|_(I^"pub"_tau) = bold(p)_"ext"$ and
     $bold(v)|_(I^"pv"_tau) = bold(p)_"pv"$.
   + $bold(T)$ agrees with the prescribed data on the fixed columns:
-    $T_j (r) = d_(tau, j)(r)$ for every $j in J^"fix"_tau$ and $r in [N_tau]$.
+    $T_j (r) = d_(tau, j)(r)$ for every $j in J^"fix"_tau$ and $r in [0, N_tau)$.
   + The cached columns open the commitment carried in $bold(p)_"ext"$:
     $ Commit_"cach" (bold(T)|_(J^"cach"_tau)) = (p_(psi_tau (1)), dots, p_(psi_tau (m))), $
     where $p_i$ is the $i$-th coordinate of $bold(p)_"ext"$.
@@ -185,13 +185,13 @@ carried in $bold(p)_"ext"$ are those of the intended program.
   support and add such maps pointwise. For $tau in [M]$ and $w in cal(W)_tau$,
   the _message multiset_ of $w$ is
   $
-    "Msg"_tau (w)(b, v) := sum_(iota in cal(I)_tau, b_iota = b) sum_(r=1)^(N_tau) m_iota (w, r) dot bold(1)[bold(e)_iota (w, r) = v].
+    "Msg"_tau (w)(b, v) := sum_(iota in cal(I)_tau, b_iota = b) sum_(r=0)^(N_tau - 1) m_iota (w, r) dot bold(1)[bold(e)_iota (w, r) = v].
   $
   Its support has at most $N_tau dot abs(cal(I)_tau)$ elements.
 ] <def:msg>
 
-A row that sends a message with positive multiplicity and a row of the same
-witness that receives it with negative multiplicity cancel in
+A row that proves a message, with positive multiplicity, and a row of the
+same witness that assumes it, with negative multiplicity, cancel in
 $"Msg"_tau (w)$: the multiset records the net flow of every message out of the
 witness.
 
@@ -258,7 +258,7 @@ $abs(cal(G)(bold(p))) <= g$ for a constant $g$.
   $
   that is,
   $
-    cal(M)_L (b, v) = sum_(i=1)^(abs(L)) sum_(iota in cal(I)_(tau_i), b_iota = b) sum_(r=1)^(N_(tau_i)) m_iota (w_i, r) dot bold(1)[bold(e)_iota (w_i, r) = v].
+    cal(M)_L (b, v) = sum_(i=1)^(abs(L)) sum_(iota in cal(I)_(tau_i), b_iota = b) sum_(r=0)^(N_(tau_i) - 1) m_iota (w_i, r) dot bold(1)[bold(e)_iota (w_i, r) = v].
   $
   The collection is _balanced for_ $bold(p) in cal(P)$, written
   $Balanced_bold(p) (L)$, if $cal(M)_L + cal(G)(bold(p)) = 0$, i.e.

@@ -394,7 +394,7 @@ party. The verification keys involved play different roles. @tbl:vk-ledger recor
   caption: [
     Verification-key ledger. The type $tau$ selects which hard-coded
     key an aggregation node uses for a child; the propagated public $vk$ is
-    the aggregation verifier's own key, which no aggregation node can
+    the aggregation node's own key, which no aggregation node can
     hard-code and which the Final Verifier fixes.
   ],
   kind: table,
@@ -501,7 +501,7 @@ with it the cached-column commitment, so the cached columns are fixed before
 the key $chi$ is derived, exactly as the committed witnesses are.
 
 *Frequent-operation caches.* The caches of precomputed operations are tables that prove, on the
-operation bus, every operation they list. Their columns are fixed, generated
+Operation Bus, every operation they list. Their columns are fixed, generated
 at setup independently of the program, so they are bound by the
 verification key like every fixed column (@tbl:vk-ledger). That every row of the table is a correct operation is a
 property of the setup, which this analysis takes as an obligation

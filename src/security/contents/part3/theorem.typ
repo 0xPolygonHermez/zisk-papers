@@ -39,7 +39,7 @@ output. The initial state, the termination at $"pc"_"END"$ with $c_T = 0$ and
 $T <= 2^(36)$ are @lem:global-control and @lem:main-chain; the ROM data
 clause is the log of the ROM data region; the program clause is @lem:rom.
 For the public outputs, every `pubout` meets the contract $b = "out"_a$ of
-the operation bus; the only entries that carry an output message are its
+the Operation Bus; the only entries that carry an output message are its
 global push, with multiplicity $1$, and the pulls of the Main chip, with
 multiplicity $-1$, so balance with fewer than $p$ entries makes it pulled
 exactly once.]

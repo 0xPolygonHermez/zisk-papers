@@ -1,6 +1,6 @@
 // The ZisK release these documents describe.
 #let zisk-version = footnote[
-  This document describes ZisK v0.16.1 [48cf7cc -- 2026-20-03]. \
+  This document describes ZisK v0.16.1 [48cf7cc -- 2026-03-20]. \
   ~~~~~ Source code available at #link("https://github.com/0xPolygonHermez/zisk").
 ]
 

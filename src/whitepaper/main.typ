@@ -5,7 +5,7 @@
   authors: ((name: "ZisK Core Team"),),
   // Fixed on purpose: the build script pins SOURCE_DATE_EPOCH for
   // reproducible PDFs, so `datetime.today()` would not give the real date.
-  date: [September 14, 2026],
+  date: [October 30, 2026],
   abstract: [
     We present ZisK, a STARK-based zero-knowledge virtual machine (zkVM) that executes programs compiled from standard instruction set architectures and produces succinct, transparent proofs of their correct execution. ZisK targets the RISC-V ISA, allowing developers to use existing Rust and C toolchains without modification. Moreover, ZisK's modular architecture enables the addition of optimized constraint systems for expensive operations such as elliptic-curve arithmetic and bulk memory access, making it practical to prove complex computations at scale.
 

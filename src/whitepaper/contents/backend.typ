@@ -31,7 +31,7 @@ Rates, query counts and grinding are chosen per AIR so that every proof reaches 
       [Keccakf], [$17$], [$1\/2$], [$217$], [$23$], [$8$], [$3$],
       [Poseidon2], [$17$], [$1\/4$], [$114$], [$16$], [$8$ ($4$ last)], [$4$],
       [Compressors], [$18$--$20$], [$1\/4$], [$110$], [$20$], [$8$ ($4$ last)], [$5$],
-      [Leaf and aggregation verifiers], [$17$], [$1\/8$], [$73$], [$20$], [$8$], [$8$],
+      [Leaf and aggregation nodes], [$17$], [$1\/8$], [$73$], [$20$], [$8$], [$8$],
       [Final Verifier], [$16$], [$1\/32$], [$43$], [$22$], [$16$], [$8$],
     )
   },
@@ -39,7 +39,7 @@ Rates, query counts and grinding are chosen per AIR so that every proof reaches 
   kind: table,
 ) <tbl:backend-params>
 
-With these parameters, `soundcalc` @SOUNDCALC reports $128$ bits of security in the Johnson-bound regime for every AIR of ZisK. Under the more conservative _unique-decoding regime_ (UDR), which only assumes FRI soundness up to half the minimum distance, it reports between $111$ and $113$ bits for the AIRs at rate $1\/2$, $93$ bits for Poseidon2, $94$ bits for the compressors, $80$ bits for the leaf and aggregation verifiers and $63$ bits for the Final Verifier. ZisK therefore claims $128$-bit security in the Johnson-bound regime.
+With these parameters, `soundcalc` @SOUNDCALC reports $128$ bits of security in the Johnson-bound regime for every AIR of ZisK. Under the more conservative _unique-decoding regime_ (UDR), which only assumes FRI soundness up to half the minimum distance, it reports between $111$ and $113$ bits for the AIRs at rate $1\/2$, $93$ bits for Poseidon2, $94$ bits for the compressors, $80$ bits for the leaf and aggregation nodes and $63$ bits for the Final Verifier. ZisK therefore claims $128$-bit security in the Johnson-bound regime.
 
 #remark(title: "Proof Size and Compressors")[
   The high rate and large query count of the AIR proofs make them fast to produce but large, especially for the AIRs with the widest traces. The compressor nodes of @sec:recursion verify such a proof and re-prove its statement at rate $1\/4$ with $110$ queries, which is what keeps the leaf verifier within $2^(17)$ rows.
@@ -47,7 +47,7 @@ With these parameters, `soundcalc` @SOUNDCALC reports $128$ bits of security in 
 
 == Topology of All Proof-System Calls <sec:topology>
 
-@tbl:topology lists every AIR for which a STARK proof is produced in a ZisK proof, its role in the aggregation tree of @sec:recursion, the relation it proves in the security analysis @ZISK:RECURSION, and the number of instances an execution produces. An execution with $L$ leaves has between $ceil((L - 1) \/ 2)$ and $L - 1$ aggregation verifiers, since each has two or three non-null children; with a single leaf it has none, and the Final Verifier verifies the leaf verifier directly. All auxiliary arguments ---memory, lookups, permutations, range checks and continuations--- are realized as bus interactions inside the AIR leaves (@sec:bus-system), not as separate proof-system invocations.
+@tbl:topology lists every AIR for which a STARK proof is produced in a ZisK proof, its role in the aggregation tree of @sec:recursion, the relation it proves in the security analysis @ZISK:RECURSION, and the number of instances an execution produces. An execution with $L$ leaves has between $ceil((L - 1) \/ 2)$ and $L - 1$ aggregation nodes, since each has two or three non-null children; with a single leaf it has none, and the Final Verifier verifies the leaf verifier directly. All auxiliary arguments ---memory, lookups, permutations, range checks and continuations--- are realized as bus interactions inside the AIR leaves (@sec:bus-system), not as separate proof-system invocations.
 
 #figure(
   {
@@ -69,7 +69,7 @@ With these parameters, `soundcalc` @SOUNDCALC reports $128$ bits of security in 
 
       [leaf verifier], [one per AIR], [$cal(R)_"LEAF"^((tau))$], [one per leaf],
 
-      [aggregation verifier], [one], [$cal(R)_"AGG"$], [between $ceil((L - 1) \/ 2)$ and $L - 1$],
+      [aggregation node], [one], [$cal(R)_"AGG"$], [between $ceil((L - 1) \/ 2)$ and $L - 1$],
       [Final Verifier], [one], [$cal(R)_"FINAL"$], [$1$],
     )
   },
@@ -77,6 +77,6 @@ With these parameters, `soundcalc` @SOUNDCALC reports $128$ bits of security in 
   kind: table,
 ) <tbl:topology>
 
-Every AIR of @tbl:topology is registered in `soundcalc` @SOUNDCALC: each AIR under its own name (e.g., `Main`, `Mem`, `Keccakf`), each compressor as `<AIR>-compressor` (e.g., `Keccakf-compressor`), the aggregation verifier as `Recursive2`, and the Final Verifier as `Final`.
+Every AIR of @tbl:topology is registered in `soundcalc` @SOUNDCALC: each AIR under its own name (e.g., `Main`, `Mem`, `Keccakf`), each compressor as `<AIR>-compressor` (e.g., `Keccakf-compressor`), the aggregation node as `Recursive2`, and the Final Verifier as `Final`.
 
-The leaf verifiers of all AIRs share the STARK parameters and constraint system of the aggregation verifier and differ from it only in their fixed columns, which hard-code the key of the AIR they verify; the `soundcalc` entry `Recursive2` therefore covers both kinds of node. Finally, the Final Verifier's proof can be wrapped into a pairing-based SNARK over BN254 for cheap on-chain verification; this wrapping step is outside the scope of this document and of `soundcalc`.
+The leaf verifiers of all AIRs share the STARK parameters and constraint system of the aggregation node and differ from it only in their fixed columns, which hard-code the key of the AIR they verify; the `soundcalc` entry `Recursive2` therefore covers both kinds of node. Finally, the Final Verifier's proof can be wrapped into a pairing-based SNARK over BN254 for cheap on-chain verification; this wrapping step is outside the scope of this document and of `soundcalc`.

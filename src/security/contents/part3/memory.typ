@@ -4,7 +4,7 @@
 )
 
 The Main chip, the MemAlign chips and the precompiles access memory by
-pulling messages on the memory bus; the Memory AIRs prove the aligned
+pulling messages on the Memory Bus; the Memory AIRs prove the aligned
 accesses of each region as a sorted log; and the registers are carried by a
 linked-step argument of the Main chip on the same bus. The
 bus carries no contract. This section states how counting on it, together with
@@ -34,7 +34,7 @@ the logs, makes every load of the execution return its memory.
     by the global messages that initialize the registers.
 ] <lem:memory-bus>
 
-#todo[Proof: the third statement of @cor:zisk-contracts on the memory bus;
+#todo[Proof: the third statement of @cor:zisk-contracts on the Memory Bus;
 the regions are disjoint and identified by their addresses; (2) is the
 obligation on MemAlign (@tbl:obligations); a message determines its access,
 since addresses and steps are below $p$.]
