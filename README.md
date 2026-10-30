@@ -1,6 +1,6 @@
 # ZisK Papers
 
-This repository contains the [Typst](https://typst.app/) documents describing ZisK.
+This repository contains the [Typst](https://typst.app/) documents describing [ZisK](https://github.com/0xPolygonHermez/zisk). Released versions of the PDFs are on the [releases page](https://github.com/0xPolygonHermez/zisk-papers/releases).
 
 - **ZisK Whitepaper** ([PDF](src/whitepaper/main.pdf)): the specification of the ZisK zkVM. It covers the instruction set and its execution model, the arithmetization framework, the chips and buses, continuations, the recursive aggregation, and the proving backend with its parameters.
 - **Security of ZisK** ([PDF](src/security/main.pdf)): the security analysis of ZisK's proof system, in four parts: the proving system (knowledge soundness of every argument), the recursive aggregation (an accepting final proof yields a bounded collection of locally satisfying, bus-balanced AIR witnesses), the semantics (such a collection encodes a successful execution of the committed program; stated, and partly proved), and their composition into the main theorem, with a ledger of its assumptions and limitations.
