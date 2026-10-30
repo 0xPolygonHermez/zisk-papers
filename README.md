@@ -22,7 +22,7 @@ src/
 
 ## Build
 
-To refresh the committed PDFs, use the build script, which compiles every document deterministically:
+The documents require [Typst](https://github.com/typst/typst). To refresh the committed PDFs, use the build script, which compiles every document deterministically:
 ```sh
 ./scripts/build.sh
 ```
@@ -35,3 +35,37 @@ typst watch --root src src/lthash/main.typ src/lthash/main.pdf
 ```
 
 The documents use the Typst packages `fletcher`, `codly` and `codly-languages`, which Typst downloads on the first build.
+
+## Citing
+
+```bibtex
+@misc{zisk-whitepaper,
+  author       = {{ZisK Core Team}},
+  title        = {{ZisK} Whitepaper},
+  year         = {2026},
+  howpublished = {\url{https://github.com/0xPolygonHermez/zisk-papers}},
+}
+
+@misc{zisk-security,
+  author       = {H{\'e}ctor Masip-Ardevol},
+  title        = {Security of {ZisK}},
+  year         = {2026},
+  howpublished = {\url{https://github.com/0xPolygonHermez/zisk-papers}},
+}
+
+@misc{zisk-lthash,
+  author       = {H{\'e}ctor Masip-Ardevol},
+  title        = {Secure Challenge Derivation in {ZisK}},
+  year         = {2026},
+  howpublished = {\url{https://github.com/0xPolygonHermez/zisk-papers}},
+}
+```
+
+## License
+
+Licensed under either of
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
+- MIT license ([LICENSE-MIT](LICENSE-MIT))
+
+at your option.
