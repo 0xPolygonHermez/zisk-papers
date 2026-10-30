@@ -1,3 +1,6 @@
+#import "@preview/codly:1.3.0": codly, codly-init
+#import "@preview/codly-languages:0.1.10": codly-languages
+
 // The ZisK release these documents describe.
 #let zisk-version = footnote[
   This document describes ZisK v0.16.1 [48cf7cc -- 2026-03-20]. \
@@ -208,30 +211,9 @@
 // body for theorems, lemmas, propositions and corollaries.
 #let italic-envs = ([Theorem], [Lemma], [Proposition], [Corollary])
 
-// A paper: title page, article body, environments and table of contents.
-// `authors` are given as for `title-page`; `title` is a string, used for the
-// PDF metadata and, followed by the version footnote, on the title page.
-#let paper(title: none, authors: (), date: none, abstract: none, body) = {
-  show math.equation: set text(font: "New Computer Modern Math")
-
-  title-page(
-    font: body-font,
-    margin: title-margin,
-    title: [#title#zisk-version],
-    authors: authors,
-    date: date,
-    abstract: abstract,
-  )
-
-  show: article.with(
-    font: body-font,
-    title: title,
-    authors: authors.map(a => a.name),
-    margin: page-margin,
-    // The bibliography is placed by hand, with `references`.
-    bibliography: none,
-  )
-
+// Citations, theorem-like environments and remarks, shared by the papers and
+// the notes.
+#let environments(body) = {
   set cite(style: "references.csl")
 
   // The remark counter restarts at every top-level heading, like the theorem
@@ -295,6 +277,69 @@
     it.body
   })))
 
+  body
+}
+
+// Code blocks, with codly: framed, line numbers, and the language's name.
+// Languages come from codly-languages; add or override entries here, and map
+// a language without a syntax of its own to one that has it in `code-aliases`.
+#let code-languages = codly-languages + (
+  sage: (name: "Sage", icon: none, color: rgb("#3776ab")),
+)
+#let code-aliases = (sage: "python")
+
+#let code-blocks(body) = {
+  show: codly-init.with()
+  codly(
+    languages: code-languages,
+    aliases: code-aliases,
+    zebra-fill: none,
+    stroke: 0.5pt + luma(190),
+    radius: 3pt,
+    breakable: false,
+    number-format: n => text(fill: luma(150), str(n)),
+  )
+  // Smaller text, and space around the block, since codly's frame ignores
+  // block spacing. Codly re-renders an aliased block (`sage`) as a block of
+  // its target language (`python`), which this rule sees again: the outer one
+  // keeps its size, so the text is reduced once.
+  show raw.where(block: true): it => {
+    let aliased = it.lang != none and it.lang in code-aliases
+    set text(size: if aliased { 1em } else { 0.85em })
+    v(0.6em)
+    it
+    v(0.6em)
+  }
+  body
+}
+
+// A paper: title page, article body, environments and table of contents.
+// `authors` are given as for `title-page`; `title` is a string, used for the
+// PDF metadata and, followed by the version footnote, on the title page.
+#let paper(title: none, authors: (), date: none, abstract: none, body) = {
+  show math.equation: set text(font: "New Computer Modern Math")
+
+  title-page(
+    font: body-font,
+    margin: title-margin,
+    title: [#title#zisk-version],
+    authors: authors,
+    date: date,
+    abstract: abstract,
+  )
+
+  show: article.with(
+    font: body-font,
+    title: title,
+    authors: authors.map(a => a.name),
+    margin: page-margin,
+    // The bibliography is placed by hand, with `references`.
+    bibliography: none,
+  )
+
+  show: environments
+  show: code-blocks
+
   // Top-level outline entries are bold, without fill; parts stand out.
   show outline.entry.where(level: 1): it => {
     if it.element.supplement == [Part] {
@@ -346,5 +391,41 @@
   set heading(outlined: false, numbering: "A.", supplement: "Appendix")
   show heading.where(level: 1): set heading(outlined: true)
   show heading.where(level: 2): set heading(numbering: none)
+  body
+}
+
+// A short note: the title block at the top of the first page, no table of
+// contents, and the same body and references as the papers.
+#let note(title: none, authors: (), date: none, thanks: none, body) = {
+  show math.equation: set text(font: "New Computer Modern Math")
+
+  show: article.with(
+    font: body-font,
+    title: title,
+    authors: authors.map(a => a.name),
+    margin: page-margin,
+    bibliography: none,
+  )
+
+  show: environments
+  show: code-blocks
+
+  align(center, {
+    text(size: 17pt, title)
+    v(0.8em)
+    text(size: 12pt, authors.map(a => a.name).join(", "))
+    if date != none {
+      v(0.3em)
+      text(size: 11pt, date)
+    }
+  })
+  v(1.5em)
+
+  // A block, not a paragraph, so the first paragraph of the text is not
+  // indented after it.
+  if thanks != none {
+    block(width: 100%, below: 1.8em, emph(thanks))
+  }
+
   body
 }

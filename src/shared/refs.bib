@@ -62,6 +62,20 @@
 @string{africacrypt23month =    jul}
 @string{africacrypt23pub =      springer_cham}
 
+@string{eurocryptname =         "Advances in Cryptology -- {EUROCRYPT}"}
+@string{eurocrypt97name =       eurocryptname # "'97"}
+@string{eurocrypt97ed =         "Walter Fumy"}
+@string{eurocrypt97vol =        "1233"}
+@string{eurocrypt97addr =       ""}
+@string{eurocrypt97month =      may}
+@string{eurocrypt97pub =        springer_berlin_heidelberg}
+
+@string{crypto02name =          cryptoname # " 2002"}
+@string{crypto02ed =            "Moti Yung"}
+@string{crypto02vol =           "2442"}
+@string{crypto02month =         aug}
+@string{crypto02pub =           springer_berlin_heidelberg}
+
 // Copied from cryptobib/crypto.bib
 @Misc{EPRINT:GabWilCio19,
   author =       "Ariel Gabizon and
@@ -303,7 +317,69 @@
   url =          "https://eprint.iacr.org/2025/2055",
 }
 
+@InProceedings{EC:BelMic97,
+  author =       "Mihir Bellare and
+                  Daniele Micciancio",
+  title =        "A New Paradigm for Collision-Free Hashing: Incrementality at Reduced Cost",
+  pages =        "163--192",
+  editor =       eurocrypt97ed,
+  booktitle =    eurocrypt97name,
+  volume =       eurocrypt97vol,
+  address =      eurocrypt97addr,
+  month =        eurocrypt97month,
+  publisher =    eurocrypt97pub,
+  series =       mylncs,
+  year =         1997,
+  doi =          "10.1007/3-540-69053-0_13",
+}
+
+@InProceedings{C:Wagner02,
+  author =       "David Wagner",
+  title =        "A Generalized Birthday Problem",
+  pages =        "288--303",
+  editor =       crypto02ed,
+  booktitle =    crypto02name,
+  volume =       crypto02vol,
+  address =      cryptoaddr,
+  month =        crypto02month,
+  publisher =    crypto02pub,
+  series =       mylncs,
+  year =         2002,
+  doi =          "10.1007/3-540-45708-9_19",
+}
+
+@Misc{EPRINT:LKMW19,
+  author =       "Kevin Lewi and
+                  Wonho Kim and
+                  Ilya Maykov and
+                  Stephen Weis",
+  title =        "Securing Update Propagation with Homomorphic Hashing",
+  year =         2019,
+  howpublished = "Cryptology ePrint Archive, Report 2019/227",
+  url =          "https://eprint.iacr.org/2019/227",
+}
+
 // Manual entries
+@InProceedings{ANTS:Shallue08,
+  author =       "Andrew Shallue",
+  title =        "An Improved Multi-set Algorithm for the Dense Subset Sum Problem",
+  booktitle =    "Algorithmic Number Theory, 8th International Symposium, ANTS-VIII",
+  series =       mylncs,
+  volume =       "5011",
+  pages =        "416--429",
+  publisher =    "Springer, Berlin, Heidelberg",
+  year =         2008,
+  doi =          "10.1007/978-3-540-79456-1_28",
+}
+
+@Misc{LATTICE-ESTIMATOR,
+  author =       "Martin R. Albrecht",
+  title =        "Lattice Estimator",
+  year =         2024,
+  howpublished = "GitHub repository",
+  url =          "https://github.com/malb/lattice-estimator",
+}
+
 @article{CIRCOM,
   author={Bellés-Muñoz, Marta and Isabel, Miguel and Muñoz-Tapia, Jose Luis and Rubio, Albert and Baylina, Jordi},
   journal={IEEE Transactions on Dependable and Secure Computing}, 
@@ -418,11 +494,11 @@
   doi =          "10.1007/3-540-47721-7_12",
 }
 @Misc{ZISK:LTHASH,
-  author =       "ZisK",
+  author =       "H{\'e}ctor Masip-Ardevol",
   title =        "Secure Challenge Derivation in {ZisK}",
-  year =         2025,
-  howpublished = "HackMD technical note",
-  url =          "https://hackmd.io/SXKiWASTRu2QYgy7B-NGmg",
+  year =         2026,
+  howpublished = "ZisK Core Team technical note",
+  url =          "https://github.com/0xPolygonHermez/zisk-whitepaper",
 }
 
 @InProceedings{STOC:Ajtai96,
