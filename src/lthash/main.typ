@@ -135,8 +135,8 @@ First, observe that if multiplicities are left unbounded over $ZZ_p$, then
 LtHash is not collision-resistant. Indeed, given a multiset $S$, take any
 string $y in.not S$ and form $T = S union {y^((p))}$. Then $T != S$ but
 $"LtHash"(T) = "LtHash"(S)$. To avoid such trivial collisions, we restrict
-our attention to $cal(M)^(< B)({0, 1}^*)$, the family of multisets of
-cardinality below $B << p$. This is a stronger requirement than asking that
+our attention to $cal(M)^(< 2^B)({0, 1}^*)$, the family of multisets of
+cardinality below $2^B << p$. This is a stronger requirement than asking that
 every element of a multiset have multiplicity much lower than $p$, but it
 turns out to be sufficient for ZisK (see the next section).
 
@@ -149,7 +149,7 @@ multisets, as in Theorem 3 of @AC:CDDGS03, follows directly.
 At a high level, the relation goes as follows. For two multisets
 $S = {s_1^((m_(s_1))), dots, s_J^((m_(s_J)))}$ and
 $T = {t_1^((m_(t_1))), dots, t_K^((m_(t_K)))}$ of
-$cal(M)^(< B)({0, 1}^*)$ with $J, K > 0$, let
+$cal(M)^(< 2^B)({0, 1}^*)$ with $J, K > 0$, let
 $U = "supp"(S) union "supp"(T) = {u_1, dots, u_L}$, so that $L > 0$, and
 define
 $
@@ -164,7 +164,7 @@ $
 $
 Since both $S$ and $T$ have bounded cardinality and $h$ is a secure hash
 function, a collision yields a nontrivial solution $x$ of the SIS instance
-with infinity norm below $B$. Consequently, under the hardness of SIS, it is
+with infinity norm below $2^B$. Consequently, under the hardness of SIS, it is
 infeasible to find collisions of LtHash.
 
 == Enforcing Bounded Cardinality
@@ -184,19 +184,19 @@ $
 $
 The last coordinate records the total multiplicity of the multiset. By
 requiring, within proof aggregation, that this coordinate stays strictly below
-a fixed bound $B$ (e.g., $2^(20)$), we guarantee that no multiset reaches $B$
-elements. This prevents adversaries from building long addition chains or
+a fixed bound $2^B$ ($B = 20$ in ZisK), we guarantee that no multiset reaches
+$2^B$ elements. This prevents adversaries from building long addition chains or
 otherwise bypassing the cardinality bound.
 
 == Concrete Parameters and Security
 
 We use the Lattice Estimator @LATTICE-ESTIMATOR to estimate the security of
-LtHash against the best known attacks on SIS. With $n = 372$,
-$p = 2^(64) - 2^(32) + 1$ and $B = 2^(20)$,
+LtHash against the best known attacks on SIS. With $n = 368$,
+$p = 2^(64) - 2^(32) + 1$ and $2^B = 2^(20)$,
 ```sage
 from estimator import *
 
-vector_size = 372
+vector_size = 368
 goldilocks = 2**64 - 2**32 + 1
 bound = 2**20
 
@@ -206,64 +206,86 @@ SIS.estimate(params)
 we obtain
 #codly(number-format: none)
 ```
-lattice  :: rop: ≈2^134.3, red: ≈2^133.3, sieve: ≈2^133.3,
-            β: 363, η: 373, ζ: 317, d: 1951, prob: 1, ↻: 1, tag: infinity
+lattice  :: rop: ≈2^134.7, red: ≈2^133.8, sieve: ≈2^133.6,
+            β: 364, η: 374, ζ: 0, d: 2244, prob: 1, ↻: 1, tag: infinity
 ```
 which is sufficient for our $128$-bit security target.
 
 = Application to Distributed Challenge Derivation in ZisK
 
-We now describe how distributed challenge derivation is instantiated in ZisK.
-Let $n$ be a positive integer, let $p = 2^(64) - 2^(32) + 1$ be the
-Goldilocks prime, and let $h$ be the Poseidon2 hash function
-@AFRICACRYPT:GraKhoSch23. ZisK builds on STARKs as its underlying proving
-system, where polynomial commitments are the Merkle roots of trees containing
-all polynomial evaluations over a predefined domain over $ZZ_p$. Since
-Poseidon2 is used in the commitment phase, every commitment $c_i$ lies in the
-domain $D = ZZ_p^4$.
+We now describe how distributed challenge derivation is instantiated in ZisK
+v0.16.1 @ZISK:WHITEPAPER. Let $p = 2^(64) - 2^(32) + 1$ be the Goldilocks
+prime, let $pi : ZZ_p^(16) -> ZZ_p^(16)$ be the Poseidon2 permutation of
+width $16$ @AFRICACRYPT:GraKhoSch23, and let $n = 23 dot 16 = 368$. ZisK
+builds on STARKs as its underlying proving system: every segment of an
+execution is proved on its own, and its proof commits to the segment's
+stage-1 trace with a Poseidon2 Merkle tree whose root lies in $ZZ_p^4$.
 
 For security, the challenge space must be large enough for the target
-security level. As ZisK targets $128$-bit security, we fix $ZZ_p^3$ as the
-challenge space. Finally, we use the technique of the previous section to
-bound the number of accumulated elements by $B$.
+security level. As ZisK targets $128$-bit security, the challenges lie in the
+cubic extension $KK = ZZ_p [X] \/ (X^3 - X - 1)$, of $p^3 approx 2^(192)$
+elements. Finally, we use the technique of the previous section, with
+$B = 20$, to bound the number of accumulated elements by $2^B$.
 
-The distributed challenge $alpha$ is computed collaboratively by the provers
-${cal(P)_i}_(i=1)^J$ as follows:
-+ *Commit phase.* Each prover $cal(P)_i$ computes its polynomial commitment
-  $c_i in ZZ_p^4$ and sends it to the designated accumulator party $A$.
-+ *Initialization and first accumulation.* The accumulator is initialized at
-  $"acc"_0 = 0$. Upon receiving the first batch of $k$ commitments
-  $C = {c_1, dots, c_k}$, the accumulator builds the multiset
-  $S = {s_1^((m_(s_1))), dots, s_ell^((m_(s_ell)))}$ from $C$. For each
-  $s_i in S$, it derives a vector embedding by iterated hashing,
+The challenges are computed collaboratively by the segment provers
+${cal(P)_i}_(i=1)^J$ and the aggregation tree, which plays the role of the
+accumulator party $A$:
++ *Commit phase.* Each prover $cal(P)_i$ commits to the stage-1 trace of its
+  segment and publishes its _typed commitment_
   $
-    h_(i,1) = h(s_i), quad h_(i,2) = h(h_(i,1)), quad dots, quad
-    h_(i,n\/4) = h(h_(i,n\/4-1)),
+    s_i = (tau_i, "com"_i), quad "com"_i = ("root"_i, bold(a)_i),
   $
-  where each $h_(i,j) in ZZ_p^4$, and concatenates all intermediate values
+  where $tau_i$ is the type of its AIR, $"root"_i in ZZ_p^4$ is the Merkle root of its stage-1
+  trace, and $bold(a)_i$ are its stage-1 AIR values.
++ *Embedding.* Each typed commitment $s$ is mapped to a vector by absorbing it
+  into a Poseidon2 sponge of width $16$, squeezing the whole state, and
+  applying the permutation $22$ more times in a chain,
+  $
+    h_(s,1) = "Sponge"(s), quad h_(s,2) = pi(h_(s,1)), quad dots, quad
+    h_(s,23) = pi(h_(s,22)),
+  $
+  where each $h_(s,j) in ZZ_p^(16)$, and by concatenating all the states
   into
   $
-    v_i = (h_(i,1), dots, h_(i,n\/4), 1) in ZZ_p^(n+1).
+    h(s) = (h_(s,1), dots, h_(s,23)) in ZZ_p^n, quad v_s = (h(s), 1) in ZZ_p^(n+1).
   $
-  It then applies LtHash:
+  The last coordinate is the cardinality coordinate of the augmented
+  embedding $h'$; ZisK keeps it as a separate value, the _leaf counter_
+  $kappa$.
++ *Accumulation.* Every leaf of the aggregation tree carries the value
+  $"acc"_s = v_s$ of its typed commitment. Every aggregation node $u$ carries
+  the sum of the values of its non-null children,
   $
-    "acc"_1 = "acc"_0 + "acc"(c_1, dots, c_k) = "LtHash"(S) = sum_(i=1)^ell m_(s_i) dot v_i .
+    "acc"_u = sum_(w in "children"(u)) "acc"_w ,
   $
-+ *Subsequent accumulations.* As further batches of $k$ commitments arrive,
-  the accumulator repeats the above process, updating
-  $"acc"_i = "acc"_(i-1) + "acc"(dot)$.
-+ *Finalization.* After processing all $J$ commitments, i.e., after $J \/ k$
-  accumulation rounds, the accumulator outputs the final value
-  $"acc" := "acc"_(J\/k)$, which is broadcast to all the provers. Each prover
-  continues the protocol using the embedding of $"acc"$ into $ZZ_p^3$ as the
-  common challenge $alpha$.
+  and range-checks its counter, the last coordinate of $"acc"_u$, to
+  $[2, 2^B)$. At the root, for the multiset $S$ of the typed commitments of
+  all the segments,
+  $
+    "acc" = sum_(s in S) m_s dot v_s = "LtHash"(S)
+    = (sum_(s in S) m_s dot h(s), abs(S)), quad abs(S) < 2^B,
+  $
+  whatever the shape of the tree.
++ *Key derivation.* A Poseidon2 sponge absorbs the public statement
+  $bold(p)$ and the accumulated vector and squeezes the _global challenge_
+  $g in KK$; a fresh sponge seeded with $g$ squeezes the challenges of the
+  bus argument,
+  $
+    g = "Sponge"(bold(p), "acc") in KK, quad (alpha, gamma) = "Sponge"(g) in KK^2 .
+  $
+  The public statement carries the transcript elements left out in the
+  remark above. Every segment proof receives $g$ as a public input, so all
+  the provers use the same challenges, and the root of the tree checks that
+  they are the ones derived from what was actually aggregated.
 
-Efficiency, incrementality and security follow directly from the properties
-of LtHash. Accumulation is fully parallelizable and can be performed in any
-order. Input lengths can also vary, $k' != k$ being permissible, so several
-accumulators can be composed hierarchically: two accumulators $A_1$ and $A_2$
-may independently process disjoint subsets $C_1$ and $C_2$ of the commitments
-$C = {c_1, dots, c_J}$, after which a final aggregation step combines their
-outputs.
+Efficiency and incrementality follow directly from the properties of LtHash:
+accumulation is fully parallelizable and can be performed in any order, so
+several accumulators can be composed hierarchically: two subtrees may
+independently accumulate disjoint subsets $S_1$ and $S_2$ of the typed
+commitments, and their parent obtains
+$"LtHash"(S_1 union S_2) = "LtHash"(S_1) + "LtHash"(S_2)$ by a single addition.
+Security rests on the multiset collision-resistance of LtHash for multisets of
+fewer than $2^B$ elements; the security analysis of ZisK @ZISK:RECURSION
+relies on the stronger property of preimage awareness, which it assumes.
 
 #references()
