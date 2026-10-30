@@ -172,7 +172,7 @@ as $eta -> 0$ and $rho^+ -> rho$, and the level reported by `soundcalc`
     )
   },
   caption: [Security level, in bits, of the query round of every argument of
-    ZisK in the Johnson regime, for the parameters of @ZISK:WHITEPAPER: the idealized bound of @lem:grinding and the level reported by
+    ZisK in the Johnson regime: the idealized bound of @lem:grinding and the level reported by
     `soundcalc`.],
   kind: table,
 ) <tbl:security>

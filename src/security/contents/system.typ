@@ -422,7 +422,7 @@ changes none of the statements below. The only requirements are those the
 analysis names where it uses them: collision resistance of the digest, with
 at least $2 lambda$ bits (#fwd(<sec:discussion>)[Part IV]), and the random-oracle idealization.
 
-*Public statement.* In ZisK, $k = 68$ and $k' = 8$ @ZISK:WHITEPAPER. The external statement $bold(p)_"ext"$ consists of the program
+*Public statement.* In ZisK, $k = 68$ and $k' = 8$. The external statement $bold(p)_"ext"$ consists of the program
 commitment $"root"_"ROM"$, the root of the Rom chip's cached columns, at the
 $m = 4$ coordinates that $gamma$ designates (@def:columns), and of the $32$
 public outputs, each as two $32$-bit limbs; the proof values $bold(p)_"pv"$ are
@@ -472,7 +472,7 @@ with multiplicity. Its collision resistance on multisets of
 cardinality below $2^B$ rests on the hardness of the short integer solution
 problem @STOC:Ajtai96; the analysis assumes the stronger preimage awareness
 (@def:cr), which is the second idealization of @rem:idealized. ZisK takes
-$B = 20$ @ZISK:WHITEPAPER, so that a proof has fewer than $2^(20)$ leaves; the cardinality
+$B = 20$, so that a proof has fewer than $2^(20)$ leaves; the cardinality
 bound is what the leaf counter enforces, and $A dot 2^B <= p$ holds with
 room to spare.
 
@@ -496,8 +496,7 @@ the cached columns; this is sound because $DeriveKey$ absorbs $bold(p)$, and
 with it the cached-column commitment, so the cached columns are fixed before
 the key $chi$ is derived, exactly as the committed witnesses are.
 
-*Frequent-operation caches.* The caches of precomputed operations
-@ZISK:WHITEPAPER are tables that prove, on the
+*Frequent-operation caches.* The caches of precomputed operations are tables that prove, on the
 operation bus, every operation they list. Their columns are fixed, generated
 at setup independently of the program, so they are bound by the
 verification key like every fixed column (@tbl:vk-ledger). That every row of the table is a correct operation is a

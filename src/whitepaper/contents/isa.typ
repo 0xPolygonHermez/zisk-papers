@@ -112,6 +112,14 @@ In essence, each instruction is a single execution step that transforms two 64-b
 
 Two further flags are functions of `op`: `is_external_op`, which states that the operation is proved by a chip other than Main (@sec:chip-design), and `is_precompiled`, which states that the operation reads and writes memory itself (@sec:precompiles).
 
+Not every record of this shape is an instruction that the Main chip executes as specified, and the programs that ZisK proves are restricted accordingly.
+
+#definition(title: "Valid Program")[
+  A program $P$ is _valid_ if every one of its instructions has its fields in the domains above, takes `m32`, `is_external_op` and `is_precompiled` from its opcode, uses only register indices in $[1, 31]$ for the sources and the store of kind `REG`, and sets `set_pc` only for an opcode whose flag is always zero.
+] <def:valid-program>
+
+Every program produced by the transpiler is valid. Validity is not checked by the arithmetization: the Rom chip proves whatever table is committed (@sec:rom-bus), and a table that is not the ROM table of a valid program can be committed as well. A verifier therefore accepts a proof only for the program commitment of the valid program it expects.
+
 === Operations <sec:operations>
 
 ZisK defines a set of opcodes, listed with their exact semantics in @appendix:opcodes, which transcribes the reference implementation#footnote[It can be found at #link("https://github.com/0xPolygonHermez/zisk/blob/v0.16.1/core/src/zisk_ops.rs")[https://github.com/0xPolygonHermez/zisk/blob/v0.16.1/core/src/zisk_ops.rs].]. They fall into the following families, each proved by one or more chips of @sec:chip-design:
@@ -236,7 +244,7 @@ The new state is $S' = ("pc"', c', bold(x)', "mem"')$. We write $S' = "Step"_P (
 - It reads exactly $abs(h)$ words from the free-input port.
 An execution moreover respects the _ROM data policy_ if every write to the ROM data region leaves the memory unchanged, every $8$-byte word of the region is written at most once, and every word of the region that is never written is zero in $"mem"_0$. The contents of the region are thus fixed from the start by the stores of the boot code, which leave them unchanged, and a read of the region returns the same value whenever it happens.
 
-*Terminal condition.* Every ZisK program contains, at the exit address $"pc"_"END"$, an _exit instruction_ with the `end` field set; the only other instructions with `end` set are `halt` sentinels. The guest terminates by returning from its entry point or by the exit system call; in both cases control passes to the epilogue, which emits the public outputs (@sec:public-outputs) and jumps to $"pc"_"END"$. A $T$-step execution is _successful_ if $"pc"_T = "pc"_"END"$ and $c_T = 0$, every step before $T$ is valid, and the execution respects the ROM data policy. Execution _fails_ otherwise: on an undefined program counter, an access outside the regions of @tbl:address-space, a write to the input data region, a write that changes the ROM data region or a second write to one of its words, the `halt` sentinel, or if the program counter never reaches $"pc"_"END"$. Only successful executions are provable, and ZisK bounds their length by $T < 2^(36)$.
+*Terminal condition.* Every ZisK program contains, at the exit address $"pc"_"END"$, an _exit instruction_ with the `end` field set; the only other instructions with `end` set are `halt` sentinels. The guest terminates by returning from its entry point or by the exit system call; in both cases control passes to the epilogue, which emits the public outputs (@sec:public-outputs) and jumps to $"pc"_"END"$. A $T$-step execution is _successful_ if $"pc"_T = "pc"_"END"$ and $c_T = 0$, every step before $T$ is valid, and the execution respects the ROM data policy. Execution _fails_ otherwise: on an undefined program counter, an access outside the regions of @tbl:address-space, a write to the input data region, a write that changes the ROM data region or a second write to one of its words, the `halt` sentinel, or if the program counter never reaches $"pc"_"END"$. Only successful executions are provable, and ZisK bounds their length by $T <= 2^(36)$.
 
 *Public outputs.* The public outputs are not a separate component of the state. For $i in [0, 32)$, the $i$-th public output of the execution is the operand $b$ of the unique step $t$ that executes `pubout` with $a = i$; since the epilogue reads them from the output data region, this is the word $"mem"_t [$`0xA001_0000`$+ 8 i]_8$ at the end of the guest's execution.
 
@@ -244,12 +252,12 @@ An execution moreover respects the _ROM data policy_ if every write to the ROM d
 
 #definition(title: "Execution Relation")[
   The statement is $bold(p)_"ext" = ("root"_"ROM", "out"_0, dots, "out"_(31))$, with $"root"_"ROM" in FF^4$ and $"out"_i in [0, 2^(64))$, and the witness is $w_"exec" = (P, "in", (h_t)_(t < T), (S_t)_(t <= T))$. Then $(bold(p)_"ext"; w_"exec") in cal(R)_"exec"$ if and only if:
-  + _Program._ $"RomRoot"(P) = "root"_"ROM"$.
+  + _Program._ $P$ is valid (@def:valid-program) and $"RomRoot"(P) = "root"_"ROM"$.
   + _Initial state._ $S_0 = ("pc"_"BOOT", 0, bold(0), "mem"_0)$, where $"mem"_0$ holds $"in"$ from address `0x4000_0008` and is zero outside the input data and ROM data regions.
   + _Steps._ For every $t < T$, the instruction $P["pc"_t]$ is defined, the step from $S_t$ with hints $h_t$ is valid, and $S_(t+1) = "Step"_P (S_t, h_t)$.
   + _ROM data._ The execution respects the ROM data policy.
-  + _Termination._ $"pc"_T = "pc"_"END"$, $c_T = 0$ and $T < 2^(36)$.
+  + _Termination._ $"pc"_T = "pc"_"END"$, $c_T = 0$ and $T <= 2^(36)$.
   + _Public outputs._ Every step $t < T$ that executes `pubout` has $a_t < 32$ and $b_t = "out"_(a_t)$, and for every $i < 32$ exactly one step executes `pubout` with $a_t = i$.
 ] <def:r-exec>
 
-The statement contains neither the input nor the hints, and the relation constrains them only through the execution they produce: a guest that wants its outputs bound to its input must expose, for instance, a hash of the input among them. The relation concerns the committed ZisK program; its connection to the original RISC-V binary is the transpiler correctness of @sec:transpilation, which is assumed. The companion security analysis @ZISK:RECURSION proves that an accepting final proof for $bold(p)_"ext"$ yields, except with a stated probability, a witness of $cal(R)_"exec"$.
+The statement contains neither the input nor the hints, and the relation constrains them only through the execution they produce: a guest that wants its outputs bound to its input must expose, for instance, a hash of the input among them. The relation concerns the committed ZisK program; its connection to the original RISC-V binary is the transpiler correctness of @sec:transpilation, which is assumed. The companion security analysis @ZISK:RECURSION proves that an accepting final proof for a statement $bold(p)_"ext"$ whose program commitment is that of a valid program yields, except with a stated probability, a witness of $cal(R)_"exec"$.

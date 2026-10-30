@@ -71,6 +71,7 @@
 #let Local = math.upright("Local")
 #let Bind = math.upright("Bind")
 #let Balanced = math.upright("Balanced")
+#let Spec = math.upright("Spec")
 #let mult = math.upright("mult")
 
 // Placeholder for a section that is planned but not yet written.
