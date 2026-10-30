@@ -171,8 +171,8 @@
     it
   }
 
-  // Theorem-like figures are left-aligned blocks, not centred figures (a
-  // figure would otherwise centre the text inside it).
+  // Theorem-like figures are left-aligned blocks, not centered figures (a
+  // figure would otherwise center the text inside it).
   show figure.where(kind: "theorem"): set align(start)
   show figure.where(kind: "remark"): set align(start)
 

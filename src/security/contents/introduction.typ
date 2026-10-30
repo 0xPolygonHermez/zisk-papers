@@ -42,7 +42,8 @@ segments are checked only once, summed, at the root. A gap in any of these
 places can make an accepting proof certify nothing, while every component
 remains sound on its own. This paper states precisely what an accepting
 final proof of ZisK certifies, and proves it for the protocol as deployed,
-under explicit assumptions on the primitives.
+under explicit assumptions on the primitives and on the chips, with some of
+the lemmas on the semantics stated and their proofs deferred.
 
 == What ZisK Proves <sec:intro-statement>
 
@@ -96,9 +97,9 @@ proof claims is:
   the public outputs $y$ of $bold(p)$._
 ]
 
-We formalize this claim as a relation $cal(R)_"exec"$ whose witness is the
-whole execution: the program, the input, the hints and the sequence of
-machine states (#fwd(<sec:exec-relation>)[Part III]). The claim concerns the committed ZisK
+The whitepaper formalizes this claim as a relation $cal(R)_"exec"$ whose
+witness is the whole execution: the program, the input, the hints and the
+sequence of machine states. The claim concerns the committed ZisK
 program; its connection to the original RISC-V binary rests on the
 correctness of the transpiler, which we assume.
 
@@ -109,7 +110,7 @@ correctness of the transpiler, which we assume.
   extractor outputs a witness of $cal(R)_"exec"$ for $bold(p)$,
   except with probability at most the sum of:
   - The knowledge-soundness errors of the arguments proving the nodes of
-    the aggregation tree, each at most $Q$ times the largest round-by-round
+    the aggregation tree, each about $Q$ times the largest round-by-round
     error of its IOP.
   - The soundness error of the bus argument at a key derived after the
     leaves are committed, for each of the $Q$ queries.
@@ -137,7 +138,7 @@ program (@fig:layers).
     diagram(
       spacing: (1.6cm, 1cm),
       stage((0, 0), [an execution \ of the program]),
-      stage((1, 0), [segment traces, \ one per chip]),
+      stage((1, 0), [segment traces, \ one per segment]),
       stage((2, 0), [a proof \ for every segment]),
       stage((3, 0), [one final proof]),
       // How ZisK builds a proof.
@@ -166,7 +167,7 @@ out-of-domain sample could satisfy the constraint check with any trace, so
 the binding lemma, which combines preimage awareness of the accumulator with
 extractability of the Merkle trees, is what makes the chip proofs sound.
 
-*Part II: The Recursion.* Each node of the aggregation tree carries a leaf
+*Part II: Recursion.* Each node of the aggregation tree carries a leaf
 counter, a homomorphic hash of the leaves' typed commitments, and the sum of
 their bus contributions; the root of the tree checks that the bus key was
 derived from the hash and that the contributions, with the global messages
@@ -174,7 +175,7 @@ of the statement, sum to zero. The analysis descends the tree with one
 extraction game per layer, and a zero test at a key derived after the
 leaves are fixed turns the root check into balance of every bus.
 
-*Part III: The Semantics.* A balanced collection of locally satisfying
+*Part III: Semantics.* A balanced collection of locally satisfying
 witnesses of the ZisK chips encodes an execution: the memory argument
 reconstructs the memory, the continuation buses stitch the segments of each
 chip into one sequence, and the constraints of the Main chip and of the

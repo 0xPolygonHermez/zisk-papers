@@ -6,18 +6,18 @@
 A chip with state is split into segments, each proved on its own, and the
 continuation buses chain them. These buses carry no
 contract: their meaning comes from counting, which
-@cor:zisk-contracts provides. This chapter states what counting gives.
+@cor:zisk-contracts provides. This section states what counting gives.
 
 == Chains of Segments
 
 #definition(title: "Chain")[
-  A finite list of _segments_, each with an index $k in NN$, a _start_
+  A finite list of _segments_, each with an index $k < p$, a _start_
   payload, an _end_ payload and a _last_ flag, is a _chain from_ $b_0$ _to_
   $b_f$ if, for some $n >= 1$, the indices are $0, dots, n - 1$, one each;
   segment $0$ starts with $b_0$; the segment of index $k + 1$ starts with the
   end of the segment of index $k$; only the segment of index $n - 1$ is last;
   and it ends with $b_f$. It is an _open chain from_ $b_0$ if it satisfies the
-  same conditions without the last one.
+  same conditions except that it need not end with $b_f$.
 ] <def:chain>
 
 #lemma(title: "Chains by Counting")[

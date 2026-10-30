@@ -89,7 +89,7 @@ $KK^(< d)[X]$, that is:
 $
   RS[KK, cal(L), d] := { f : cal(L) -> KK : exists p in KK^(< d)[X], f(x) = p(x) thick forall x in cal(L) }
 $
-and $rho := d \/ abs(cal(L))$ is its rate. For a function $f : cal(L) -> KK$
+and $d \/ abs(cal(L))$ is its rate. For a function $f : cal(L) -> KK$
 and a set $S subset cal(L)$, $f[S]$ is the restriction of $f$ to $S$, so that
 $f[S] = g[S]$ means that $f$ and $g$ agree on $S$; and for an integer $m$,
 $cal(L)^m := {x^m : x in cal(L)}$ and $S^m := {x^m : x in S}$. For
@@ -120,7 +120,7 @@ per query.
   $delta < delta_cal(C) \/ 2$, the _unique-decoding_ regime.
 ] <def:list>
 
-The minimum distance of $RS[KK, cal(L), d]$ is $1 - (d - 1) \/ abs(cal(L))$, and up to
+The minimum relative distance of $RS[KK, cal(L), d]$ is $1 - (d - 1) \/ abs(cal(L))$, and up to
 the Johnson bound its lists remain small, also when the code is interleaved
 @EC:ACFY25.
 
@@ -169,12 +169,12 @@ challenge.
   error
   $
     epsilon^"mca" (cal(C), m, theta) := cases(
-      frac(m - 1, abs(KK)) dot (frac(2 (eta + 1 \/ 2)^5 + 3 (eta + 1 \/ 2) dot theta dot rho, 3 rho^(3 \/ 2)) dot abs(cal(L)) + frac(eta + 1 \/ 2, sqrt(rho)))\, quad & "if" theta < 1 - sqrt(rho)\,,
+      frac(m - 1, abs(KK)) dot (frac(2 (m_J + 1 \/ 2)^5 + 3 (m_J + 1 \/ 2) dot theta dot rho, 3 rho^(3 \/ 2)) dot abs(cal(L)) + frac(m_J + 1 \/ 2, sqrt(rho)))\, quad & "if" theta < 1 - sqrt(rho)\,,
       1\, & "otherwise",
       gap: #0.8em
     )
   $
-  where $eta := max(ceil(frac(sqrt(rho), (1 - sqrt(rho) - theta))), 3)$. We
+  where $m_J := max(ceil(frac(sqrt(rho), (1 - sqrt(rho) - theta))), 3)$. We
   call $r$ _bad_ for $(f_1, dots, f_m)$ at $theta$ if $Powers(m; r)$ is.
 ] <lem:mca-jbr>
 
@@ -382,12 +382,11 @@ their degrees.
 
 === The Bus Columns <sec:stark-bus>
 
-Let $chi = (alpha, gamma) in KK^2$ be the key of the bus argument
-(@sec:arithmetization), and for an interaction
+Let $chi = (alpha, gamma) in KK^2$ be the key of the bus argument, with
+$hat(e)_gamma$ the compression of @sec:instantiation, and for an interaction
 $iota = (b_iota, m_iota, bold(e)_iota)$ and a row $r$ write
 $
-  delta_iota (r) := alpha + hat(e)_gamma (b_iota, bold(e)_iota (r)), quad
-  hat(e)_gamma (b, v) := b + sum_(j=1)^(ell_b) gamma^j v_j .
+  delta_iota (r) := alpha + hat(e)_gamma (b_iota, bold(e)_iota (r)) .
 $
 The interactions of the AIR are partitioned into
 _row interactions_, whose multiplicity and message read the trace, and
@@ -625,7 +624,7 @@ execution (@sec:tree).
 ] <prot:stark>
 
 The honest prover's functions satisfy every check. Its constraint
-polynomials vanish on $H$, so $Q$ is a polynomial and the constraint check
+polynomials vanish on $H$, so $hat(Q)$ is a polynomial and the constraint check
 holds at every $xi$. Every $g_(f, o)$ is the evaluation of a polynomial in
 $KK^(< N - 1)[X]$, so $F in cal(C)_0$, and by @lem:fold
 $F_i in cal(C)_i$ for every $i$. The only exception is a point

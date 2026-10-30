@@ -3,22 +3,21 @@
   negl, poly, proof, proposition, prover, remark, theorem, todo, verifier, vk,
 )
 
-This section fixes the notation and the definitions shared by the three
-parts of the paper: the arithmetization layer (AIRs, interactions and buses),
+This section fixes the notation and the definitions shared by the rest
+of the paper: the arithmetization layer (AIRs, interactions and buses),
 the interfaces of the cryptographic components (trace commitments, the
 multiset hash and key derivation) and the security notions they are required
 to satisfy. ZisK's
 concrete choices are collected in @sec:instantiation.
 
-*Notation and Parameters*. Let $FF$ be a prime field of order $p$ and $KK$ an extension field of $FF$. $ZZ_p^n$ denotes the additive
+*Notation and Parameters.* Let $FF$ be a prime field of order $p$ and $KK$ an extension field of $FF$. $ZZ_p^n$ denotes the additive
 group of $n$-vectors of integers modulo $p$, the same set as $FF^n$ viewed as
 a $ZZ$-module. For integers $a <= b$, $[a, b]$ and $[a, b)$ are the closed and
 half-open integer intervals and $[b] := [1, b]$. Field elements are identified
 with integers in $[0, p)$ when needed. $lambda$ is the security parameter;
 "PPT" means probabilistic polynomial time in $lambda$, and
 $negl(lambda)$ and $poly(lambda)$ denote negligible and polynomially bounded
-functions. All algorithms have oracle access to the random oracles introduced
-in @sec:components; $Q$ bounds the total number of oracle queries an adversary
+functions. All algorithms have oracle access to the random oracles; $Q$ bounds the total number of oracle queries an adversary
 makes.
 
 The recursion is governed by two integer parameters: the _aggregation arity_
@@ -75,7 +74,7 @@ description of an AIR partitions both.
     reused across different proofs. Their values are not part of the
     description; instead, a commitment to them (@def:commitment) travels in
     the publics, at the coordinates designated by a
-    _cached-commitment binding_ $gamma : [m] -> [k]$.
+    _cached-commitment binding_ $psi : [m] -> [k]$.
   + The _witness columns_ $J^"wit"$, computed afresh for every proof and
     only known in full to the prover.
   The _prescribed data_ of $cal(C)$ is the family
@@ -104,7 +103,7 @@ description of an AIR partitions both.
   $
   Every AIR that takes part in a proof reads the whole public statement,
   but the external verifier sees only $bold(p)_"ext"$: the proof values are
-  hidden by the root of the aggregation tree (@sec:system).
+  hidden by the Final Verifier (@def:r-final).
 ] <def:proof-values>
 
 The constraints of an AIR therefore read, besides its trace, only its own
@@ -153,7 +152,7 @@ of type $tau$.
 
 Each chip carries its column and value classes and its prescribed data;
 we index them by the type, as in $J^"fix"_tau$, $I^"air"_tau$, $bold(d)_tau$
-and $gamma_tau$.
+and $psi_tau$.
 
 #definition(title: "Local Satisfaction")[
   For $tau in [M]$, $bold(p) = (bold(p)_"ext", bold(p)_"pv") in cal(P)$ and
@@ -166,7 +165,7 @@ and $gamma_tau$.
   + $bold(T)$ agrees with the prescribed data on the fixed columns:
     $T_j (r) = d_(tau, j)(r)$ for every $j in J^"fix"_tau$ and $r in [N_tau]$.
   + The cached columns open the commitment carried in $bold(p)_"ext"$:
-    $ Commit_"cach" (bold(T)|_(J^"cach"_tau)) = (p_(gamma_tau (1)), dots, p_(gamma_tau (m))), $
+    $ Commit_"cach" (bold(T)|_(J^"cach"_tau)) = (p_(psi_tau (1)), dots, p_(psi_tau (m))), $
     where $p_i$ is the $i$-th coordinate of $bold(p)_"ext"$.
 ] <def:local>
 
@@ -175,8 +174,8 @@ once per program, committed with $Commit_"cach"$, and the commitment travels
 in the publics, where the description of $cal(C)_tau$ designates its
 coordinates. The program being executed is therefore bound through
 $bold(p)$ rather than hard-wired into the AIRs: the program ROM
-and the boot state live in cached columns of the relevant chips, and whoever accepts a
-Final proof for $bold(p)_"ext"$ must check that the cached commitments
+lives in the cached columns of the Rom chip, and whoever accepts a
+final proof for $bold(p)_"ext"$ must check that the cached commitments
 carried in $bold(p)_"ext"$ are those of the intended program.
 
 #definition(title: "Message Multiset of a Witness")[
@@ -245,7 +244,7 @@ adversary can anticipate.
 
 Some messages are not emitted by any witness: they belong to the system as
 a whole and are determined by the public statement. In ZisK these _global
-messages_ open and close the continuation chains, initialise the registers
+messages_ open and close the continuation chains, initialize the registers
 and inject the public outputs into the buses. We model them as a fixed
 function $cal(G)$ that maps every public statement $bold(p) in cal(P)$ to an
 $FF$-weighted multiset of messages $cal(G)(bold(p))$, with
@@ -284,7 +283,7 @@ the value $1$ means that the proof $pi$ is accepted for the statement
 $bb(x)$. We write
 $verifier_X (bb(x), pi) := verifier(vk_X, bb(x), pi)$ for the verifier of the system attesting to the
 relation $cal(R)_X$, and keep the explicit form $verifier(vk, bb(x), pi)$ where the key is
-a variable. The relations of the next section (@sec:relations-def) refer to argument systems
+a variable. The relations of @sec:relations-def refer to argument systems
 only through their verifiers, so the prover is never named again, and to the
 following fixed public maps only through their signatures. Their
 security properties are defined in @sec:definitions, and
@@ -310,10 +309,12 @@ The following interface elements are used throughout:
 - *Carriers.* A finite key space $cal(X)$ and an abelian group
   $G_(cal(F))$ of fingerprint values (@def:fingerprint), and a finite
   abelian _accumulator group_ $G_(cal(H))$.
-- *Trace commitment.* A deterministic commitment scheme $Com$ with message
-  space $union.big_(tau in [M]) cal(W)_tau$ and commitment space ${0, 1}^*$.
-  A commitment $"com" = Commit(w)$ covers the trace and the AIR values of a
-  witness $w$. The argument system for a chip takes the key
+- *Trace commitment.* A deterministic commitment scheme $Com$ whose messages
+  are the first-stage parts of witnesses, with commitment space ${0, 1}^*$:
+  for $w in union.big_(tau in [M]) cal(W)_tau$, the commitment
+  $"com" = Commit(w)$ covers the witness columns and the first-stage AIR
+  values of $w$, and binding and extraction (@def:ext-com) refer to this
+  part. The argument system for a chip takes the key
   $chi in cal(X)$ as a public input, so the witness is key-independent.
 - *Cached-column commitment.* A deterministic commitment scheme $Com_"cach"$
   with message space $union.big_(tau in [M]) FF^(N_tau times abs(J^"cach"_tau))$
@@ -344,17 +345,21 @@ The following interface elements are used throughout:
   running time of $cal(E)(bb(x), pi)$ is at most $Time(cal(A)(1^lambda)) + poly(lambda)$
   for every $cal(A)$ and every $(bb(x), pi)$ in the support of $cal(A)$'s output:
   the extractor incurs an additive polynomial overhead over one evaluation of
-  $cal(A)$. We call $Adv("ks", Pi)(cal(A))$ the _knowledge-soundness error_ of
+  $cal(A)$. Besides $(bb(x), pi)$, the extractor reads the list of
+  $cal(A)$'s random-oracle queries and answers, which we leave implicit in
+  the notation. We call $Adv("ks", Pi)(cal(A))$ the _knowledge-soundness error_ of
   $cal(A)$ against $Pi$.
 ] <def:ks>
 
 #remark(title: "Straight-Line Extraction")[
-  The extractor of @def:ks is straight-line: it receives only the statement
-  and the proof and does not rewind the adversary. For succinct proofs this is
-  not achievable in the plain model, and in the ROM it holds for one argument
-  but does not compose across a recursion (@rem:idealized). The definition is a
-  proxy that makes the reduction structure explicit; a concrete instantiation
-  replaces it by ROM extractability with the overhead discussed there.
+  The extractor of @def:ks is straight-line: it receives the statement, the
+  proof and the adversary's oracle queries, and does not rewind the
+  adversary. For succinct proofs this is not achievable in the plain model,
+  and in the random-oracle model it holds for one argument but does not
+  compose across a recursion (@rem:idealized). The definition is a proxy that
+  makes the reduction structure explicit; a concrete instantiation replaces it
+  by extractability in the random-oracle model with the overhead discussed
+  there.
 ]
 
 #definition(title: "Straight-Line Extractable Commitment")[
@@ -396,8 +401,9 @@ $Adv("bind", Com)(cal(A)) <= 2 dot Adv("ext", Com)(cal(D))$.
       abs(cal(S)) < 2^B and cal(H)(cal(S)) = y and cal(E)_(cal(H)) (cal(T)_(<= t), y) != cal(S)
     ] <= negl(lambda),
   $
-  where $t$ is the time of the announcement and $cal(T)_(<= t)$ the transcript
-  up to it.
+  where $t$ is the time of the announcement, $cal(T)_(<= t)$ the transcript
+  up to it, and $abs(cal(S))$ the cardinality of $cal(S)$, counted with
+  multiplicity.
 ] <def:cr>
 
 The definition mirrors @def:ext-com, with the accumulator in the role of the
@@ -424,8 +430,10 @@ Whether this succeeds is a preimage question, computational rather than
 statistical, and it is exactly what the extractor of @def:cr rules out.
 
 #definition(title: "Random-Oracle Model")[
-  The hash-to-group function $h$, the challenge derivation $DeriveKey$ and
-  the hash function underlying $Com$ are independent random oracles. An
+  The hash-to-group function $h$, the key derivation $DeriveKey$, the
+  Fiat–Shamir transcript of every argument and the compression functions of
+  the Merkle trees of $Com$ and $Com_"cach"$ are independent random
+  oracles. An
   adversary makes at most $Q$ queries in total; every algorithm, including
   verifiers and extractors, has oracle access.
 ] <def:rom>
@@ -435,11 +443,11 @@ setting of the whole analysis. Two of the properties it relies on are
 idealizations, which we make explicit.
 
 #remark(numbered: true, title: "Idealized Proof Model")[
-  The analysis is idealized in three respects.
+  The analysis is idealized in two respects.
 
   First, @def:ks postulates a straight-line extractor that runs in essentially
   the time of the adversary. Because the argument systems are hash-based, the
-  natural model is the random oracle model (ROM), in which such extractors
+  natural model is the random-oracle model, in which such extractors
   exist for a single argument @TCC:BenChiSpo16. Composing straight-line
   extraction across the layers of a recursion tree, however, requires every
   argument to remain knowledge-sound relative to the same oracle, and such
@@ -450,18 +458,18 @@ idealizations, which we make explicit.
   Second, the bus argument is sound only if the multiset of typed commitments
   that the accumulator $bold(c)$ stands for is fixed before the random oracle
   answers at $bold(c)$. For the trace commitments this is the straight-line
-  extractability of Merkle trees in the ROM (@def:ext-com). For the
+  extractability of Merkle trees in the random-oracle model (@def:ext-com). For the
   accumulator we assume the analogous property, preimage awareness
   (@def:cr): a straight-line extractor recovers, from the transcript at the
   time a value is announced, the multiset the adversary later opens it to.
   For the algebraic accumulator $cal(H)$ this is an idealization. Distinct
-  small multisets with equal hash exist in abundance, only the hardness of
-  finding them protects the scheme, and recovering a multiset from its
+  small multisets with equal hash exist in abundance; only the hardness of
+  finding them protects the scheme; and recovering a multiset from its
   accumulator is a subset-sum problem, so no straight-line extractor is
   known; only collision resistance follows from standard assumptions.
   #fwd(<rem:forking>)[Part II] discusses the rigorous alternative.
 
-  Third, while the analysis produces explicit advantage bounds and reduction
+  Consequently, while the analysis produces explicit advantage bounds and reduction
   running times (#fwd(<thm:main>)[Part II]), the two idealizations mean that these should be
   read as statements about the reduction structure (the recursion topology is
   sound and the relations compose) rather than as a concrete security level.

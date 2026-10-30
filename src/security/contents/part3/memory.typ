@@ -7,7 +7,7 @@ The Main chip, the MemAlign chips and the precompiles access memory by
 pulling messages on the memory bus; the Memory AIRs prove the aligned
 accesses of each region as a sorted log; and the registers are carried by a
 linked-step argument of the Main chip on the same bus. The
-bus carries no contract. This chapter states how counting on it, together with
+bus carries no contract. This section states how counting on it, together with
 the logs, makes every load of the execution return its memory.
 
 == Accesses
@@ -26,8 +26,8 @@ the logs, makes every load of the execution return its memory.
   Under the hypotheses of @cor:zisk-contracts:
   + the aligned $mono("LOAD")$ and $mono("STORE")$ accesses requested in a
     region, together with those that the MemAlign chips request to implement
-    the others, are the accesses of the region's log of @lem:mem-chain, as
-    multisets;
+    the others, are the submitted accesses of the region's log of
+    @lem:mem-chain, as multisets;
   + every sub-word or unaligned access is implemented by MemAlign as the
     corresponding read or write of the aligned words it covers; and
   + the $mono("REG")$ accesses are pushed and pulled only by the Main chip and
@@ -89,8 +89,8 @@ since addresses and steps are below $p$.]
   write to it at a smaller memory step, or zero if there is none.
 ] <lem:registers>
 
-#todo[Proof: every register access proves the previous access of its
-register and pulls its own, with a range-checked increasing memory step; the
+#todo[Proof: every register access pulls the previous access of its
+register and pushes its own, with a range-checked increasing memory step; the
 global messages open every chain with value zero at step $0$, and the
 end-of-segment reloads carry each register across a segment boundary. With
 @lem:memory-bus (3), the accesses of each register form one chain ordered by
@@ -110,5 +110,6 @@ memory step.]
 $t$ come after every write of an earlier step and before the writes of step
 $t$. Since @lem:offline-memory lets a read see a write at its own memory step,
 this needs that no write at slot $2$ of step $t$ (the store of the Main row)
-is to an address that a precompile dispatched at step $t$ reads at that
-slot.]
+is to an address that a precompile dispatched at step $t$ reads at that slot,
+which the validity of $P_L$ ensures: a precompile instruction stores nothing
+in memory.]

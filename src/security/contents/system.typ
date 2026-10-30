@@ -165,7 +165,7 @@ therefore loses no generality.
 We write a relation as $cal(R) = { (bb(x); bb(w)) mid(|) phi(bb(x), bb(w)) }$ with public
 statement $bb(x)$, witness $bb(w)$ and _defining predicate_ $phi$; in the definitions
 below, $phi$ is the conjunction of the clauses displayed to the right of the
-bar. Every node statement below the Final Verifier
+bar. Every statement of a recursive verifier below the Final Verifier
 carries the public statement $bold(p) in cal(P)$, a key $chi in cal(X)$, a
 recursive statement $sigma$ and a verification key $vk$. We proceed from the
 leaves to the root, naming after each relation the argument system that
@@ -213,7 +213,7 @@ A compressor (@sec:tree) re-proves the statement of another argument.
 #definition(title: "Compressor Relation")[
   For an argument $Pi_X$ with verifier $verifier_X$ and key $vk_X$,
   $
-    cal(R)_"COMP"^((X)) := { (bb(x); pi) mid(|) verifier_X (vk_X, bb(x), pi) = 1 }.
+    cal(R)_"COMP"^((X)) := { (bb(x); pi) mid(|) verifier(vk_X, bb(x), pi) = 1 }.
   $
 ] <def:r-comp>
 
@@ -290,8 +290,7 @@ type $0$ marks a null child.
   particular a null child ($tau = 0$) never passes the dispatched verifier.
 ] <def:dispatch>
 
-The dispatch is a function of the key $vk$ carried in the statement; the
-typing predicate of @def:typed is what makes the counter meaningful.
+The dispatch is a function of the key $vk$ carried in the statement.
 
 #definition(title: "Aggregation Relation")[
   Write $bb(x)_X := (bold(p), chi, sigma_X, vk)$ for the statement of the child
@@ -329,7 +328,7 @@ carries the parent's own $(bold(p), chi, vk)$, so every node of a valid tree
 carries the root's public statement, fingerprint key and verification key; in
 particular an aggregation child is verified under $verifier(vk, dot, dot)$ for the
 very $vk$ the parent declares. Since the cached-column commitments travel in
-$bold(p)$ (@def:columns), the binding of $Commit_"cach"$ then makes the cached
+$bold(p)$ (@def:columns), the binding of $Com_"cach"$ then makes the cached
 columns of all leaves of one type equal. Second, the _counter invariant_: $sans("Typed")$
 places the counters of the non-null children in $[1, 2^B)$, there are at
 least two and at most $A$ of them, and $A dot 2^B <= p$ makes $kappa = sum_(X in N) kappa_X$
@@ -401,8 +400,8 @@ party. The verification keys involved play different roles. @tbl:vk-ledger recor
   kind: table,
 ) <tbl:vk-ledger>
 
-An execution with $L$ leaves has between $ceil((L - 1) \/ (A - 1))$ and $L - 1$
-aggregation nodes, since each has between two and $A$ non-null children; with
+An execution with $n_"leaves"$ leaves has between
+$ceil((n_"leaves" - 1) \/ (A - 1))$ and $n_"leaves" - 1$ aggregation nodes, since each has between two and $A$ non-null children; with
 a single leaf it has none, and the Final Verifier verifies the leaf verifier
 directly. The whitepaper lists every proof-system call of a ZisK proof, with
 the number of its instances, the AIRs of $T_"COMP"$ and the parameters of every
@@ -415,16 +414,20 @@ which fix the carriers and the maps of @sec:components. Four of them are
 built from one _underlying hash function_, and the analysis depends on that
 function only through the random-oracle model of @def:rom, never through its
 internals. ZisK currently instantiates it with Poseidon2
-@AFRICACRYPT:GraKhoSch23, whose arithmetisation-friendly design makes the
+@AFRICACRYPT:GraKhoSch23, whose arithmetization-friendly design makes the
 recursive verifiers cheap; a general-purpose hash such as BLAKE3 @BLAKE3 or
 SHA-2 @FIPS180-4 is an equally valid instantiation, and switching among them
 changes none of the statements below. The only requirements are those the
 analysis names where it uses them: collision resistance of the digest, with
 at least $2 lambda$ bits (#fwd(<sec:discussion>)[Part IV]), and the random-oracle idealization.
 
+*Fields.* $FF$ is the Goldilocks field, of order $p = 2^(64) - 2^(32) + 1$,
+and $KK = FF[X] \/ (X^3 - X - 1)$ its cubic extension, with
+$abs(KK) = p^3 approx 2^(192)$.
+
 *Public statement.* In ZisK, $k = 68$ and $k' = 8$. The external statement $bold(p)_"ext"$ consists of the program
 commitment $"root"_"ROM"$, the root of the Rom chip's cached columns, at the
-$m = 4$ coordinates that $gamma$ designates (@def:columns), and of the $32$
+$m = 4$ coordinates that $psi$ designates (@def:columns), and of the $32$
 public outputs, each as two $32$-bit limbs; the proof values $bold(p)_"pv"$ are
 boolean flags that switch on the genesis anchors of the optional chips. The
 program commitment is bound by @def:local and by $DeriveKey$, which absorbs
@@ -457,7 +460,7 @@ equals $cal(F)^"LogUp"_chi ("Msg"_tau (w))$ whenever every row denominator is
 nonzero. At a pole the constraints do not determine $s$: a row of zero
 multiplicity whose denominator vanishes satisfies its fraction constraint for
 every value of the fraction column. The poles of a witness are at most
-$N_tau abs(cal(I)_tau)$ values of $alpha$ for each $gamma$, fixed by the
+$(N_tau + 1) abs(cal(I)_tau)$ values of $alpha$ for each $gamma$ (@rem:poles), fixed by the
 witness, and the key is derived after the commitment to the witness; the
 probability of hitting one is charged in #fwd(<lem:binding>)[the binding lemma of Part I].
 
@@ -472,24 +475,25 @@ with multiplicity. Its collision resistance on multisets of
 cardinality below $2^B$ rests on the hardness of the short integer solution
 problem @STOC:Ajtai96; the analysis assumes the stronger preimage awareness
 (@def:cr), which is the second idealization of @rem:idealized. ZisK takes
-$B = 20$, so that a proof has fewer than $2^(20)$ leaves; the cardinality
-bound is what the leaf counter enforces, and $A dot 2^B <= p$ holds with
-room to spare.
+$B = 20$, so that a proof has fewer than $2^(20)$ leaves, and aggregation
+nodes with $A = 3$ slots; the cardinality bound is what the leaf counter
+enforces, and $A dot 2^B <= p$ holds with room to spare.
 
 *Key derivation.* $DeriveKey$ hashes the public statement $bold(p)$ ---the
 external statement and the proof values--- and the accumulated vector with the
 underlying hash function into a _global challenge_ in $KK$, from which a fresh
 sponge squeezes the pair $(alpha, gamma)$. The analysis treats the pair as a single
-random-oracle output (@def:rom) and suppresses the $(Q + 1) slash abs(KK)$
-term for a derived $alpha$ colliding with a previously queried input.
+random-oracle output (@def:rom), which suppresses a term
+$(Q + 1) slash abs(KK)$ for the global challenge coinciding with an input
+already queried to the sponge that squeezes $(alpha, gamma)$.
 
-*Trace commitment.* $Commit$ is a Merkle tree over the underlying hash
+*Trace commitment.* $Com$ is a Merkle tree over the underlying hash
 function, so it is straight-line extractable in the random-oracle model
 (@def:ext-com).
 
-*Cached-column commitment.* $Commit_"cach"$ is likewise a Merkle tree over
+*Cached-column commitment.* $Com_"cach"$ is likewise a Merkle tree over
 the underlying hash function. The program ROM is the cached column group of
-the ROM chip, and its root is one of the publics, so a
+the Rom chip, and its root is one of the publics, so a
 proof is bound to a program through $bold(p)$. The leaf commitment
 $"com"$ covers the witness columns and the AIR values of the first stage, not
 the cached columns; this is sound because $DeriveKey$ absorbs $bold(p)$, and

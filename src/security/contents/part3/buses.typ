@@ -9,7 +9,7 @@ $(bold(p)_"ext"; (bold(p)_"pv", L)) in cal(R)_Zisk$, so that every witness is
 locally satisfying for $bold(p) = (bold(p)_"ext", bold(p)_"pv")$ and $L$ is
 balanced for $bold(p)$. Balance states only that the multiplicities of every
 message add up to zero in $FF$. What a message _means_ is a contract between
-the chips on its bus. This chapter turns balance and the
+the chips on its bus. This section turns balance and the
 contracts into guarantees: every message that a chip assumes holds, and on the
 buses that only count, the messages proved are the messages assumed.
 
@@ -34,7 +34,7 @@ its multiplicity, not on how the chip writes it. A chip _assumes_ a message
 with the multiplicity $-1$ of a selected row, and _proves_ it with any other
 nonzero multiplicity, such as the free multiplicity column of a lookup table.
 
-#lemma(title: "Balance With Few Interactions")[
+#lemma(title: "Balance with Few Interactions")[
   Let $L$ be balanced for $bold(p)$, with $Lambda(L) + g < p$.
   + For every pull of a message $(b, v)$ in $cal(J)_bold(p) (L)$, there is a
     push of $(b, v)$ in $cal(J)_bold(p) (L)$.
@@ -159,8 +159,9 @@ the word encoding of @sec:encoding.
     $(c, "flag") = "op"(a, b)$, for the words $a$, $b$ and $c$ of the limbs
     (@def:words); for a precompile, it states moreover that the memory effect
     of the operation, at step $t$ and with extended argument $x$, is the one
-    its prover makes on the memory bus. For `pubout`, the predicate states that $b = "out"_a$, the
-    public output of index $a < 32$ in $bold(p)_"ext"$.
+    its prover makes on the memory bus, with well-formed limbs. For `pubout`,
+    the predicate states that $a < 32$, that $b = "out"_a$, the public output
+    of index $a$ in $bold(p)_"ext"$, and that $(c, "flag") = (b, 0)$.
   + _ROM bus._ One channel, whose predicate states that the instruction of the
     committed program at the address of the message has the fields of the
     message.

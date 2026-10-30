@@ -1,5 +1,5 @@
 #import "../../../shared/lib.typ": (
-  Adv, Balanced, Bind, BusCont, Com, Commit, DeriveKey, Exp, Local, Pr, Time, Zisk, definition, game, lemma, mult, negl,
+  Adv, Balanced, Bind, BusCont, Com, Commit, DeriveKey, Exp, Local, Pr, Time, Zisk, definition, fwd, game, lemma, mult, negl,
   poly, proof, proposition, remark, theorem, todo, vk, prover, verifier,
 )
 
@@ -27,7 +27,7 @@
     (@def:local).
 
   + *Hash to the accumulator group.* $h : [M] times {0,1}^* -> G_(cal(H))$,
-    modelled as a random oracle (@def:rom), which maps a typed commitment to
+    modeled as a random oracle (@def:rom), which maps a typed commitment to
     the leaf contribution of the challenge accumulator.
 
   + *Multiset hash.* $cal(H)$, the additively homomorphic extension of $h$ to
@@ -35,7 +35,7 @@
     cardinality below $2^B$ (@def:cr).
 
   + *Key derivation.* $DeriveKey : cal(P) times G_(cal(H)) -> cal(X)$,
-    modelled as a random oracle (@def:rom), which turns the public statement
+    modeled as a random oracle (@def:rom), which turns the public statement
     and the accumulated value into the fingerprint key that the Final
     Verifier checks.
 
@@ -89,12 +89,12 @@ exactly what the recursion adds to the individual AIR proofs: a bound on the
 number of instances, one common public statement, and global bus balancing,
 including the global messages determined by the statement.
 Everything else that a ZisK proof establishes about the guest execution is a
-consequence of $Local$ and $Balanced$ for the specific AIRs of ZisK and
-is outside this section.
+consequence of $Local$ and $Balanced$ for the specific AIRs of ZisK and is the
+subject of #fwd(<sec:exec-relation>)[Part III].
 
 #definition(title: "Final Argument System")[
   The _final argument system_ of $Zisk$ is the non-interactive
-  argument system $Pi^*$ for $cal(R)_Zisk$ whose proofs are Final
+  argument system $Pi^*$ for $cal(R)_Zisk$ whose proofs are final
   proofs and whose verifier is
   $
     verifier^* (bold(p)_"ext", pi_"FIN") := verifier_"FINAL" (bold(p)_"ext", pi_"FIN").
@@ -121,8 +121,9 @@ algorithm and differ only in the relation against which each is judged.
     Adv("cwe", Zisk)(cal(A)) := Adv("ks", Pi^*)(cal(A))
   $
   for the _CWE advantage_ of a PPT adversary $cal(A)$ and $cal(E)_Zisk$
-  for the extractor whose existence is asserted; the running-time convention
-  of @def:ks applies to it unchanged.
+  for the extractor whose existence is asserted, which may run in time
+  $O(kappa_"max") dot Time(cal(A)) + poly(lambda)$ rather than within the
+  bound of @def:ks.
 ] <def:cwe>
 
 == Correct-Witness Extractability
@@ -134,7 +135,7 @@ algorithm and differ only in the relation against which each is judged.
   adversary $cal(A)$ that, together with the extractors composed with it
   below, makes at most $Q$ random-oracle queries, with CWE advantage
   $epsilon := Adv("cwe", Zisk)(cal(A))$, there exist PPT reduction
-  adversaries $cal(D)_"FIN"$, $cal(D)_"AGG"$, ${cal(D)_"LEAF"^((tau))}_tau$,
+  adversaries $cal(D)_"FIN"$, $cal(D)_"AGG"$, ${cal(D)_"LEAF"^((tau))}_(tau in [M])$,
   ${cal(D)_"COMP"^((tau))}_(tau in T_"COMP")$ and $cal(D)^"pa"$ such that
   $
     epsilon <= & Adv("ks", Pi_"FINAL")(cal(D)_"FIN")
@@ -304,9 +305,10 @@ argument needs; and the last by @prop:bus-soundness.
   chain above its own layer, hence runs in at most
   $(3 kappa_"max" + 2) dot Time(cal(A)) + poly(lambda)$. (Strictly, the
   convention of @def:ks bounds each extractor by the time of the composed
-  adversary that produced its input, which compounds along the recursion to
-  $O(kappa_"max"^2) dot Time(cal(A))$; the linear figure uses the per-call
-  convention and is part of the idealization of @rem:idealized.) In particular
+  adversary that produced its input, which compounds along the recursion, in
+  the worst case exponentially in the depth of the tree, the usual blow-up of
+  recursive extraction; the linear figure uses the per-call convention and is
+  part of the idealization of @rem:idealized.) In particular
   $cal(E)_Zisk$ is PPT whenever $cal(A)$ is, since $2^B <= poly(lambda)$.
 ]
 
@@ -315,7 +317,7 @@ argument needs; and the last by @prop:bus-soundness.
   the extractors composed with it, which are polynomially many: Steps 4 and
   6 apply to such compositions. Every proof of the tree, moreover, is
   produced from the same query list, so a single union bound over the $Q$
-  queries could replace the factors $kappa_"max"$ of the leaf-verifier and
+  queries could replace the factors of the aggregation, leaf-verifier and
   compressor terms, as it already does for the AIR proofs in Step 4. Doing so
   would merge the layers into one compilation argument; we keep the layered
   structure of the reference architecture @EF:VanillaVM and its looser bound.

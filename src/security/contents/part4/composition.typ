@@ -23,8 +23,9 @@ expects. The guarantee is therefore stated for a fixed program.
   that $cal(A)$ outputs $(bold(p)_"ext", pi)$ with
   $verifier^* (bold(p)_"ext", pi) = 1$ and $"root"_"ROM" = "RomRoot"(P^*)$,
   while $(bold(p)_"ext"; cal(E)(bold(p)_"ext", pi)) in.not cal(R)_"exec"$.
-  ZisK is _execution-extractable_ for $P^*$ if there is an extractor, with the
-  running time of @def:ks, for which this advantage is negligible.
+  ZisK is _execution-extractable_ for $P^*$ if there is an extractor, running
+  in time $O(kappa_"max") dot Time(cal(A)) + poly(lambda)$, for which this
+  advantage is negligible.
 ] <def:exec-extract>
 
 The definition is knowledge soundness in the sense of @def:ks for the
@@ -82,7 +83,7 @@ extractor.
   time @thm:main bounds, and the decoding is linear in the size of $L$.
 ]
 
-The theorem is the composition of statements, three of which are proved in
+The theorem is the composition of statements, two of which are proved in
 this paper as stated ---@thm:arguments in Part I and @thm:main in Part II---
 and one of which, @thm:theorem-iii, is stated in Part III together with the
 lemmas it rests on, some of whose proofs are left to a machine-checked
@@ -90,14 +91,20 @@ formalization.
 @sec:discussion records every assumption and obligation the theorem rests on.
 
 #remark(numbered: true, title: "Concrete Reading")[
-  The dominant terms are $Q dot epsilon^*$ and the knowledge-soundness
-  errors of the recursive arguments, each about $Q$ times the query error of
-  @tbl:security, and multiplied by $kappa_"max" = 2^(20) - 1$ for the leaf
-  verifiers and the compressors. Every other term is negligible for
+  The dominant terms are $Q dot epsilon^*$; the knowledge-soundness errors
+  of the recursive arguments, each about $Q$ times the query error of
+  @tbl:security, and multiplied by $kappa_"max" - 1$ for the aggregation
+  nodes and by $kappa_"max" = 2^(20) - 1$ for the leaf verifiers and the
+  compressors; and the bus term $(Q + 1) dot epsilon_(cal(F))(Lambda_"max")$,
+  which grows with the square of the number of interactions: with traces of
+  height up to $2^(22)$, $Lambda_"max" >= 2^(42)$ and
+  $epsilon_(cal(F))(Lambda_"max") >= ell dot 2^(-109)$, of the same order as
+  the leaf-verifier terms. The remaining terms are negligible for
   $abs(KK) approx 2^(192)$. The factor $kappa_"max"$ comes from bounding the
   extractions layer by layer, and @rem:query-budget explains how a single union
   bound over the queries would remove it. With $B = 20$, $kappa_"max"
-  approx 10^6$, and the extractor runs in time
+  approx 10^6$: the extractor runs in time
+  $(3 kappa_"max" + 1) dot Time(cal(A)) + poly(lambda)$ and the reductions in
   $(3 kappa_"max" + 2) dot Time(cal(A)) + poly(lambda)$ (@thm:main), about
   $3 dot 10^6$ times that of the adversary. Together with the idealizations of
   @rem:idealized, the bound should be read as a statement about the structure

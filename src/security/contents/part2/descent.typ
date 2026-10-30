@@ -22,8 +22,7 @@ $Adv("ks", Pi)$ (knowledge-soundness error, @def:ks), $Adv("ext", Com)$
 exhibit explicit reduction adversaries $cal(D)$ and state their running
 times; when a bound has the form $k dot Adv(dot)(cal(D))$, the reduction
 $cal(D)$ denotes the maximum-advantage adversary among the $k$ per-node
-reductions constructed in the proof, each of which runs in
-$Time(cal(A)) + poly(lambda)$. Probabilities in the games below are over the
+reductions constructed in the proof, whose running time the lemma states. Probabilities in the games below are over the
 coins of the adversary, the extractor and the random oracles; verification is
 deterministic.
 
@@ -62,8 +61,8 @@ deterministic.
   the knowledge-soundness challenger of $Pi_"FINAL"$. The challenger applies
   the same filter and runs the same extractor, and @def:game-fin returns $1$
   exactly when $pi_"FIN"$ verifies but $(bold(p)_"ext"; (bold(p)_"pv", chi, sigma, pi)) in.not cal(R)_"FINAL"$,
-  which is the event that $cal(D)_"FIN"$ wins. Since $Pi^*$ and $Pi_"FINAL"$
-  are the same algorithm, this is the base of the composition and no
+  which is the event that $cal(D)_"FIN"$ wins. Since $Pi^*$, the final argument system
+  of @def:final-as, and $Pi_"FINAL"$ are the same algorithm, this is the base of the composition and no
   additional work is required.
 ]
 
@@ -95,7 +94,7 @@ $kappa - 1$ aggregation nodes.
   Assume $Pi_"AGG"$ is knowledge-sound and let $kappa in [1, 2^B)$. There is
   an extractor $cal(E)_"REC"$, given in the proof, such that for every PPT
   adversary $cal(A)$ there is a reduction $cal(D)_"AGG"$ running in
-  $Time(cal(A)) + poly(lambda)$ with
+  $kappa dot Time(cal(A)) + poly(lambda)$ with
   $
     Adv("agg", (kappa, cal(E)_"REC"))(cal(A)) <= (kappa - 1) dot Adv("ks", Pi_"AGG")(cal(D)_"AGG").
   $
@@ -146,8 +145,9 @@ $kappa - 1$ aggregation nodes.
   deterministic given $cal(A)$'s output and the earlier extractions) and
   forwards that node's $(bb(x)_v, pi_v)$ to the knowledge-soundness challenger of
   $Pi_"AGG"$. It wins whenever $B_t$ occurs, so
-  $Pr[B_t] <= Adv("ks", Pi_"AGG")(cal(D)_"AGG"^((t)))$, and it runs in
-  $Time(cal(A)) + poly(lambda)$.
+  $Pr[B_t] <= Adv("ks", Pi_"AGG")(cal(D)_"AGG"^((t)))$, and, running
+  $cal(A)$ and at most $t - 1$ extractions, it runs in
+  $t dot Time(cal(A)) + poly(lambda)$.
 
   _Step 3: off the bad events, the extractor succeeds._ Assume
   $not B_1 and dots and not B_(kappa - 1)$; every statement below is then

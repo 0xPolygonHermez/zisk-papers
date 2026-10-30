@@ -38,7 +38,8 @@ arithmetized, not of the proof system, and this paper assumes it.
   + (_AIR arguments._) There is a straight-line extractor $cal(E)_"J"$ that
     extracts the witnesses of all the AIR proofs of an execution at once: for
     every adversary $cal(A)$ there is an adversary $cal(D)$ against preimage
-    awareness, with $Time(cal(D)) = Time(cal(A)) + poly(lambda)$, such that
+    awareness, with $Time(cal(D)) = Time(cal(A)) + poly(lambda)$, such that,
+    with $Lambda_"pole"$ as in @lem:binding,
     $
       Adv("joint", cal(E)_"J")(cal(A)) <= Q dot epsilon^* + Adv("pa", cal(H))(cal(D)) + epsilon_"MT" (Q) + frac(Q dot Lambda_"pole", abs(KK)).
     $
@@ -102,8 +103,8 @@ $Pi_X$. Composing the two arguments preserves knowledge soundness.
   $cal(E)_"COMP"$. The argument whose proofs for $bb(x)$ are the proofs of
   $Pi_"COMP"$ for $bb(x)$ is knowledge-sound for $cal(R)_X$ with the extractor
   $cal(E)_X (bb(x), cal(E)_"COMP" (bb(x), dot))$, and for every adversary $cal(A)$
-  there are reductions $cal(D)_1, cal(D)_2$ running in time
-  $Time(cal(A)) + poly(lambda)$ with
+  there are reductions $cal(D)_1, cal(D)_2$ running in time at most
+  $2 dot Time(cal(A)) + poly(lambda)$ with
   $
     Adv("ks", Pi_"COMP" compose Pi_X)(cal(A)) <= Adv("ks", Pi_"COMP")(cal(D)_1) + Adv("ks", Pi_X)(cal(D)_2).
   $
@@ -116,7 +117,7 @@ $Pi_X$. Composing the two arguments preserves knowledge soundness.
   runs $cal(A)$ and $cal(E)_"COMP"$ and outputs $(bb(x), pi)$; it wins the
   knowledge-soundness game of $Pi_X$ exactly when $pi$ is accepted and
   $cal(E)_X$ fails. Its running time is that of $cal(A)$ plus that of
-  $cal(E)_"COMP"$, which is $Time(cal(A)) + poly(lambda)$ by @def:ks.
+  $cal(E)_"COMP"$, at most $2 dot Time(cal(A)) + poly(lambda)$ by @def:ks.
 ]
 
 The lemma composes straight-line extractors and is subject to the first
@@ -140,8 +141,8 @@ compresses only AIR proofs, the case of the following remark.
 The parameters of every argument of ZisK, its rate $rho$, number of queries
 $q$, grinding bits $g_"pow"$, folding factors and constraint degree, are
 those of the proving backend @ZISK:WHITEPAPER. In the Johnson regime
-(@cor:iop-jbr), every error of @thm:iop-rbr except the query error is a
-polynomial in $abs(D)$ divided by $abs(KK) approx 2^(192)$, hence negligible
+(@cor:iop-jbr), every error of @thm:iop-rbr except the query error is, for a
+fixed $eta$, a polynomial in $abs(D)$ divided by $abs(KK) approx 2^(192)$, hence negligible
 for the trace heights of ZisK, and the query error of the compiled protocol
 is, by @lem:grinding,
 $
@@ -150,7 +151,10 @@ $
 @tbl:security lists, for every family of arguments, the limit
 $g_"pow" + q dot log_2 (1 \/ sqrt(rho))$ of $-log_2 epsilon^"qry"_"BCS"$
 as $eta -> 0$ and $rho^+ -> rho$, and the level reported by `soundcalc`
-@SOUNDCALC, which fixes $eta$ and accounts for every round.
+@SOUNDCALC, which fixes $eta$ and accounts for every round. The other
+errors grow as $eta$ decreases, the list size as $eta^(-1)$ and
+$epsilon^"mca"$ as $eta^(-5)$, so $eta$ cannot be taken to $0$; this is the
+gap between the two columns.
 
 #figure(
   {

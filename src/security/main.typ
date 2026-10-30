@@ -16,19 +16,20 @@
   abstract: [
     This document analyzes the security of ZisK's proof system, from the
     proof of a single chip to the statement about program execution that a
-    final proof certifies. It is organized in three parts that compose. Part I
-    describes the proving system as implemented and bounds the knowledge
-    soundness of every argument it uses. Part II analyzes the recursive aggregation
-    layer: the bus argument that ties the AIR instances together is abstracted
-    as an additive fingerprint of a weighted multiset of messages, and the
-    per-node bookkeeping as accumulators over a commutative monoid, and any
-    adversary producing an accepting Final proof is turned into an extractor
-    that outputs a bounded collection of locally satisfying, bus-balanced AIR
-    witnesses. Part III shows that such a collection encodes a successful
-    execution of the committed program. The composition yields the knowledge
-    soundness of the final verifier for ZisK's execution relation, with an
-    explicit error bound. The idealizations made, the assumptions inherited
-    from the primitives and the obligations left open are recorded in a ledger.
+    final proof certifies. It is organized in four parts. Part I describes the
+    proving system as implemented and bounds the knowledge soundness of every
+    argument it uses. Part II analyzes the recursive aggregation layer: the bus
+    argument that ties the AIR instances together is abstracted as an additive
+    fingerprint of a weighted multiset of messages, and the per-node
+    bookkeeping as accumulators over a commutative monoid; from any adversary
+    producing an accepting final proof, an extractor obtains a bounded
+    collection of locally satisfying, bus-balanced AIR witnesses. Part III
+    states, and partly proves, that such a collection encodes a successful
+    execution of the committed program. Part IV composes the three into the
+    main theorem: for a fixed valid program, the final argument is
+    knowledge-sound for ZisK's execution relation, with an explicit error
+    bound. The idealizations made, the assumptions inherited from the
+    primitives and the obligations left open are recorded in a ledger.
   ],
 )
 
@@ -61,7 +62,7 @@
 #part("part:recursion", [Part II: Recursion])
 
 We prove that the ZisK aggregation tree is _correct-witness extractable_: any
-adversary that produces an accepting Final proof for an external statement
+adversary that produces an accepting final proof for an external statement
 $bold(p)_"ext"$ can be used to extract, in a straight-line fashion, proof
 values $bold(p)_"pv"$ and a typed witness collection $L$ such that every witness
 satisfies its AIR and is consistent with $bold(p) = (bold(p)_"ext", bold(p)_"pv")$, and
@@ -74,21 +75,21 @@ awareness of the accumulator $cal(H)$, and the soundness of the bus
 fingerprint.
 
 This part follows the reference architecture of the EF zkVM security sprint
-@EF:VanillaVM in structure as well as in method: an idealized-model remark,
-the definitions of the assumptions, a bridging proposition, one extraction
-game and lemma per layer of the recursion, and a main theorem whose bound is
-an explicit sum over those lemmas. Where ZisK departs from that architecture,
+@EF:VanillaVM in structure as well as in method: a bridging proposition, one
+extraction game and lemma per layer of the recursion, and a main theorem whose
+bound is an explicit sum over those lemmas; the idealized-model remark and the
+definitions of the assumptions are in @sec:preliminaries. Where ZisK departs from that architecture,
 the departure is flagged at the point where it matters.
 
 #remark(title: "Scope")[
   The target relation of this part speaks about AIR witnesses, not about
   guest executions: it is the recursion layer of the chain that leads from an
-  accepting final proof to a correct execution of the guest program. Not
-  covered here, and left as named obligations, are the semantic layer (that a
-  balanced collection of locally satisfying witnesses encodes a single
-  execution of the committed program, including the memory argument and
-  continuation stitching), completeness, zero knowledge, and any wrapper
-  placed above the Final Verifier.
+  accepting final proof to a correct execution of the guest program. The
+  semantic layer (that a balanced collection of locally satisfying witnesses
+  encodes a single execution of the committed program, including the memory
+  argument and continuation stitching) is Part III; completeness, zero
+  knowledge and any wrapper placed above the Final Verifier are outside the
+  analysis (@sec:discussion).
 ]
 
 = From the Root Check to Bus Balancing <sec:bus>
@@ -107,10 +108,10 @@ the departure is flagged at the point where it matters.
 
 What a ZisK proof claims is the execution relation $cal(R)_"exec"$ of the
 whitepaper @ZISK:WHITEPAPER, which formalizes the claim of
-@sec:intro-statement. Part III shows that a balanced collection of locally
-satisfying witnesses encodes a witness of this relation, and this chapter
-recalls what such a witness is and how its words are carried by field
-elements.
+@sec:intro-statement. Part III states, and partly proves, that a balanced
+collection of locally satisfying witnesses encodes a witness of this relation;
+@sec:exec-relation recalls what such a witness is and how its words are
+carried by field elements.
 
 = Executions and Words <sec:exec-relation>
 

@@ -51,8 +51,9 @@ with $cal(F)^"LogUp"_chi (D) := bot$ if some denominator vanishes.
   $z_gamma (b, v) = z_gamma (b', v')$ for two distinct messages in
   $"supp" D$. For a fixed pair of messages the difference is a polynomial in
   $gamma$ of degree at most $ell$, and it is nonzero: if $v != v'$ some
-  coefficient of a positive power of $gamma$ is nonzero, and if $v = v'$ then
-  $b != b'$ and the constant term is nonzero. A uniform $gamma$ is a root with
+  if $b != b'$ the constant term $b - b'$ is nonzero, and if $b = b'$ then
+  $ell_b = ell_(b')$ and $v != v'$, so some coefficient of a positive power of
+  $gamma$ is nonzero. A uniform $gamma$ is a root with
   probability at most $ell slash abs(KK)$, so
   $Pr[E_gamma] <= binom(Lambda, 2) dot ell slash abs(KK)$.
 
@@ -224,7 +225,7 @@ which the game is invoked in the proof of @thm:main.
   obligation for the full security argument: either preimage awareness of
   LtHash as a knowledge-type assumption (an efficient extractor that recovers
   the multiset from an accumulator the adversary produced), or an accumulator
-  that is preimage aware in the ROM by construction, at the cost of the
+  that is preimage aware in the random-oracle model by construction, at the cost of the
   homomorphism that makes independent aggregation possible.
 ] <rem:forking>
 
@@ -234,7 +235,8 @@ which the game is invoked in the proof of @thm:main.
   as integers one needs, in addition, that every multiplicity column of every
   AIR is range-checked to $[0, m_"max"]$ (or to a symmetric interval with a
   fixed signed encoding) and that $Lambda_"max" dot m_"max" < p$, so that
-  vanishing in $FF$ lifts to vanishing in $ZZ$. Whether the receiving sides of
-  ZisK's lookup tables satisfy such a bound is a property of the individual
-  AIRs and is recorded as an open item in #fwd(<sec:discussion>)[Part IV].
+  vanishing in $FF$ lifts to vanishing in $ZZ$. For the buses whose multiplicities are $0$, $1$ and
+  $-1$, #fwd(<lem:few-interactions>)[Part III] needs only
+  $Lambda_"max" < p$; the other buses need only the weaker statement that a
+  received message is also sent.
 ] <rem:integer-balance>

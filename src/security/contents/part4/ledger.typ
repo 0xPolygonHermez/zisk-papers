@@ -42,9 +42,10 @@ each.
       [Binding of a Merkle tree over a random oracle (@def:commitment).],
 
       [$Lambda_"max" < p$], [parameter condition], [@lem:few-interactions; it holds for ZisK.],
+
       [Part III],
       [stated, partly proved],
-      [@thm:theorem-iii and the lemmas of @sec:per-bus to @sec:memory; the proofs that read the constraints of the AIRs, and that of @thm:theorem-iii, are left as todos.],
+      [@thm:theorem-iii and the lemmas of @sec:per-bus to @sec:memory; the proofs that read the constraints of the AIRs, and that of @thm:theorem-iii, are not given here.],
 
       [Chip obligations],
       [obligation],
@@ -52,7 +53,7 @@ each.
 
       [Valid program], [assumption on $P^*$], [@sec:valid-programs; every program produced by the transpiler is valid.],
       [Transpiler correctness],
-      [assumption],
+      [assumption, outside the theorem],
       [@def:transpiler; it relates the committed ZisK program to the RISC-V binary.],
     )
   },

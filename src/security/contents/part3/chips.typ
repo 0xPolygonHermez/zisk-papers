@@ -3,7 +3,7 @@
   game, lemma, mult, negl, poly, proof, proposition, remark, theorem, todo, vk,
 )
 
-This chapter states what each chip of ZisK establishes about the messages it
+This section states what each chip of ZisK establishes about the messages it
 proves, in the terms of @sec:per-bus, from the constraints of its AIR. The chips on which the reconstruction of the execution rests ---the
 Rom, the fixed tables, BinaryAdd, the Main chip and the Memory AIRs--- are
 proved sound below; the soundness of the others is stated, with the same
@@ -35,7 +35,8 @@ in the public statement.
 
 #lemma(title: "Program Table")[
   Let the Rom witnesses of $L$ have the same cached columns, and let $P_L$ be
-  the program whose messages are their rows. Then $"RomRoot"(P_L) =
+  the program whose messages are their rows other than the all-zero padding
+  rows. Then $"RomRoot"(P_L) =
   "root"_"ROM"$, and every push on the ROM bus is a message of $P_L$. These
   pushes are unconditional.
 ] <lem:rom>
@@ -69,8 +70,8 @@ fixed columns.
 
 #proof[
   The fixed columns are part of the verification key of the chip, so every
-  locally satisfying witness has them, and the only interaction of the chip
-  proves a row of them. If they are the specified table, a row of them
+  locally satisfying witness has them, and every interaction of the chip
+  proves a row of (some of) them. If they are the specified table, a row of them
   satisfies the predicate of its channel.
 ]
 
@@ -122,7 +123,7 @@ hence modulo $2^(64)$.
 A Main witness holds one segment of the execution. Its AIR values give the
 segment index $j$, whether it is the last segment, the program counter
 $"pc"^"in"$ and the output $c^"in"$ it starts from, and the program counter
-$"pc"^"out"$ and the output $c^"out"$ it ends with. Its row $r in [N]$, of
+$"pc"^"out"$ and the output $c^"out"$ it ends with. Its row $r in [0, N)$, of
 step $t = j N + r$, holds the fields of an instruction ---its program counter
 $"pc"_r$, opcode, source and store flags, offsets, immediates and jump
 offsets--- and the limbs of the operands $a_r$ and $b_r$, the result $c_r$
@@ -134,19 +135,22 @@ $"set_pc"$, and $"pc"_r + "j2"$ otherwise.
 
 #lemma(title: "Main Rows")[
   Let $w$ be a Main witness with $Local_"Main" (bold(p), w)$ whose pulls on
-  the ROM channel and on the operation channels meet their contracts. Then for
+  the ROM channel, the operation channels and the range channels meet their
+  contracts. Then for
   every row $r$:
   + _Fetch._ The row holds the fields of the message of $P_L$ at
     $"pc"_r$, and $"pc"_r$ is an address of $P_L$.
   + _Operands._ $a_r$ is $c^"prev"_r$ if its source is $mono("C")$, the
     immediate of the instruction if it is $mono("IMM")$, and otherwise the
     value of the access that the row pulls on the memory bus: the load of the
-    word at address $"a_off"$ ($mono("MEM")$), or of register $"a_off"$
-    ($mono("REG")$), at memory step $1 + 4 t$. Likewise $b_r$, at memory step
+    word at address $"a_off"$ ($mono("MEM")$), at memory step $1 + 4 t$, or,
+    for register $"a_off"$ ($mono("REG")$), the access at that memory step
+    that the row pushes after pulling the previous access to the register. Likewise $b_r$, at memory step
     $1 + 4 t + 1$, where an indirect source ($mono("IND")$) loads $"ind_w"$
     bytes at address $a_(r, 0) + "b_off"$, with $a_(r, 1) = 0$.
   + _Operation._ If the instruction is internal, it is `flag`, with result
-    $0$ and flag $1$, or `copyb`, with result $b_r$ and flag $0$. If it is
+    $0$ and flag $1$, or `copyb`, `fcall_param`, `fcall` or `fcall_get`, with
+    result $b_r$ and flag $0$. If it is
     external and the limbs of $a_r$ and $b_r$ are well formed, then the
     result and the flag of the row are those of the operation on $a_r$ and
     $b_r$, the result is well formed, and, for a precompile, its memory effect
@@ -176,7 +180,7 @@ role of the row before its first row.
 
 #lemma(title: "Memory Rows")[
   Let $w$ be a witness of the Memory AIR of a region, with
-  $Local (bold(p), w)$, whose pulls on the range channels meet their
+  $Local_tau (bold(p), w)$, whose pulls on the range channels meet their
   contracts. Then the sequence of its rows, preceded by $B^"in"$, satisfies
   the conditions of a log of the region, with the first
   address of the first segment new; its addresses lie between the base and
@@ -207,7 +211,7 @@ lists them.
       [Binary, BinaryExtension], [sound for the operation channels of their opcodes],
       [Arith], [sound for the operation channels of its opcodes, relying on the comparisons it assumes from Binary],
       [Add256, ArithEq, ArithEq384, Keccakf, Sha256f, Poseidon2, Blake2br],
-      [sound for the operation channel of their opcodes, including the memory effect],
+      [sound for the operation channels of their opcodes, including the memory effect],
 
       [Dma, DmaMemCpy, DmaInputCpy],
       [sound for the operation channels of the DMA opcodes, relying on the operations they assume from the DMA workers],

@@ -288,7 +288,7 @@ and their answers, but may not rewind the adversary.
 
 The theorem measures soundness by the maximum error over the rounds, per
 query, rather than by their sum: the adversary may retry any round as often
-as its budget allows. In @thm:iop-rbr the maximum is
+as its budget allows. For the parameters of ZisK, the maximum in @thm:iop-rbr is
 $epsilon^"qry" = (1 - min{theta, delta})^q$, and two features of @prot:compiled refine it.
 
 #lemma(title: "Grinding and Query Derivation")[
@@ -342,15 +342,16 @@ challenge that depends on it (@tbl:transcripts). For AIR proofs,
   observe them, obtain $xi$, and only then choose first-stage columns in
   $FF^(< N)[X]$ that take, at the points $xi omega^o$, values
   satisfying the constraint check. One field equation suffices, and a column
-  read at fewer than $N$ points can be interpolated through any values. Every
+  over $FF$ read at fewer than $N \/ 3$ points of $KK$ can be interpolated
+  through any values. Every
   committed function is then a low-degree polynomial, so the low-degree test
   passes, while the trace need not satisfy any constraint. Knowledge soundness of
   $Pi_"AIR"^((tau))$ in the sense of @def:ks therefore fails, and what holds
   is the joint statement of @lem:binding.
 ] <rem:standalone>
 
-In ZisK the global challenge is not chosen by the prover: it is
-$DeriveKey(bold(p), bold(c))$, where $bold(c) = sum_i h(tau_i, "com"_i)$
+In ZisK the bus key is not chosen by the prover: it is
+$chi = DeriveKey(bold(p), bold(c))$, expanded from the global challenge $g$, where $bold(c) = sum_i h(tau_i, "com"_i)$
 accumulates the typed commitments of all the leaves, and
 $"com"_i = ("root"_(1, i), bold(a)^((1))_i)$ contains the first-stage root.
 Preimage awareness of the accumulator (@def:cr) fixes the commitments when
@@ -432,8 +433,8 @@ compressor (@rem:air-compressors).
   $bold(a)^((2))_i$, is fixed before $v_c$: the first stage before $g$, the
   second stage, $bold(a)^((2))_i$ and $s_i$ through the transcript, which
   observes them after $g$ and before sampling $v_c$. The instance is fixed
-  before $v_c$ as well, since $bold(p)$ and $chi$ are determined by $g$ and
-  $s_i$ is observed. Every later message is observed before the challenge that
+  before $v_c$ as well, since $bold(p)$ is an input of the query that
+  produced $g$, $chi$ is determined by $g$, and $s_i$ is observed. Every later message is observed before the challenge that
   follows it. Every query of $cal(A)$ to the transcript oracle of any proof
   extends a partial transcript of one of the IOPs by one challenge, and the
   argument of @thm:bcs, with @lem:grinding for the query round, shows that,

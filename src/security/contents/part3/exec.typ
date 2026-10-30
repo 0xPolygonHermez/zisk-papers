@@ -22,7 +22,7 @@ witness, and $(bold(p)_"ext"; w_"exec") in cal(R)_"exec"$ requires:
   instructions are instructions of the ISA (@sec:valid-programs), and the
   root of the Rom chip's cached columns for $P$ is the program commitment.
 - _Initial state._ $S_0 = ("pc"_"BOOT", 0, bold(0), "mem"_0)$, where
-  $"mem"_0$ holds $"in"$ in the input data region and is zero outside the
+  $"mem"_0$ holds $"in"$ from address `0x4000_0008` and is zero outside the
   input data and ROM data regions.
 - _Steps._ For every $t < T$, the step from $S_t$ with hints $h_t$ is valid and
   $S_(t+1) = "Step"_P (S_t, h_t)$.
@@ -30,7 +30,7 @@ witness, and $(bold(p)_"ext"; w_"exec") in cal(R)_"exec"$ requires:
   every word of the region is written at most once, and every word that is
   never written is zero in $"mem"_0$.
 - _Termination._ $"pc"_T = "pc"_"END"$, $c_T = 0$ and $T <= 2^(36)$.
-- _Public outputs._ Every step $t$ that executes `pubout` has operands
+- _Public outputs._ Every step $t < T$ that executes `pubout` has operands
   $a_t < 32$ and $b_t = "out"_(a_t)$, and for every $i < 32$ exactly one step
   executes `pubout` with $a_t = i$.
 
@@ -67,7 +67,7 @@ binary only through this assumption.
 The ISA computes on $64$-bit words, with arithmetic modulo $2^(64)$, while the
 traces and the messages of ZisK are vectors over $FF$, of order
 $p = 2^(64) - 2^(32) + 1 < 2^(64)$. ZisK writes every word as two $32$-bit
-limbs. The rest of this chapter states when limbs stand for words, and where
+limbs. The rest of this section states when limbs stand for words, and where
 the range of every limb is established.
 
 We identify every element of $FF$ with its representative in $[0, p)$.
@@ -99,8 +99,8 @@ We identify every element of $FF$ with its representative in $[0, p)$.
 
 The lemma is what lets the analysis read words off messages: the operands and
 results of the operation bus, the values of the memory bus and the outputs in
-$bold(p)_"ext"$ are words exactly when their limbs are well formed. A pair whose
-limbs are not well formed stands for no word, and two such pairs may differ in
+$bold(p)_"ext"$ are words exactly when their limbs are well formed. A pair that is
+not well formed is not the split of its word, and two pairs may differ in
 $FF^2$ while having the same $"word"$, so every pair that the reconstruction
 reads must be shown to be well formed.
 
@@ -118,8 +118,8 @@ that only move a value do not check it again. In the terms of @sec:per-bus, the 
   chunks, so every word read from the input, and every hint, is well formed.
 - _The global messages._ The public outputs are two $32$-bit limbs of each
   word in $bold(p)_"ext"$ by the instantiation of @sec:instantiation, and the
-  initial values of the registers and the anchors of the memory chains are
-  zero.
+  initial values of the registers and the anchors of the memory chains carry
+  the value zero.
 
 Starting from these producers, the reconstruction of @sec:theorem-iii shows,
 step by step, that every operand, result, register and memory word of the
@@ -130,7 +130,7 @@ be well formed.
 == Addresses, Steps and Wrap-Around
 
 Byte addresses ($32$ bits), program counters ($32$ bits), memory steps
-($38$ bits) and segment indices (below $2^(36) \/ N$) are below $p$ and are
+(at most $2^(38)$) and segment indices (below $2^(36) \/ N$) are below $p$ and are
 carried as single field elements, so an equality between two of them in $FF$
 is an equality of integers. The chips bound them by range checks where they
 are produced, and the soundness of every chip includes that the arithmetic
